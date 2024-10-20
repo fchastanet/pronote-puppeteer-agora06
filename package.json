@@ -1,0 +1,18 @@
+{
+  "type": "module",
+  "name": "pronote",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "author": "François Chastanet <fchastanet@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.7.7",
+    "axios-cookiejar-support": "^5.0.3",
+    "dotenv": "^16.4.5",
+    "puppeteer": "^23.6.0",
+    "tough-cookie": "^5.0.0"
+  },
+  "scripts": {
+    "start": "node ./src/index.js"
+  }
+}
