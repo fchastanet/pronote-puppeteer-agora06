@@ -211,6 +211,7 @@ async function loginToPronote() {
       document.querySelector(sel).click();
     });
     await page.waitForSelector('.conteneur-CDT');
+    await delay(2000); // wait some time to let the page to be fully loaded before screenshot
     await page.screenshot({path: path.join(resultDir, 'cahierDeTexte-resources.png'), fullPage: true});
 
     console.log('click on "travail à faire"');
@@ -219,6 +220,7 @@ async function loginToPronote() {
         .dispatchEvent(new Event( 'click', { bubbles: true } ));
     });
     await page.waitForSelector('.conteneur-CDT');
+    await delay(2000); // wait some time to let the page to be fully loaded before screenshot
     await page.screenshot({path: path.join(resultDir, 'cahierDeTexte-travailAFaire.png'), fullPage: true});
 
     if (debugMode) {
