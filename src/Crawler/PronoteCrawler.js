@@ -4,7 +4,7 @@ import fs from 'fs';
 import Utils from '#pronote/Utils/Utils.js';
 
 export default class PronoteCrawler {
-  #consoleLogs = false;
+  #verbose = false;
   #debugMode = false;
   #page = null;
   #resultDir = "";
@@ -17,14 +17,14 @@ export default class PronoteCrawler {
    * 
    * @param {Page} page 
    * @param {boolean} debugMode 
-   * @param {boolean} consoleLogs 
+   * @param {boolean} verbose 
    * @param {string} resultDir
    * @param {string} login
    * @param {string} password
    */
-  constructor({page, debugMode, consoleLogs, resultDir, login, password, casUrl}) {
+  constructor({page, debugMode, verbose, resultDir, login, password, casUrl}) {
     this.#page = page;
-    this.#consoleLogs = consoleLogs;
+    this.#verbose = verbose;
     this.#debugMode = debugMode;
     this.#resultDir = resultDir;
     this.#login = login;
@@ -33,7 +33,7 @@ export default class PronoteCrawler {
   }
 
   setPageListeners() {
-    if (this.#consoleLogs) {
+    if (this.#verbose) {
       this.#page.on('console', msg => console.log('PAGE CONSOLE LOGS:', msg.text()));
     }
 

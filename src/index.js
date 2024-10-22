@@ -5,6 +5,7 @@ import Crawler from '#pronote/Crawler/Crawler.js';
 import PronoteCrawler from '#pronote/Crawler/PronoteCrawler.js';
 import Database from '#pronote/Database/Database.js'
 import DataProcessor from '#pronote/Processor/DataProcessor.js'
+import {Command} from 'commander'
 
 let browser = null;
 
@@ -16,7 +17,6 @@ process.stdin.resume(); // so the program will not close instantly
 
 function exitHandler(options, exitCode) {
     if (options.cleanup) {
-      console.log('clean before exiting');
       if (browser !== null) {
         console.log('Closing browser');
         browser.close();
@@ -45,7 +45,7 @@ process.on('SIGUSR2', exitHandler.bind(null, {exit:true}));
 // catches uncaught exceptions
 process.on('uncaughtException', exitHandler.bind(null, {exit:true}));
 
-async function retrievePronoteData({resultDir, casUrl, login, password, debugMode, consoleLogs}) {
+async function retrievePronoteData({resultDir, casUrl, login, password, debugMode, verbose}) {
   /** @var {Crawler} crawler */
   const crawler = new Crawler(debugMode);
   browser = await crawler.initBrowser();
@@ -53,7 +53,7 @@ async function retrievePronoteData({resultDir, casUrl, login, password, debugMod
 
   /** @var {PronoteCrawler} pronoteCrawler */
   const pronoteCrawler = new PronoteCrawler({
-    page, debugMode, consoleLogs, 
+    page, debugMode, verbose, 
     resultDir, login, password, casUrl
   });
   pronoteCrawler.setPageListeners();
@@ -71,11 +71,27 @@ async function retrievePronoteData({resultDir, casUrl, login, password, debugMod
   }
 }
 
-async function processPronoteData({databaseFile}) {
+async function processPronoteData({databaseFile, verbose}) {
   const database = new Database();
-  database.init(databaseFile)
+  database.init({databaseFile, verbose})
   const dataProcessor = new DataProcessor(database)
   dataProcessor.process()
+}
+
+function parseCommandOptions(argv) {
+  const command = new Command()
+  command
+    .name('pronote-analyser')
+    .description('Allows pronote information retrieval and analysis')
+    .version('1.0.0', '--version')
+    .usage('[OPTIONS]...')
+    .option('-d, --debug', 'Activates debug mode.', false)
+    .option('-v, --verbose', 'Activates verbose mode (details loaded pages, ...).', false)
+    .option('--skip-pronote', 'Skips pronote data retrieval.', false)
+    .option('--skip-data-process', 'Skips data process.', false)
+    .parse(argv);
+
+  return command.opts();
 }
 
 async function main() {
@@ -84,15 +100,40 @@ async function main() {
   const casUrl = process.env.CAS_URL;
   const login = process.env.LOGIN;
   const password = process.env.PASSWORD;
-  const debugMode = process.env.DEBUG_MODE === '1';
-  const consoleLogs = process.env.CONSOLE_LOGS === '1';
   const databaseFile = process.env.SQLITE_DATABASE_FILE;
-    
+
   const currentDate = Utils.formatDate(new Date());
   const resultDir = path.join(process.cwd(), process.env.RESULTS_DIR, currentDate);
 
-  await retrievePronoteData({resultDir, casUrl, login, password, debugMode, consoleLogs});
-  await processPronoteData({databaseFile});
+  const commandOptions = parseCommandOptions(process.argv)
+  
+
+  if (!commandOptions.skipPronote) {
+    if (commandOptions.verbose) {
+      console.debug("Retrieving Pronote data ...")
+    }
+    await retrievePronoteData({
+      resultDir, casUrl, login, password, 
+      debug: commandOptions.debug, 
+      verbose: commandOptions.verbose
+    });
+    if (commandOptions.verbose) {
+      console.debug("Pronote data retrieved")
+    }
+  } else if (commandOptions.verbose) {
+    console.debug("Pronote data retrieval skipped.")
+  }
+  if (!commandOptions.skipDataProcess) {
+    if (commandOptions.verbose) {
+      console.debug("Pronote data processing ...")
+    }
+    await processPronoteData({databaseFile, verbose: commandOptions.verbose});
+    if (commandOptions.verbose) {
+      console.debug("Pronote data processed.")
+    }
+  } else if (commandOptions.verbose) {
+    console.debug("Pronote data processing skipped.")
+  }
 }
 
 await main();

@@ -12,6 +12,7 @@
     "axios": "^1.7.7",
     "axios-cookiejar-support": "^5.0.3",
     "better-sqlite3": "^11.5.0",
+    "commander": "^12.1.0",
     "dotenv": "^16.4.5",
     "puppeteer": "^23.6.0",
     "tough-cookie": "^5.0.0"

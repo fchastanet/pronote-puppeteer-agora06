@@ -3,8 +3,12 @@ import { default as SqliteDatabase} from 'better-sqlite3'
 export default class Database {
   db = null
 
-  async init(databaseFile) {
-    this.db = new SqliteDatabase(databaseFile, { verbose: console.log })
+  async init({databaseFile, verbose}) {
+    const opts = {}
+    if (verbose) {
+      opts.verbose = console.log
+    }
+    this.db = new SqliteDatabase(databaseFile, opts)
     this.db.pragma('journal_mode = WAL') // it is generally important to set the WAL pragma for performance reasons.
   }
 
