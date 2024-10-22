@@ -11,6 +11,7 @@ export default class PronoteCrawler {
   #login = "";
   #password = "";
   #casUrl = "";
+  #sessionNumber = null;
   
   /**
    * 
@@ -67,6 +68,17 @@ export default class PronoteCrawler {
     });
   }
 
+  #getResultFile(name) {
+    if (this.#sessionNumber === null) {
+      throw new InvalidStateException()
+    }
+    const dir = `${this.#resultDir}-${this.#sessionNumber}`
+    if (!fs.existsSync(dir)){
+      fs.mkdirSync(dir, { recursive: true });
+    }  
+    return path.join(dir, name);
+  }
+
   #writeCahierDeTexte(response, postDataObj) {
     // Log response status and URL
     
@@ -81,7 +93,8 @@ export default class PronoteCrawler {
     }
     // Write response body
     response.text().then((text) => {
-      fs.writeFile(targetFile, text, err => {
+      const json = JSON.parse(text)
+      fs.writeFile(targetFile, JSON.stringify(json, null, "  "), err => {
         if (err) {
           console.error(err);
           process.exit(1);
@@ -98,9 +111,9 @@ export default class PronoteCrawler {
       console.log("Onglet", tab);
     }
     if (tab === 88) {
-      return path.join(this.#resultDir, "cahierDeTexte-travailAFaire.json");
+      return this.#getResultFile("cahierDeTexte-travailAFaire.json");
     } else if (tab === 89) {
-      return path.join(this.#resultDir, "cahierDeTexte-resources.json");
+      return this.#getResultFile("cahierDeTexte-resources.json");
     }
     // unknown request
     return null;
@@ -155,13 +168,30 @@ export default class PronoteCrawler {
   async #extractGeneralInformation() {
     console.info('Step 6: Extract information from the Pronote dashboard');
     const studentInfo = await this.#page.evaluate(() => {
-      const name = document.querySelector('.label-membre').innerText; // Adjust selector based on the page's structure
+      const fullName = document.querySelector('.label-membre').innerText; // Adjust selector based on the page's structure
+      const reMatches = fullName.match(/^(?<name>.*) \((?<grade>[^)]+)\)$/)
       const school = document.querySelector('.ibe_centre .ibe_etab').innerText; // Adjust selector as needed
       const sessionNumber = window.GParametres.application.communication.NumeroDeSession
-      return {name, school, sessionNumber};
+      return {
+        fullName, 
+        name: reMatches.groups.name, 
+        grade: reMatches.groups.grade, 
+        school, 
+        sessionNumber
+      };
     });
 
-    console.log('Student Info:', studentInfo);
+    console.log('Student Info:', studentInfo)
+    this.#sessionNumber = studentInfo.sessionNumber
+    const targetFile = this.#getResultFile("studentInfo.json")
+    fs.writeFile(targetFile, JSON.stringify(studentInfo, null, "  "), err => {
+      if (err) {
+        console.error(err);
+        process.exit(1);
+      } else {
+        console.log(`Result written into '${targetFile}'`);
+      }
+    });
   }
       
   async #navigateToCahierDeTexte() {
@@ -173,7 +203,7 @@ export default class PronoteCrawler {
     });
     await this.#page.waitForSelector('.conteneur-CDT');
     await Utils.delay(2000); // wait some time to let the page to be fully loaded before screenshot
-    await this.#page.screenshot({path: path.join(this.#resultDir, 'cahierDeTexte-resources.png'), fullPage: true});
+    await this.#page.screenshot({path: this.#getResultFile('cahierDeTexte-resources.png'), fullPage: true});
   }
 
   async #navigateToTravailAFaire() {
@@ -184,6 +214,6 @@ export default class PronoteCrawler {
     });
     await this.#page.waitForSelector('.conteneur-CDT');
     await Utils.delay(2000); // wait some time to let the page to be fully loaded before screenshot
-    await this.#page.screenshot({path: path.join(this.#resultDir, 'cahierDeTexte-travailAFaire.png'), fullPage: true});
+    await this.#page.screenshot({path: this.#getResultFile('cahierDeTexte-travailAFaire.png'), fullPage: true});
   }
 }
