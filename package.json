@@ -1,5 +1,8 @@
 {
   "type": "module",
+  "imports": {
+    "#pronote/*.js": "./src/*.js"
+  },
   "name": "pronote",
   "version": "1.0.0",
   "main": "src/index.ts",

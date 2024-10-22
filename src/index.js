@@ -1,9 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
-import Utils from './Utils.js';
-import Crawler from './Crawler.js';
-import PronoteCrawler from './PronoteCrawler.js';
+import Utils from '#pronote/Utils/Utils.js';
+import Crawler from '#pronote/Crawler/Crawler.js';
+import PronoteCrawler from '#pronote/Crawler/PronoteCrawler.js';
 
 let browser = null;
 

@@ -1,7 +1,7 @@
 import {Page} from 'puppeteer';
 import path from 'path';
 import fs from 'fs';
-import Utils from './Utils.js';
+import Utils from '#pronote/Utils/Utils.js';
 
 export default class PronoteCrawler {
   #consoleLogs = false;
