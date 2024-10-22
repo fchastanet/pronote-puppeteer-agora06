@@ -1,9 +1,10 @@
-import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import Utils from '#pronote/Utils/Utils.js';
 import Crawler from '#pronote/Crawler/Crawler.js';
 import PronoteCrawler from '#pronote/Crawler/PronoteCrawler.js';
+import Database from '#pronote/Database/Database.js'
+import DataProcessor from '#pronote/Processor/DataProcessor.js'
 
 let browser = null;
 
@@ -44,21 +45,7 @@ process.on('SIGUSR2', exitHandler.bind(null, {exit:true}));
 // catches uncaught exceptions
 process.on('uncaughtException', exitHandler.bind(null, {exit:true}));
 
-async function main() {
-  dotenv.config();
-
-  const casUrl = process.env.CAS_URL;
-  const login = process.env.LOGIN;
-  const password = process.env.PASSWORD;
-  const debugMode = process.env.DEBUG_MODE === '1';
-  const consoleLogs = process.env.CONSOLE_LOGS === '1';
-  const currentDate = Utils.formatDate(new Date());
-  const resultDir = path.join(process.cwd(), process.env.RESULTS_DIR, currentDate);
-
-  if (!fs.existsSync(resultDir)){
-    fs.mkdirSync(resultDir, { recursive: true });
-  }
-
+async function retrievePronoteData({resultDir, casUrl, login, password, debugMode, consoleLogs}) {
   /** @var {Crawler} crawler */
   const crawler = new Crawler(debugMode);
   browser = await crawler.initBrowser();
@@ -79,10 +66,35 @@ async function main() {
       console.log("Wait 5 seconds for xhr request to finish");
       await Utils.delay(5000);
     }
-    process.exit(0);
   } catch (error) {
     console.error('An error occurred during the login process:', error);
   }
 }
 
+async function processPronoteData({databaseFile}) {
+  const database = new Database();
+  database.init(databaseFile)
+  const dataProcessor = new DataProcessor(database)
+  dataProcessor.process()
+}
+
+async function main() {
+  dotenv.config();
+
+  const casUrl = process.env.CAS_URL;
+  const login = process.env.LOGIN;
+  const password = process.env.PASSWORD;
+  const debugMode = process.env.DEBUG_MODE === '1';
+  const consoleLogs = process.env.CONSOLE_LOGS === '1';
+  const databaseFile = process.env.SQLITE_DATABASE_FILE;
+    
+  const currentDate = Utils.formatDate(new Date());
+  const resultDir = path.join(process.cwd(), process.env.RESULTS_DIR, currentDate);
+
+  await retrievePronoteData({resultDir, casUrl, login, password, debugMode, consoleLogs});
+  await processPronoteData({databaseFile});
+}
+
 await main();
+
+process.exit(0)
