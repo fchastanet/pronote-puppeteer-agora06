@@ -76,7 +76,8 @@ export default class Database {
     `;
     const createFactCoursesTable = `
       CREATE TABLE IF NOT EXISTS fact_courses (
-        fact_id TEXT PRIMARY KEY,
+        fact_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        fact_key TEXT,
         subject_id INTEGER,
         student_id INTEGER,
         school_id INTEGER,
@@ -103,7 +104,7 @@ export default class Database {
         FOREIGN KEY (update_first_date_id) REFERENCES dim_dates(date_id),
         FOREIGN KEY (update_last_date_id) REFERENCES dim_dates(date_id)
       );
-      CREATE INDEX IF NOT EXISTS idx_fact_courses_id ON fact_courses(fact_id);
+      CREATE INDEX IF NOT EXISTS idx_fact_courses_id ON fact_courses(fact_key);
       CREATE INDEX IF NOT EXISTS idx_fact_courses_subject_id ON fact_courses(subject_id);
       CREATE INDEX IF NOT EXISTS idx_fact_courses_student_id ON fact_courses(student_id);
       CREATE INDEX IF NOT EXISTS idx_fact_courses_school_id ON fact_courses(school_id);
@@ -162,7 +163,7 @@ export default class Database {
   }
 
   getFactCourse(id) {
-    const stmt = this.db.prepare('SELECT * FROM fact_courses WHERE fact_id = ?');
+    const stmt = this.db.prepare('SELECT * FROM fact_courses WHERE fact_key = ?');
     return stmt.get(id);
   }
 
@@ -225,21 +226,21 @@ export default class Database {
   }
 
   insertFactCourse({
-    fact_id, subject_id, student_id, school_id, grade_id,
+    fact_key, subject_id, student_id, school_id, grade_id,
     teacher_id, start_date_id, end_date_id, homework_date_id,
     content_list, checksum, locked,
     update_first_date_id, update_last_date_id, update_count, update_files
   }) {
     const stmt = this.db.prepare(`
       INSERT INTO fact_courses (
-        fact_id, subject_id, student_id, school_id, grade_id, 
+        fact_key, subject_id, student_id, school_id, grade_id, 
         teacher_id, start_date_id, end_date_id, homework_date_id, 
         content_list, checksum, locked,
         update_first_date_id, update_last_date_id, update_count, update_files
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const info = stmt.run(
-      fact_id, 
+      fact_key, 
       subject_id, student_id, school_id, grade_id, 
       teacher_id, start_date_id, end_date_id, homework_date_id, 
       content_list, checksum, locked ? 1 : 0,
@@ -249,7 +250,7 @@ export default class Database {
   }
 
   updateFactCourse({
-    fact_id, subject_id, student_id, school_id, grade_id,
+    fact_key, subject_id, student_id, school_id, grade_id,
     teacher_id, start_date_id, end_date_id, homework_date_id,
     content_list, checksum, locked,
     update_first_date_id, update_last_date_id, update_count, update_files
@@ -260,14 +261,14 @@ export default class Database {
         teacher_id = ?, start_date_id = ?, end_date_id = ?, homework_date_id = ?, 
         content_list = ?, checksum = ?, locked = ?,
         update_first_date_id = ?, update_last_date_id = ?, update_count = ?, update_files = ?
-      WHERE fact_id = ?
+      WHERE fact_key = ?
     `);
     const info = stmt.run(
       subject_id, student_id, school_id, grade_id, 
       teacher_id, start_date_id, end_date_id, homework_date_id, 
       content_list, checksum, locked ? 1 : 0,
       update_first_date_id, update_last_date_id, update_count, update_files,
-      fact_id
+      fact_key
     );
     return info.lastInsertRowid;
   }

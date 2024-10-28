@@ -180,7 +180,7 @@ export default class DataProcessor {
     if (typeof factCourse === 'undefined') {
       updateFiles.push(filePath);
       factCourseId = this.#db.insertFactCourse({
-        fact_id: course.id,
+        fact_key: course.id,
         student_id: studentId,
         school_id: schoolId,
         subject_id: subjectId,
@@ -201,7 +201,7 @@ export default class DataProcessor {
       updateFiles = JSON.parse(factCourse.update_files);
       updateFiles.push(filePath);
       this.#db.updateFactCourse({
-        fact_id: course.id,
+        fact_key: course.id,
         student_id: studentId,
         school_id: schoolId,
         subject_id: subjectId,
