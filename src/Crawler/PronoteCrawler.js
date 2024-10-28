@@ -61,6 +61,7 @@ export default class PronoteCrawler {
         request.url().includes("pronote/appelfonction/2/")
       ) {
         const postDataObj = JSON.parse(postData);
+        postDataObj.crawlDate = new Date().toISOString();
         if (postDataObj?.nom === 'PageCahierDeTexte') {
           this.#writeCahierDeTexte(response, postDataObj);
         }
@@ -113,7 +114,7 @@ export default class PronoteCrawler {
     if (tab === 88) {
       return this.#getResultFile("cahierDeTexte-travailAFaire.json");
     } else if (tab === 89) {
-      return this.#getResultFile("cahierDeTexte-resources.json");
+      return this.#getResultFile("cahierDeTexte-courses.json");
     }
     // unknown request
     return null;
@@ -203,7 +204,7 @@ export default class PronoteCrawler {
     });
     await this.#page.waitForSelector('.conteneur-CDT');
     await Utils.delay(2000); // wait some time to let the page to be fully loaded before screenshot
-    await this.#page.screenshot({path: this.#getResultFile('cahierDeTexte-resources.png'), fullPage: true});
+    await this.#page.screenshot({path: this.#getResultFile('cahierDeTexte-courses.png'), fullPage: true});
   }
 
   async #navigateToTravailAFaire() {

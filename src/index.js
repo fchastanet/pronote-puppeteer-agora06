@@ -71,10 +71,10 @@ async function retrievePronoteData({resultDir, casUrl, login, password, debugMod
   }
 }
 
-async function processPronoteData({databaseFile, verbose}) {
+async function processPronoteData({databaseFile, verbose, resultsDir}) {
   const database = new Database();
   database.init({databaseFile, verbose})
-  const dataProcessor = new DataProcessor(database)
+  const dataProcessor = new DataProcessor(database, resultsDir)
   dataProcessor.process()
 }
 
@@ -103,7 +103,8 @@ async function main() {
   const databaseFile = process.env.SQLITE_DATABASE_FILE;
 
   const currentDate = Utils.formatDate(new Date());
-  const resultDir = path.join(process.cwd(), process.env.RESULTS_DIR, currentDate);
+  const resultsDir = path.join(process.cwd(), process.env.RESULTS_DIR)
+  const currentResultDir = path.join(resultsDir, currentDate);
 
   const commandOptions = parseCommandOptions(process.argv)
   
@@ -113,7 +114,8 @@ async function main() {
       console.debug("Retrieving Pronote data ...")
     }
     await retrievePronoteData({
-      resultDir, casUrl, login, password, 
+      resultDir: currentResultDir, 
+      casUrl, login, password, 
       debug: commandOptions.debug, 
       verbose: commandOptions.verbose
     });
@@ -127,7 +129,7 @@ async function main() {
     if (commandOptions.verbose) {
       console.debug("Pronote data processing ...")
     }
-    await processPronoteData({databaseFile, verbose: commandOptions.verbose});
+    await processPronoteData({databaseFile, verbose: commandOptions.verbose, resultsDir});
     if (commandOptions.verbose) {
       console.debug("Pronote data processed.")
     }
