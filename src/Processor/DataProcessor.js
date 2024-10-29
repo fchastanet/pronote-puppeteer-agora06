@@ -193,7 +193,7 @@ export default class DataProcessor {
     let updateFiles = [];
     let factCourseId = null;
     if (typeof factCourse === 'undefined') {
-      updateFiles.push(filePath);
+      updateFiles.push({filePath, checksum: course.checksum});
       factCourseId = this.#db.insertFactCourse({
         fact_key: course.key,
         student_id: studentId,
@@ -214,7 +214,7 @@ export default class DataProcessor {
       });
     } else if (course.checksum != factCourse.checksum) {
       updateFiles = JSON.parse(factCourse.update_files);
-      updateFiles.push(filePath);
+      updateFiles.push({filePath, checksum: course.checksum});
       factCourseId = this.#db.updateFactCourse({
         fact_key: course.key,
         student_id: studentId,
@@ -286,7 +286,7 @@ export default class DataProcessor {
     let updateFiles = [];
     let factHomeworkId = null;
     if (typeof factHomework === 'undefined') {
-      updateFiles.push(filePath);
+      updateFiles.push({filePath, checksum: homework.checksum});
       factHomeworkId = this.#db.insertFactHomework({
         fact_key: homeworkKey,
         fact_course_id: factCourse?.fact_id ?? null,
@@ -315,7 +315,7 @@ export default class DataProcessor {
       });
     } else if (homework.checksum != factHomework.checksum) {
       updateFiles = JSON.parse(factHomework.update_files);
-      updateFiles.push(filePath);
+      updateFiles.push({filePath, checksum: homework.checksum});
       factHomeworkId = this.#db.updateFactHomework({
         fact_key: homeworkKey,
         fact_course_id: factCourse?.fact_id ?? null,
