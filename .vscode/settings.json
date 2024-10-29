@@ -1,5 +1,23 @@
 {
   "cSpell.words": [
     "pronote"
-  ]
+  ],
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/env": true,
+    "**/venv": true
+  },
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/env/**": true,
+    "**/venv/**": true,
+    "results/**": true,
+    "env-*": true
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+  },
 }
