@@ -1,4 +1,6 @@
 import FromTypeConverter from '#pronote/Converter/FromTypeConverter.js';
+import crypto from 'crypto';
+import Utils from '#pronote/Utils/Utils.js';
 
 export default class HomeworkConverter {
 
@@ -17,27 +19,39 @@ export default class HomeworkConverter {
   fromPronoteItem(item) {
     const resultItem = {
       id: item.N,
-      uniqueId: this.computeUniqueId(item),
-      description: this.fromTypeConverter.convertItem(item.descriptif, "Literal"),
-      formatted: item.avecMiseEnForme,
+      plannedCourseId: item?.cahierDeTextes?.V?.N || null,
+      subject: this.fromTypeConverter.convertItem(item.Matiere, "Literal"),
       dueDate: this.fromTypeConverter.fromPronote(item.PourLe, "Value"),
-      requiresSubmission: item?.avecRendu !== undefined ? item.avecRendu : false,
-      submissionType: item.genreRendu!== undefined ? item.genreRendu : null,
+      assignedDate: this.fromTypeConverter.fromPronote(item.DonneLe, "Value"),
       completed: item.TAFFait,
+      formatted: item.avecMiseEnForme,
+      submissionType: item.genreRendu!== undefined ? item.genreRendu : null,
       difficultyLevel: item.niveauDifficulte,
       duration: item.duree,
-      assignedDate: this.fromTypeConverter.fromPronote(item.DonneLe, "Value"),
-      subject: this.fromTypeConverter.convertItem(item.Matiere, "Literal"),
+      requiresSubmission: item?.avecRendu !== undefined ? item.avecRendu : false,
       backgroundColor: item.CouleurFond,
       publicName: item.nomPublic,
+      description: this.fromTypeConverter.convertItem(item.descriptif, "Literal"),
       themes: item.ListeThemes ? item.ListeThemes.V.map(theme => this.fromTypeConverter.fromPronote(theme)) : [],
       attachments: item.ListePieceJointe ? item.ListePieceJointe.V.map(theme => this.fromTypeConverter.fromPronote(theme, "ListePieceJointe")) : [],
     };
+    resultItem.checksum = this.computeHomeworkItemChecksum(resultItem);
 
     return resultItem;
   }
 
-  computeUniqueId(item) {
-    return `{item.}`;
-  }
+  computeHomeworkItemChecksum(homeworkItem) {
+    const hash = crypto.createHash("md5");
+    const attachments = Utils.removeKey(homeworkItem.attachments, 'id');
+    hash.update(JSON.stringify({
+      subject: homeworkItem.subject,
+      dueDate: homeworkItem.dueDate,
+      submissionType: homeworkItem.submissionType,
+      description: homeworkItem.description,
+      requiresSubmission: homeworkItem.requiresSubmission,
+      attachments: attachments,
+    }));
+    return hash.digest("hex");
+}
+
 }

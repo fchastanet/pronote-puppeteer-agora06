@@ -17,12 +17,15 @@ export default class DataProcessor {
   #studentId = null;
   #schoolId = null;
   #gradeId = null;
+  #courseIdFactMapping = {};
+  #homeworkUniqueId = {};
   
   constructor(db, resultsDir) {
     this.#db = db
     this.#resultsDir = resultsDir
     this.#homeworkConverter = new HomeworkConverter();
     this.#courseConverter = new CourseConverter();
+    this.#courseIdFactMapping = {};
   }
 
   process() {
@@ -32,7 +35,7 @@ export default class DataProcessor {
       // TODO
       this.processStudentInfo(this.#resultsDir);
       this.processCourses(this.#resultsDir);
-      //this.processHomeworks(this.#resultsDir);
+      this.processHomeworks(this.#resultsDir);
     } catch (error) {
       console.error('Unable to connect to the database:', error)
     } finally {
@@ -61,26 +64,6 @@ export default class DataProcessor {
           this.#gradeId = this.#db.insertGrade(studentInfo.grade)
         }
         
-      }
-    });
-  }
-
-  processHomeworks(resultsDir) {
-    const subDirs = fs.readdirSync(resultsDir);
-
-    subDirs.forEach(subDir => {
-      const filePath = path.join(resultsDir, subDir, 'cahierDeTexte-travailAFaire.json');
-      if (fs.existsSync(filePath)) {
-        // Read and parse the JSON file
-        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        
-        const items = this.#homeworkConverter.fromPronote(data)
-
-        // Process each item in ListeCahierDeTextes
-        items.forEach(item => {
-          // Insert item into your desired data structure or database
-          this.insertItem(item);
-        });
       }
     });
   }
@@ -115,14 +98,18 @@ export default class DataProcessor {
         });
         
         // Process each item in ListeCahierDeTextes
-        for (const [key, course] of Object.entries(items.courses)) {
-          this.insertCourse(course, this.#schoolId, this.#gradeId, this.#studentId, filePath);
+        for (const [_, course] of Object.entries(items.courses)) {
+          this.insertCourse(
+            course, 
+            data?.crawlDate ?? false, 
+            this.#schoolId, this.#gradeId, this.#studentId, filePath
+          );
         }
       }
     });
   }
 
-  insertCourse(course, schoolId, gradeId, studentId, filePath) {
+  insertCourse(course, crawlDate, schoolId, gradeId, studentId, filePath) {
     // Insert course
     let subjectId = this.#db.getSubjectId(course.subject);
     if (!subjectId) {
@@ -155,7 +142,7 @@ export default class DataProcessor {
     if (!endDateId && course.endDate !== null) {
       const endDate = Utils.parseFrenchDate(course.endDate);
       if (endDate !== null) {
-        endDateId = this.#db.insertDate(endDate, endDate.getFullYear(), endDate.getMonth() + 1, endDate.getDate(), endDate.getDay());
+        endDateId = this.#db.insertDate(endDate);
       }
     }
 
@@ -163,24 +150,24 @@ export default class DataProcessor {
     if (!homeworkDateId && course.homeworkDate !== null) {
       const homeworkDate = Utils.parseFrenchDate(course.homeworkDate);
       if (homeworkDate !== null) {
-        homeworkDateId = this.#db.insertDate(homeworkDate, homeworkDate.getFullYear(), homeworkDate.getMonth() + 1, homeworkDate.getDate(), homeworkDate.getDay());
+        homeworkDateId = this.#db.insertDate(homeworkDate);
       }
     }
 
-    let updateLastDate = course?.crawlDate ? new Date(course.crawlDate) : new Date();
-    let updateLastDateId = this.#db.getDateId(course.crawlDate);
+    let updateLastDate = crawlDate ? new Date(crawlDate) : new Date();
+    let updateLastDateId = this.#db.getDateId(updateLastDate);
     if (!updateLastDateId) {
-      updateLastDateId = this.#db.insertDate(updateLastDate, updateLastDate.getFullYear(), updateLastDate.getMonth() + 1, updateLastDate.getDate(), updateLastDate.getDay());
+      updateLastDateId = this.#db.insertDate(updateLastDate);
     }
     
     // Insert fact course
-    let factCourse = this.#db.getFactCourse(course.id);
+    let factCourse = this.#db.getFactCourse(course.key);
     let updateFiles = [];
     let factCourseId = null;
     if (typeof factCourse === 'undefined') {
       updateFiles.push(filePath);
       factCourseId = this.#db.insertFactCourse({
-        fact_key: course.id,
+        fact_key: course.key,
         student_id: studentId,
         school_id: schoolId,
         subject_id: subjectId,
@@ -200,8 +187,8 @@ export default class DataProcessor {
     } else if (course.checksum != factCourse.checksum) {
       updateFiles = JSON.parse(factCourse.update_files);
       updateFiles.push(filePath);
-      this.#db.updateFactCourse({
-        fact_key: course.id,
+      factCourseId = this.#db.updateFactCourse({
+        fact_key: course.key,
         student_id: studentId,
         school_id: schoolId,
         subject_id: subjectId,
@@ -219,32 +206,171 @@ export default class DataProcessor {
         update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g,''),
       });
     }
+    if (factCourseId !== null) {
+      this.#courseIdFactMapping[course.id] = {fact_id: factCourseId, fact_key: course.key};
+    }
+  }
+
+  processHomeworks(resultsDir) {
+    const subDirs = fs.readdirSync(resultsDir);
+
+    subDirs.forEach(subDir => {
+      const filePath = path.join(resultsDir, subDir, 'cahierDeTexte-travailAFaire.json');
+      if (fs.existsSync(filePath)) {
+        this.#homeworkUniqueId = {};
+
+        // Read and parse the JSON file
+        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
         
+        const homeworks = this.#homeworkConverter.fromPronote(data)
 
-    // Insert content and attachments
-    /*item.contentList.forEach(content => {
-      if (!this.#db.getContentId(content.id)) {
-        this.#db.insertContent({
-          id: content.id,
-          courseItemId: item.courseItemId,
-          description: content.description,
-          date: content.date,
-          endDate: content.endDate
-        });
-      }
-
-      content.attachmentList.forEach(attachment => {
-        if (!this.#db.getAttachmentId(attachment.id)) {
-          this.#db.insertAttachment({
-            id: attachment.id,
-            contentId: content.id,
-            name: attachment.name,
-            type: attachment.type,
-            isInternal: attachment.isInternal
-          });
+        // Process each homework in travailAFaire
+        for (const [_, homework] of Object.entries(homeworks)) {
+          this.insertHomework(
+            homework, 
+            data?.crawlDate ?? false,
+            this.#schoolId, this.#gradeId, this.#studentId, filePath
+          );
         }
+      }
+    });
+  }
+
+  insertHomework(homework, crawlDate, schoolId, gradeId, studentId, filePath) {
+    // Insert homework
+    let subjectId = this.#db.getSubjectId(homework.subject);
+    if (!subjectId) {
+      subjectId = this.#db.insertSubject({
+        subject: homework.subject,
+        backgroundColor: homework.backgroundColor
       });
-    });*/
+    }
+
+    // Insert dates
+    let dueDateId = this.#db.getDateId(homework.dueDate);
+    if (!dueDateId && homework.dueDate !== null) {
+      const dueDate = Utils.parseFrenchDate(homework.dueDate);
+      if (dueDate !== null) {
+        dueDateId = this.#db.insertDate(dueDate);
+      }
+    }
+
+    let assignedDateId = this.#db.getDateId(homework.assignedDate);
+    if (!assignedDateId && homework.assignedDate !== null) {
+      const assignedDate = Utils.parseFrenchDate(homework.assignedDate);
+      if (assignedDate !== null) {
+        assignedDateId = this.#db.insertDate(assignedDate);
+      }
+    }
+
+    let updateLastDate = crawlDate ? new Date(crawlDate) : new Date();
+    let updateLastDateId = this.#db.getDateId(updateLastDate);
+    if (!updateLastDateId) {
+      updateLastDateId = this.#db.insertDate(updateLastDate);
+    }
+
+    const factCourseKey = this.#courseIdFactMapping?.[homework.plannedCourseId]?.fact_key;
+    let factCourse = null;
+    if (factCourseKey !== null) {
+      factCourse = this.#db.getFactCourse(factCourseKey);
+    } else {
+      console.log(`Course ${homework.plannedCourseId} not found in #courseIdFactMapping`);
+    }
+    
+    // Insert fact homework
+    const homeworkKey = this.computeHomeworkUniqueId(homework, factCourse, filePath);
+    let factHomework = this.#db.getFactHomework(homeworkKey);
+    let updateFiles = [];
+    let factHomeworkId = null;
+    if (typeof factHomework === 'undefined') {
+      updateFiles.push(filePath);
+      factHomeworkId = this.#db.insertFactHomework({
+        fact_key: homeworkKey,
+        fact_course_id: factCourse?.fact_id ?? null,
+        student_id: studentId,
+        school_id: schoolId,
+        grade_id: gradeId,
+        subject_id: subjectId,
+        due_date_id: dueDateId,
+        assigned_date_id: assignedDateId,
+        description: homework.description,
+        formatted: homework.formatted,
+        requires_submission: homework.requiresSubmission,
+        completed: homework.completed,
+        submission_type: homework.submissionType,
+        difficulty_level: homework.difficultyLevel,
+        duration: homework.duration,
+        background_color: homework.backgroundColor,
+        public_name: homework.publicName,
+        themes: JSON.stringify(homework.themes, null, 2)?.replace(/\00/g,''),
+        attachments: JSON.stringify(homework.attachments, null, 2)?.replace(/\00/g,''),
+        checksum: homework.checksum,
+        update_count: 1,
+        update_first_date_id: updateLastDateId,
+        update_last_date_id: updateLastDateId,
+        update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g,''),
+      });
+    } else if (homework.checksum != factHomework.checksum) {
+      updateFiles = JSON.parse(factHomework.update_files);
+      updateFiles.push(filePath);
+      factHomeworkId = this.#db.updateFactHomework({
+        fact_key: homeworkKey,
+        fact_course_id: factCourse?.fact_id ?? null,
+        student_id: studentId,
+        school_id: schoolId,
+        grade_id: gradeId,
+        subject_id: subjectId,
+        due_date_id: dueDateId,
+        assigned_date_id: assignedDateId,
+        description: homework.description,
+        formatted: homework.formatted,
+        requires_submission: homework.requiresSubmission,
+        completed: homework.completed,
+        submission_type: homework.submissionType,
+        difficulty_level: homework.difficultyLevel,
+        duration: homework.duration,
+        background_color: homework.backgroundColor,
+        public_name: homework.publicName,
+        themes: JSON.stringify(homework.themes, null, 2)?.replace(/\00/g,''),
+        attachments: JSON.stringify(homework.attachments, null, 2)?.replace(/\00/g,''),
+        checksum: homework.checksum,
+        update_first_date_id: factHomework.update_first_date_id,
+        update_last_date_id: updateLastDateId,
+        update_count: factHomework.update_count + 1,
+        update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g,''),
+      });
+    }
+  }
+
+  // TODO check if in the same travailAFaire.json we cannot generate the same uniqueId
+  // for 2 different homework ids
+  computeHomeworkUniqueId(homework, factCourse, filePath) {
+    try {
+      let uniqueId = `${homework.subject}-${homework.assignedDate}-${homework.publicName}`;
+      if (factCourse == null) {
+        // worst case scenario where course cannot be deduced
+        // TODO could I deduce the course from assignedDate and subject ?
+        uniqueId = `${homework.dueDate}-${uniqueId}`;
+      } else {
+        console.log(factCourse);
+        uniqueId = `${factCourse.fact_key}-${uniqueId}`;
+      }
+      if (uniqueId in this.#homeworkUniqueId) {
+        let i = 1;
+        while (`${uniqueId}-${i}` in this.#homeworkUniqueId) {
+          i++;
+        }
+        uniqueId = `${uniqueId}-${i}`;
+        console.warn(`Duplicate unique ID for homework ID '${homework.id}' in '${filePath}' - new unique ID: '${uniqueId}'`);
+      }
+      this.#homeworkUniqueId[uniqueId] = homework.id;
+      return uniqueId;
+    } catch (e) {
+      console.error(e);
+      throw new Error(
+        `Error computing unique ID for homework ID '${homework.id}' in '${filePath}'`
+      );
+    }
   }
     
 }

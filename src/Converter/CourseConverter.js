@@ -32,8 +32,8 @@ export default class CourseConverter {
           console.error(`Duplicate course id: ${courseItem.id}`, courseItem);
           continue;
         }
-        result.coursesIdMapping[courseItem.id] = courseItem.courseItemId;
-        result.courses[courseItem.courseItemId] = courseItem;
+        result.coursesIdMapping[courseItem.id] = courseItem.key;
+        result.courses[courseItem.key] = courseItem;
       }
     }
     console.log( JSON.stringify(result));
@@ -48,8 +48,8 @@ export default class CourseConverter {
         subjects[item.Matiere.V.N] = item.Matiere.V.L;
       }
       const course = {
-        courseItemId: item.N,
-        courseId: item.cours.V.N,
+        id: item.N,
+        plannedCourseId: item.cours.V.N,
         locked: item.verrouille,
         // TODO listeGroupes, listeElementsProgrammeCDT
         subject: subjects[item.Matiere.V.N],
@@ -63,7 +63,7 @@ export default class CourseConverter {
         locked: item.verrouille,
         backgroundColor: item.CouleurFond
       };
-      course.id = this.computeCourseItemId(course);
+      course.key = this.computeCourseItemId(course);
       course.checksum = this.computeCourseItemChecksum(course);
       return course;
     } catch (e) {
@@ -87,8 +87,8 @@ export default class CourseConverter {
      const hash = crypto.createHash("md5");
      const contentList = Utils.removeKey(course.contentList, 'id');
      hash.update(JSON.stringify({
-        id: course.id,
         locked: course.locked,
+        subject: course.subject,
         homeworkDate: course.homeworkDate,
         contentList: contentList,
         description: course.description,

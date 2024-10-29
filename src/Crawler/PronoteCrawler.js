@@ -61,7 +61,6 @@ export default class PronoteCrawler {
         request.url().includes("pronote/appelfonction/2/")
       ) {
         const postDataObj = JSON.parse(postData);
-        postDataObj.crawlDate = new Date().toISOString();
         if (postDataObj?.nom === 'PageCahierDeTexte') {
           this.#writeCahierDeTexte(response, postDataObj);
         }
@@ -95,6 +94,7 @@ export default class PronoteCrawler {
     // Write response body
     response.text().then((text) => {
       const json = JSON.parse(text)
+      json.crawlDate = new Date().toISOString();
       fs.writeFile(targetFile, JSON.stringify(json, null, "  "), err => {
         if (err) {
           console.error(err);
