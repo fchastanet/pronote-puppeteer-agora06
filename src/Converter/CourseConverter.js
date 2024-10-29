@@ -3,9 +3,10 @@ import crypto from 'crypto';
 import Utils from '#pronote/Utils/Utils.js';
 
 export default class CourseConverter {
- 
-  constructor() {
+  #verbose;
+  constructor(verbose = false) {
     this.fromTypeConverter = new FromTypeConverter();
+    this.#verbose	= verbose;
   }
 
   fromPronote(data) {
@@ -36,7 +37,12 @@ export default class CourseConverter {
         result.courses[courseItem.key] = courseItem;
       }
     }
-    console.log( JSON.stringify(result));
+    if (this.#verbose) {
+      console.log('CourseConverter Subjects:');
+      console.log( JSON.stringify(result.subjects));
+      console.log('CourseConverter Courses:');
+      console.log( JSON.stringify(result.courses));
+    }
     return result;
   }
 
@@ -67,8 +73,7 @@ export default class CourseConverter {
       course.checksum = this.computeCourseItemChecksum(course);
       return course;
     } catch (e) {
-      console.error(e);
-      console.log(item);
+      console.error(e, item);
     }
     return null;
   }
@@ -77,8 +82,7 @@ export default class CourseConverter {
     try {
       return `${course.subject}-${course.startDate}-${course.endDate}-${course.teacherList.join('-')}`;
     } catch (e) {
-      console.error(e);
-      console.log(course);
+      console.error(e, course);
     }
     return null;
   }
@@ -108,8 +112,7 @@ export default class CourseConverter {
         attachmentList: item.ListePieceJointe.V.map(attachment => this.fromPronoteContentAttachment(attachment)),
       };
     } catch (e) {
-      console.error(e);
-      console.log(item);
+      console.error(e, item);
     }
     return null;
   }
@@ -124,8 +127,7 @@ export default class CourseConverter {
         isInternal: item.estUnLienInterne,
       };
     } catch (e) {
-      console.error(e);
-      console.log(item);
+      console.error(e, item);
       return null;
     }
   }

@@ -2,6 +2,10 @@ import { default as SqliteDatabase} from 'better-sqlite3'
 import Utils from '#pronote/Utils/Utils.js'
 
 export default class Database {
+  static FILE_PROCESSING_STATUS_WAITING = 0;
+  static FILE_PROCESSING_STATUS_PROCESSED = 1;
+  static FILE_PROCESSING_STATUS_ERROR = 0;
+
   db = null
 
   async init({databaseFile, verbose}) {
@@ -167,6 +171,13 @@ export default class Database {
       CREATE INDEX IF NOT EXISTS idx_fact_homework_assigned_date_id ON fact_homework(assigned_date_id);
     `;
 
+    const createProcessedFilesTable = `
+      CREATE TABLE IF NOT EXISTS processed_files (
+        file_id TEXT PRIMARY KEY,
+        processing_status INTEGER DEFAULT 0  -- enum (0: not processed, 1: processed, 2: error)
+      );
+    `;
+    
     this.db.exec(createDimStudentsTable);
     this.db.exec(createDimSchoolsTable);
     this.db.exec(createDimGradesTable);
@@ -175,6 +186,7 @@ export default class Database {
     this.db.exec(createDimDatesTable);
     this.db.exec(createFactCoursesTable);
     this.db.exec(createFactHomeworkTable);
+    this.db.exec(createProcessedFilesTable);
   }
 
   getStudentId(name) {
@@ -425,5 +437,20 @@ export default class Database {
     stmt.run(attachment.id, attachment.contentId, attachment.name, attachment.type, attachment.isInternal);
     return info.lastInsertRowid;
   }
+    
+  /**
+   * Insert a file into the processed_files table.
+   * @param {string} fileId - The ID of the file to insert.
+   * * @param {string} status - The processing status of the file to insert.
+   */
+  insertProcessedFile(fileId, status) {
+    const stmt = this.db.prepare('INSERT OR REPLACE INTO processed_files (file_id, processing_status) VALUES (?, ?)');
+    stmt.run(fileId, status);
+  }
 
+  isFileProcessed(fileId) {
+    const selectStmt = this.db.prepare('SELECT processing_status FROM processed_files WHERE file_id = ?');
+    const result = selectStmt.get(fileId);
+    return result?.processing_status == Database.FILE_PROCESSING_STATUS_PROCESSED;
+  }
 }

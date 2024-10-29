@@ -74,7 +74,7 @@ async function retrievePronoteData({resultDir, casUrl, login, password, debugMod
 async function processPronoteData({databaseFile, verbose, resultsDir}) {
   const database = new Database();
   database.init({databaseFile, verbose})
-  const dataProcessor = new DataProcessor(database, resultsDir)
+  const dataProcessor = new DataProcessor(database, resultsDir, verbose)
   dataProcessor.process()
 }
 

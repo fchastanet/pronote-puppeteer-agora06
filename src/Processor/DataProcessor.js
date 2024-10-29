@@ -11,6 +11,7 @@ export default class DataProcessor {
    * @private
    */
   #db
+  #verbose = false
   #homeworkConverter
   #courseConverter
   #resultsDir = "";
@@ -20,22 +21,22 @@ export default class DataProcessor {
   #courseIdFactMapping = {};
   #homeworkUniqueId = {};
   
-  constructor(db, resultsDir) {
+  constructor(db, resultsDir, verbose) {
     this.#db = db
     this.#resultsDir = resultsDir
     this.#homeworkConverter = new HomeworkConverter();
-    this.#courseConverter = new CourseConverter();
+    this.#courseConverter = new CourseConverter(verbose);
     this.#courseIdFactMapping = {};
+    this.#verbose = verbose;
   }
 
   process() {
     try {
       this.#db.createSchema()
 
-      // TODO
-      this.processStudentInfo(this.#resultsDir);
-      this.processCourses(this.#resultsDir);
-      this.processHomeworks(this.#resultsDir);
+      this.processFiles(this.#resultsDir, 'studentInfo.json', this.processStudentInfoCallback.bind(this));
+      this.processFiles(this.#resultsDir, 'cahierDeTexte-courses.json', this.processCoursesCallback.bind(this));
+      this.processFiles(this.#resultsDir, 'cahierDeTexte-travailAFaire.json', this.processHomeworksCallback.bind(this));
     } catch (error) {
       console.error('Unable to connect to the database:', error)
     } finally {
@@ -43,71 +44,98 @@ export default class DataProcessor {
     }
   }
 
-  processStudentInfo(resultsDir) {
+  processFiles(resultsDir, fileType, callback) {
     const subDirs = fs.readdirSync(resultsDir);
 
     subDirs.forEach(subDir => {
-      const filePath = path.join(resultsDir, subDir, 'studentInfo.json');
+      const subFilePath = path.join(subDir, fileType);
+      const filePath = path.join(resultsDir, subFilePath);
       if (fs.existsSync(filePath)) {
+        if (this.#db.isFileProcessed(subFilePath)) {
+          console.info(`File '${filePath}' already processed`);
+          return;
+        }
+        console.info(`Processing file '${filePath}' ...`);
+        this.#db.insertProcessedFile(subFilePath, Database.FILE_PROCESSING_STATUS_WAITING);
+
         // Read and parse the JSON file
-        const studentInfo = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        this.#studentId = this.#db.getStudentId(studentInfo.name)   
-        if (!this.#studentId) {
-          this.#studentId = this.#db.insertStudent(studentInfo.name)
+        const fileContent = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        try {
+          callback(resultsDir, subDir, filePath, fileContent);
+        } catch (error) {
+          console.error(`Unable to process file ${filePath}:`, error)
+          this.#db.insertProcessedFile(subFilePath, Database.FILE_PROCESSING_STATUS_ERROR);
+          return
         }
-        this.#schoolId = this.#db.getSchoolId(studentInfo.school)   
-        if (!this.#schoolId) {
-          this.#schoolId = this.#db.insertSchool(studentInfo.school)
-        }
-        this.#gradeId = this.#db.getGradeId(studentInfo.grade)   
-        if (!this.#gradeId) {
-          this.#gradeId = this.#db.insertGrade(studentInfo.grade)
-        }
-        
+        this.#db.insertProcessedFile(subFilePath, Database.FILE_PROCESSING_STATUS_PROCESSED);
       }
     });
   }
 
-  processCourses(resultsDir) {
-    const subDirs = fs.readdirSync(resultsDir);
+  processStudentInfoCallback(resultsDir, subDir, filePath, studentInfo) {
+    this.#studentId = this.#db.getStudentId(studentInfo.name)   
+    if (!this.#studentId) {
+      this.#studentId = this.#db.insertStudent(studentInfo.name)
+    }
+    this.#schoolId = this.#db.getSchoolId(studentInfo.school)   
+    if (!this.#schoolId) {
+      this.#schoolId = this.#db.insertSchool(studentInfo.school)
+    }
+    this.#gradeId = this.#db.getGradeId(studentInfo.grade)   
+    if (!this.#gradeId) {
+      this.#gradeId = this.#db.insertGrade(studentInfo.grade)
+    }
+  }
 
-    subDirs.forEach(subDir => {
-      const filePath = path.join(resultsDir, subDir, 'cahierDeTexte-courses.json');
-      if (fs.existsSync(filePath)) {
-        // Read and parse the JSON file
-        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        
-        const items = this.#courseConverter.fromPronote(data)
-        // Log the items to debug
-        console.log('Converted Items:', items);
+  processCoursesCallback(resultsDir, subDir, filePath, data) {
+    const items = this.#courseConverter.fromPronote(data)
+    // Log the items to debug
+    if (this.#verbose) {
+      console.debug('Converted Items:', items);
+    }
 
-        // Check if items is empty
-        if (items.length === 0) {
-          console.warn(`No items found in '${filePath}'`);
-        }
- 
-        const targetFile = path.join(resultsDir, subDir, "courses.json")
-        const jsonString = JSON.stringify(items, null, 2).replace(/\00/g,'');
-        fs.writeFileSync(targetFile, jsonString, 'utf8', err => {
-          if (err) {
-            console.error(err);
-            process.exit(1);
-          } else {
-            console.log(`Result written into '${targetFile}'`);
-          }
-        });
-        
-        // Process each item in ListeCahierDeTextes
-        for (const [_, course] of Object.entries(items.courses)) {
-          this.insertCourse(
-            course, 
-            data?.crawlDate ?? false, 
-            this.#schoolId, this.#gradeId, this.#studentId, filePath
-          );
-        }
+    // Check if items is empty
+    if (items.length === 0) {
+      console.warn(`No items found in '${filePath}'`);
+    }
+
+    const targetFile = path.join(resultsDir, subDir, "courses.json")
+    const jsonString = JSON.stringify(items, null, 2).replace(/\00/g,'');
+    fs.writeFileSync(targetFile, jsonString, 'utf8', err => {
+      if (err) {
+        console.error(err);
+        process.exit(1);
+      } else {
+        console.log(`Result written into '${targetFile}'`);
       }
     });
+    
+    // Process each item in ListeCahierDeTextes
+    for (const [_, course] of Object.entries(items.courses)) {
+      this.insertCourse(
+        course, 
+        data?.crawlDate ?? false, 
+        this.#schoolId, this.#gradeId, this.#studentId, filePath
+      );
+    }
   }
+
+  processHomeworksCallback(resultsDir, subDir, filePath, data) {
+    this.#homeworkUniqueId = {};
+
+    const homeworks = this.#homeworkConverter.fromPronote(data)
+
+    // Process each homework in travailAFaire
+    for (const [_, homework] of Object.entries(homeworks)) {
+      this.insertHomework(
+        homework, 
+        data?.crawlDate ?? false,
+        this.#schoolId, this.#gradeId, this.#studentId, filePath
+      );
+    }
+  }
+
+  
 
   insertCourse(course, crawlDate, schoolId, gradeId, studentId, filePath) {
     // Insert course
@@ -209,31 +237,6 @@ export default class DataProcessor {
     if (factCourseId !== null) {
       this.#courseIdFactMapping[course.id] = {fact_id: factCourseId, fact_key: course.key};
     }
-  }
-
-  processHomeworks(resultsDir) {
-    const subDirs = fs.readdirSync(resultsDir);
-
-    subDirs.forEach(subDir => {
-      const filePath = path.join(resultsDir, subDir, 'cahierDeTexte-travailAFaire.json');
-      if (fs.existsSync(filePath)) {
-        this.#homeworkUniqueId = {};
-
-        // Read and parse the JSON file
-        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        
-        const homeworks = this.#homeworkConverter.fromPronote(data)
-
-        // Process each homework in travailAFaire
-        for (const [_, homework] of Object.entries(homeworks)) {
-          this.insertHomework(
-            homework, 
-            data?.crawlDate ?? false,
-            this.#schoolId, this.#gradeId, this.#studentId, filePath
-          );
-        }
-      }
-    });
   }
 
   insertHomework(homework, crawlDate, schoolId, gradeId, studentId, filePath) {
@@ -352,7 +355,6 @@ export default class DataProcessor {
         // TODO could I deduce the course from assignedDate and subject ?
         uniqueId = `${homework.dueDate}-${uniqueId}`;
       } else {
-        console.log(factCourse);
         uniqueId = `${factCourse.fact_key}-${uniqueId}`;
       }
       if (uniqueId in this.#homeworkUniqueId) {
