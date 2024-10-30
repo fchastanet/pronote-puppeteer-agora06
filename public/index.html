@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Homework Metrics</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style type="text/css">
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    h2 {
+      margin-top: 20px;
+    }
+
+    canvas {
+      margin: 20px auto;
+      display: block;
+    }
+
+  </style>
+</head>
+<body>
+  <h1>Homework Metrics</h1>
+
+  <h2>Homework Completion Rate</h2>
+  <canvas id="completionRateChart"></canvas>
+
+  <h2>Homework Completion Timeliness</h2>
+  <canvas id="onTimeCompletionRateChart"></canvas>
+
+  <h2>Average Homework Duration</h2>
+  <canvas id="averageDurationChart"></canvas>
+
+  <h2>Homework Load Per Week</h2>
+  <canvas id="homeworkLoadPerWeekChart"></canvas>
+
+  <h2>Homework Load Per Subject</h2>
+  <canvas id="homeworkLoadPerSubjectChart"></canvas>
+
+  <h2>Homework Completion Per Subject</h2>
+  <canvas id="completionPerSubjectChart"></canvas>
+
+  <script>
+    fetch('metrics.json')
+      .then(response => response.json())
+      .then(data => {
+        // Homework Completion Rate
+        new Chart(document.getElementById('completionRateChart'), {
+          type: 'doughnut',
+          data: {
+            labels: ['Completed', 'Not Completed'],
+            datasets: [{
+              data: [data.completionRate, 100 - data.completionRate],
+              backgroundColor: ['#4caf50', '#f44336']
+            }]
+          }
+        });
+        
+        // Homework Completion Timeliness
+        new Chart(document.getElementById('onTimeCompletionRateChart'), {
+          type: 'doughnut',
+          data: {
+            labels: ['On Time', 'Late'],
+            datasets: [{
+              data: [data.onTimeCompletionRate, 100 - data.onTimeCompletionRate],
+              backgroundColor: ['#4caf50', '#f44336']
+            }]
+          }
+        });
+
+        // Average Homework Duration
+        new Chart(document.getElementById('averageDurationChart'), {
+          type: 'bar',
+          data: {
+            labels: ['Average Duration'],
+            datasets: [{
+              label: 'Minutes',
+              data: [data.averageDuration],
+              backgroundColor: ['#2196f3']
+            }]
+          }
+        });
+
+        // Homework Load Per Week
+        new Chart(document.getElementById('homeworkLoadPerWeekChart'), {
+          type: 'line',
+          data: {
+            labels: data.homeworkLoadPerWeek.map(item => item.week),
+            datasets: [{
+              label: 'Homework Count',
+              data: data.homeworkLoadPerWeek.map(item => item.count),
+              backgroundColor: ['#ff9800'],
+              borderColor: ['#ff9800'],
+              fill: false
+            }]
+          }
+        });
+
+        // Homework Load Per Subject
+        new Chart(document.getElementById('homeworkLoadPerSubjectChart'), {
+          type: 'bar',
+          data: {
+            labels: data.homeworkLoadPerSubject.map(item => item.subject),
+            datasets: [{
+              label: 'Homework Count',
+              data: data.homeworkLoadPerSubject.map(item => item.count),
+              backgroundColor: ['#9c27b0']
+            }]
+          }
+        });
+
+        // Homework Completion Per Subject
+        new Chart(document.getElementById('completionPerSubjectChart'), {
+          type: 'bar',
+          data: {
+            labels: data.completionPerSubject.map(item => item.subject),
+            datasets: [{
+              label: 'Completion Rate (%)',
+              data: data.completionPerSubject.map(item => item.completionRate),
+              backgroundColor: ['#4caf50']
+            }]
+          }
+        });
+      });
+  </script>
+</body>
+</html>

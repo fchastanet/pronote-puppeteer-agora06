@@ -5,6 +5,7 @@ import Crawler from '#pronote/Crawler/Crawler.js';
 import PronoteCrawler from '#pronote/Crawler/PronoteCrawler.js';
 import Database from '#pronote/Database/Database.js'
 import DataProcessor from '#pronote/Processor/DataProcessor.js'
+import HttpServer from '#pronote/HttpServer/HttpServer.js'
 import {Command} from 'commander'
 
 let browser = null;
@@ -89,6 +90,7 @@ function parseCommandOptions(argv) {
     .option('-v, --verbose', 'Activates verbose mode (details loaded pages, ...).', false)
     .option('--skip-pronote', 'Skips pronote data retrieval.', false)
     .option('--skip-data-process', 'Skips data process.', false)
+    .option('--server', 'Launch internal http server to serve html files.', false)
     .parse(argv);
 
   return command.opts();
@@ -136,8 +138,10 @@ async function main() {
   } else if (commandOptions.verbose) {
     console.debug("Pronote data processing skipped.")
   }
+  if (commandOptions.server) {
+    const server = new HttpServer()
+    server.start();
+  }
 }
 
 await main();
-
-process.exit(0)
