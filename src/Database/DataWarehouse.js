@@ -1,26 +1,18 @@
-import { default as SqliteDatabase} from 'better-sqlite3'
 import Utils from '#pronote/Utils/Utils.js'
+import DatabaseConnection from './DatabaseConnection.js';
 
-export default class Database {
+export default class DataWarehouse {
   static FILE_PROCESSING_STATUS_WAITING = 0;
   static FILE_PROCESSING_STATUS_PROCESSED = 1;
   static FILE_PROCESSING_STATUS_ERROR = 0;
 
-  db = null
+  /**
+   * @type {DatabaseConnection}
+   */
+  #db = null
 
-  async init({databaseFile, verbose}) {
-    const opts = {}
-    if (verbose) {
-      opts.verbose = console.log
-    }
-    this.db = new SqliteDatabase(databaseFile, opts)
-    this.db.pragma('journal_mode = WAL') // it is generally important to set the WAL pragma for performance reasons.
-  }
-
-  close() {
-    if (this.db) {
-      this.db.close()
-    }
+  constructor(databaseConnection) {
+    this.#db = databaseConnection
   }
 
   createSchema() {
@@ -178,43 +170,43 @@ export default class Database {
       );
     `;
     
-    this.db.exec(createDimStudentsTable);
-    this.db.exec(createDimSchoolsTable);
-    this.db.exec(createDimGradesTable);
-    this.db.exec(createDimSubjectsTable);
-    this.db.exec(createDimTeachersTable);
-    this.db.exec(createDimDatesTable);
-    this.db.exec(createFactCoursesTable);
-    this.db.exec(createFactHomeworkTable);
-    this.db.exec(createProcessedFilesTable);
+    this.#db.exec(createDimStudentsTable);
+    this.#db.exec(createDimSchoolsTable);
+    this.#db.exec(createDimGradesTable);
+    this.#db.exec(createDimSubjectsTable);
+    this.#db.exec(createDimTeachersTable);
+    this.#db.exec(createDimDatesTable);
+    this.#db.exec(createFactCoursesTable);
+    this.#db.exec(createFactHomeworkTable);
+    this.#db.exec(createProcessedFilesTable);
   }
 
   getStudentId(name) {
-    const stmt = this.db.prepare('SELECT student_id FROM dim_students WHERE name = ?');
+    const stmt = this.#db.prepare('SELECT student_id FROM dim_students WHERE name = ?');
     const row = stmt.get(name);
     return row ? row.student_id : null;
   }
 
   getSubjectId(subject) {
-    const stmt = this.db.prepare('SELECT subject_id FROM dim_subjects WHERE subject = ?');
+    const stmt = this.#db.prepare('SELECT subject_id FROM dim_subjects WHERE subject = ?');
     const row = stmt.get(subject);
     return row ? row.subject_id : null;
   }
   
   getSchoolId(name) {
-    const stmt = this.db.prepare('SELECT school_id FROM dim_schools WHERE name = ?');
+    const stmt = this.#db.prepare('SELECT school_id FROM dim_schools WHERE name = ?');
     const row = stmt.get(name);
     return row ? row.school_id : null;
   }
 
   getGradeId(name) {
-    const stmt = this.db.prepare('SELECT grade_id FROM dim_grades WHERE name = ?');
+    const stmt = this.#db.prepare('SELECT grade_id FROM dim_grades WHERE name = ?');
     const row = stmt.get(name);
     return row ? row.grade_id : null;
   }
 
   getTeacherId(name, subjectId) {
-    const stmt = this.db.prepare('SELECT teacher_id FROM dim_teachers WHERE name = ? AND subject_id = ?');
+    const stmt = this.#db.prepare('SELECT teacher_id FROM dim_teachers WHERE name = ? AND subject_id = ?');
     const row = stmt.get(name, subjectId);
     return row ? row.teacher_id : null;
   }
@@ -226,49 +218,49 @@ export default class Database {
     if (typeof date?.toISOString === 'function') {
       date = date.toISOString();
     }
-    const stmt = this.db.prepare('SELECT date_id FROM dim_dates WHERE date = ?');
+    const stmt = this.#db.prepare('SELECT date_id FROM dim_dates WHERE date = ?');
     const row = stmt.get(date);
     return row ? row.date_id : null;
   }
 
   getContentId(contentId) {
-    const stmt = this.db.prepare('SELECT id FROM content WHERE id = ?');
+    const stmt = this.#db.prepare('SELECT id FROM content WHERE id = ?');
     const row = stmt.get(contentId);
     return row ? row.id : null;
   }
 
   getAttachmentId(attachmentId) {
-    const stmt = this.db.prepare('SELECT id FROM attachments WHERE id = ?');
+    const stmt = this.#db.prepare('SELECT id FROM attachments WHERE id = ?');
     const row = stmt.get(attachmentId);
     return row ? row.id : null;
   }
 
   insertStudent(name) {
-    const stmt = this.db.prepare('INSERT INTO dim_students (name) VALUES (?)');
+    const stmt = this.#db.prepare('INSERT INTO dim_students (name) VALUES (?)');
     const info = stmt.run(name);
     return info.lastInsertRowid;
   }
 
   insertSchool(name) {
-    const stmt = this.db.prepare('INSERT INTO dim_schools (name) VALUES (?)');
+    const stmt = this.#db.prepare('INSERT INTO dim_schools (name) VALUES (?)');
     const info = stmt.run(name);
     return info.lastInsertRowid;
   }
 
   insertGrade(name) {
-    const stmt = this.db.prepare('INSERT INTO dim_grades (name) VALUES (?)');
+    const stmt = this.#db.prepare('INSERT INTO dim_grades (name) VALUES (?)');
     const info = stmt.run(name);
     return info.lastInsertRowid;
   }
 
   insertSubject({subject, backgroundColor}) {
-    const stmt = this.db.prepare('INSERT INTO dim_subjects (subject, backgroundColor) VALUES (?, ?)');
+    const stmt = this.#db.prepare('INSERT INTO dim_subjects (subject, backgroundColor) VALUES (?, ?)');
     const info = stmt.run(subject, backgroundColor);
     return info.lastInsertRowid;
   }
 
   insertTeacher(name, subjectId) {
-    const stmt = this.db.prepare('INSERT INTO dim_teachers (name, subject_id) VALUES (?, ?)');
+    const stmt = this.#db.prepare('INSERT INTO dim_teachers (name, subject_id) VALUES (?, ?)');
     const info = stmt.run(name, subjectId);
     return info.lastInsertRowid;
   }
@@ -280,7 +272,7 @@ export default class Database {
     } else {
       throw new Exception('Date is null');
     }
-    const stmt = this.db.prepare('INSERT INTO dim_dates (date, year, month, day, weekday, hour, minute, second, millisecond) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    const stmt = this.#db.prepare('INSERT INTO dim_dates (date, year, month, day, weekday, hour, minute, second, millisecond) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
     const info = stmt.run(
       date_time_formatted, 
       date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getDay(), 
@@ -290,7 +282,7 @@ export default class Database {
   }
 
   getFactCourse(fact_key) {
-    const stmt = this.db.prepare('SELECT * FROM fact_courses WHERE fact_key = ?');
+    const stmt = this.#db.prepare('SELECT * FROM fact_courses WHERE fact_key = ?');
     return stmt.get(fact_key);
   }
 
@@ -300,7 +292,7 @@ export default class Database {
     content_list, checksum, locked,
     update_first_date_id, update_last_date_id, update_count, update_files
   }) {
-    const stmt = this.db.prepare(`
+    const stmt = this.#db.prepare(`
       INSERT INTO fact_courses (
         fact_key, subject_id, student_id, school_id, grade_id, 
         teacher_id, start_date_id, end_date_id, homework_date_id, 
@@ -324,7 +316,7 @@ export default class Database {
     content_list, checksum, locked,
     update_first_date_id, update_last_date_id, update_count, update_files
   }) {
-    const stmt = this.db.prepare(`
+    const stmt = this.#db.prepare(`
       UPDATE fact_courses SET 
         subject_id = ?, student_id = ?, school_id = ?, grade_id = ?, 
         teacher_id = ?, start_date_id = ?, end_date_id = ?, homework_date_id = ?, 
@@ -343,7 +335,7 @@ export default class Database {
   }
 
   getFactHomework(fact_key) {
-    const stmt = this.db.prepare('SELECT * FROM fact_homework WHERE fact_key = ?');
+    const stmt = this.#db.prepare('SELECT * FROM fact_homework WHERE fact_key = ?');
     return stmt.get(fact_key);
   }
 
@@ -354,7 +346,7 @@ export default class Database {
     public_name, themes, attachments, 
     checksum, update_count, update_first_date_id, update_last_date_id, update_files
   }) {
-    const stmt = this.db.prepare(`
+    const stmt = this.#db.prepare(`
       INSERT INTO fact_homework (
         fact_key, fact_course_id, student_id, school_id, grade_id,
         subject_id, due_date_id, assigned_date_id, description, formatted, requires_submission, 
@@ -390,7 +382,7 @@ export default class Database {
     public_name, themes, attachments, 
     checksum, update_count, update_first_date_id, update_last_date_id, update_files
   }) {
-    const stmt = this.db.prepare(`
+    const stmt = this.#db.prepare(`
       UPDATE fact_homework SET
         fact_course_id = ?, student_id = ?, school_id = ?, grade_id = ?,
         subject_id = ?, due_date_id = ?, assigned_date_id = ?, description = ?, formatted = ?, requires_submission = ?, 
@@ -421,7 +413,7 @@ export default class Database {
   }
 
   insertContent(content) {
-    const stmt = this.db.prepare(`
+    const stmt = this.#db.prepare(`
       INSERT INTO content (id, courseItemId, description, date, endDate)
       VALUES (?, ?, ?, ?, ?)
     `);
@@ -430,7 +422,7 @@ export default class Database {
   }
 
   insertAttachment(attachment) {
-    const stmt = this.db.prepare(`
+    const stmt = this.#db.prepare(`
       INSERT INTO attachments (id, contentId, name, type, isInternal)
       VALUES (?, ?, ?, ?, ?)
     `);
@@ -444,13 +436,13 @@ export default class Database {
    * * @param {string} status - The processing status of the file to insert.
    */
   insertProcessedFile(fileId, status) {
-    const stmt = this.db.prepare('INSERT OR REPLACE INTO processed_files (file_id, processing_status) VALUES (?, ?)');
+    const stmt = this.#db.prepare('INSERT OR REPLACE INTO processed_files (file_id, processing_status) VALUES (?, ?)');
     stmt.run(fileId, status);
   }
 
   isFileProcessed(fileId) {
-    const selectStmt = this.db.prepare('SELECT processing_status FROM processed_files WHERE file_id = ?');
+    const selectStmt = this.#db.prepare('SELECT processing_status FROM processed_files WHERE file_id = ?');
     const result = selectStmt.get(fileId);
-    return result?.processing_status == Database.FILE_PROCESSING_STATUS_PROCESSED;
+    return result?.processing_status == DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED;
   }
 }

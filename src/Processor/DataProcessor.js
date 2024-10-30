@@ -1,13 +1,13 @@
 import path from 'path';
 import fs from 'fs';
 import Utils from '#pronote/Utils/Utils.js';
-import Database from "#pronote/Database/Database.js";
 import HomeworkConverter from "#pronote/Converter/HomeworkConverter.js";
 import CourseConverter from "#pronote/Converter/CourseConverter.js";
+import DataWarehouse from '#pronote/Database/DataWarehouse.js';
 
 export default class DataProcessor {
   /**
-   * @type {Database}
+   * @type {DataWarehouse}
    * @private
    */
   #db
@@ -39,8 +39,6 @@ export default class DataProcessor {
       this.processFiles(this.#resultsDir, 'cahierDeTexte-travailAFaire.json', this.processHomeworksCallback.bind(this));
     } catch (error) {
       console.error('Unable to connect to the database:', error)
-    } finally {
-      this.#db.close()
     }
   }
 
@@ -56,7 +54,7 @@ export default class DataProcessor {
           return;
         }
         console.info(`Processing file '${filePath}' ...`);
-        this.#db.insertProcessedFile(subFilePath, Database.FILE_PROCESSING_STATUS_WAITING);
+        this.#db.insertProcessedFile(subFilePath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING);
 
         // Read and parse the JSON file
         const fileContent = JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -64,10 +62,10 @@ export default class DataProcessor {
           callback(resultsDir, subDir, filePath, fileContent);
         } catch (error) {
           console.error(`Unable to process file ${filePath}:`, error)
-          this.#db.insertProcessedFile(subFilePath, Database.FILE_PROCESSING_STATUS_ERROR);
+          this.#db.insertProcessedFile(subFilePath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR);
           return
         }
-        this.#db.insertProcessedFile(subFilePath, Database.FILE_PROCESSING_STATUS_PROCESSED);
+        this.#db.insertProcessedFile(subFilePath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED);
       }
     });
   }

@@ -1,10 +1,14 @@
+import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import Utils from '#pronote/Utils/Utils.js';
 import Crawler from '#pronote/Crawler/Crawler.js';
 import PronoteCrawler from '#pronote/Crawler/PronoteCrawler.js';
-import Database from '#pronote/Database/Database.js'
+import DatabaseConnection from './Database/DatabaseConnection.js';
+import DataWarehouse from '#pronote/Database/DataWarehouse.js'
+import DataMetrics from '#pronote/Database/DataMetrics.js'
 import DataProcessor from '#pronote/Processor/DataProcessor.js'
+import MetricsProcessor from '#pronote/Processor/MetricsProcessor.js'
 import HttpServer from '#pronote/HttpServer/HttpServer.js'
 import {Command} from 'commander'
 
@@ -12,10 +16,7 @@ let browser = null;
 
 // -----------------------------------------------------------------------------
 // Handle process exit
-// @see https://stackoverflow.com/a/14032965
 // -----------------------------------------------------------------------------
-process.stdin.resume(); // so the program will not close instantly
-
 function exitHandler(options, exitCode) {
     if (options.cleanup) {
       if (browser !== null) {
@@ -72,11 +73,16 @@ async function retrievePronoteData({resultDir, casUrl, login, password, debugMod
   }
 }
 
-async function processPronoteData({databaseFile, verbose, resultsDir}) {
-  const database = new Database();
-  database.init({databaseFile, verbose})
-  const dataProcessor = new DataProcessor(database, resultsDir, verbose)
+function processPronoteDataWarehouse({databaseConnection, verbose, resultsDir}) {
+  const dataWarehouse = new DataWarehouse(databaseConnection)
+  const dataProcessor = new DataProcessor(dataWarehouse, resultsDir, verbose)
   dataProcessor.process()
+}
+
+async function processPronoteDataMetrics({databaseConnection, verbose, resultsDir}) {
+  const dataMetrics = new DataMetrics(databaseConnection)
+  const metricsProcessor = new MetricsProcessor(dataMetrics, resultsDir, verbose)
+  return await metricsProcessor.process()
 }
 
 function parseCommandOptions(argv) {
@@ -90,6 +96,7 @@ function parseCommandOptions(argv) {
     .option('-v, --verbose', 'Activates verbose mode (details loaded pages, ...).', false)
     .option('--skip-pronote', 'Skips pronote data retrieval.', false)
     .option('--skip-data-process', 'Skips data process.', false)
+    .option('--skip-data-metrics', 'Skips data metrics.', false)
     .option('--server', 'Launch internal http server to serve html files.', false)
     .parse(argv);
 
@@ -106,42 +113,83 @@ async function main() {
 
   const currentDate = Utils.formatDate(new Date());
   const resultsDir = path.join(process.cwd(), process.env.RESULTS_DIR)
+  const publicDir = path.join(process.cwd(), process.env.PUBLIC_DIR)
   const currentResultDir = path.join(resultsDir, currentDate);
 
   const commandOptions = parseCommandOptions(process.argv)
-  
+  const databaseConnection = new DatabaseConnection(databaseFile, commandOptions.verbose);
 
-  if (!commandOptions.skipPronote) {
-    if (commandOptions.verbose) {
-      console.debug("Retrieving Pronote data ...")
+  try {
+    if (!commandOptions.skipPronote) {
+      if (commandOptions.verbose) {
+        console.debug("Retrieving Pronote data ...")
+      }
+      await retrievePronoteData({
+        resultDir: currentResultDir, 
+        casUrl, login, password, 
+        debug: commandOptions.debug, 
+        verbose: commandOptions.verbose
+      });
+      if (commandOptions.verbose) {
+        console.debug("Pronote data retrieved")
+      }
+    } else if (commandOptions.verbose) {
+      console.debug("Pronote data retrieval skipped.")
     }
-    await retrievePronoteData({
-      resultDir: currentResultDir, 
-      casUrl, login, password, 
-      debug: commandOptions.debug, 
-      verbose: commandOptions.verbose
-    });
-    if (commandOptions.verbose) {
-      console.debug("Pronote data retrieved")
+
+    if (!commandOptions.skipDataProcess) {
+      if (commandOptions.verbose) {
+        console.debug("Pronote data warehouse processing ...")
+      }
+      processPronoteDataWarehouse({databaseConnection, verbose: commandOptions.verbose, resultsDir});
+      if (commandOptions.verbose) {
+        console.debug("Pronote data warehouse processed.")
+      }
+    } else if (commandOptions.verbose) {
+      console.debug("Pronote data warehouse processing skipped.")
     }
-  } else if (commandOptions.verbose) {
-    console.debug("Pronote data retrieval skipped.")
+
+    if (!commandOptions.skipDataMetrics) {
+      if (commandOptions.verbose) {
+        console.debug("Pronote data metrics processing ...")
+      }
+      const metrics = await processPronoteDataMetrics({databaseConnection, verbose: commandOptions.verbose})
+      const jsonString = JSON.stringify(metrics, null, 2).replace(/\00/g,'')
+      const targetFile = path.join(publicDir, 'metrics.json')
+      console.debug(`Writing metrics to '${targetFile}'.`)
+      if (commandOptions.verbose) {
+        console.debug(`Metrics: ${jsonString}`)
+      }
+      fs.writeFileSync(
+        targetFile, 
+        jsonString, 
+        'utf8', 
+        err => {
+          if (err) {
+            console.error(err);
+            process.exit(1);
+          } else {
+            console.log(`Result written into '${targetFile}'`);
+          }
+        }
+      )
+      if (commandOptions.verbose) {
+        console.debug("Pronote data metrics processed.")
+      }
+    } else if (commandOptions.verbose) {
+      console.debug("Pronote data metrics processing skipped.")
+    }
+
+    
+    if (commandOptions.server) {
+      const server = new HttpServer()
+      server.start();
+    }
+  
+  } finally {
+    databaseConnection.close();
   }
-  if (!commandOptions.skipDataProcess) {
-    if (commandOptions.verbose) {
-      console.debug("Pronote data processing ...")
-    }
-    await processPronoteData({databaseFile, verbose: commandOptions.verbose, resultsDir});
-    if (commandOptions.verbose) {
-      console.debug("Pronote data processed.")
-    }
-  } else if (commandOptions.verbose) {
-    console.debug("Pronote data processing skipped.")
-  }
-  if (commandOptions.server) {
-    const server = new HttpServer()
-    server.start();
-  }
+  
 }
 
 await main();

@@ -182,6 +182,8 @@ Let's start simple with static site generation for the moment.
 
 ### Measures
 
+Generate notifications when new homework.
+
 #### Homework Completion Rate
 
 This metric helps you understand the overall completion rate of homework assignments.
