@@ -13,10 +13,11 @@
     "axios-cookiejar-support": "^5.0.3",
     "better-sqlite3": "^11.5.0",
     "commander": "^12.1.0",
+    "dayjs": "^1.11.13",
     "dotenv": "^16.4.5",
+    "express": "^4.21.1",
     "puppeteer": "^23.6.0",
-    "tough-cookie": "^5.0.0",
-    "express": "^4.21.1"
+    "tough-cookie": "^5.0.0"
   },
   "scripts": {
     "start": "node ./src/index.js"

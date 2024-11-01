@@ -1,9 +1,9 @@
 import path from 'path';
 import fs from 'fs';
-import Utils from '#pronote/Utils/Utils.js';
 import HomeworkConverter from "#pronote/Converter/HomeworkConverter.js";
 import CourseConverter from "#pronote/Converter/CourseConverter.js";
 import DataWarehouse from '#pronote/Database/DataWarehouse.js';
+import DateWrapper from '#pronote/Utils/DateWrapper.js';
 
 export default class DataProcessor {
   /**
@@ -158,7 +158,7 @@ export default class DataProcessor {
     // Insert dates
     let startDateId = this.#db.getDateId(course.startDate);
     if (!startDateId && course.startDate !== null) {
-      const startDate = Utils.parseFrenchDate(course.startDate);
+      const startDate = DateWrapper.parseDate(course.startDate);
       if (startDate !== null) {
         startDateId = this.#db.insertDate(startDate);
       }
@@ -166,7 +166,7 @@ export default class DataProcessor {
 
     let endDateId = this.#db.getDateId(course.endDate);
     if (!endDateId && course.endDate !== null) {
-      const endDate = Utils.parseFrenchDate(course.endDate);
+      const endDate = DateWrapper.parseDate(course.endDate);
       if (endDate !== null) {
         endDateId = this.#db.insertDate(endDate);
       }
@@ -174,13 +174,13 @@ export default class DataProcessor {
 
     let homeworkDateId = this.#db.getDateId(course.homeworkDate);
     if (!homeworkDateId && course.homeworkDate !== null) {
-      const homeworkDate = Utils.parseFrenchDate(course.homeworkDate);
+      const homeworkDate = DateWrapper.parseDate(course.homeworkDate);
       if (homeworkDate !== null) {
         homeworkDateId = this.#db.insertDate(homeworkDate);
       }
     }
 
-    let updateLastDate = crawlDate ? new Date(crawlDate) : new Date();
+    let updateLastDate = crawlDate ? new DateWrapper(crawlDate) : new DateWrapper();
     let updateLastDateId = this.#db.getDateId(updateLastDate);
     if (!updateLastDateId) {
       updateLastDateId = this.#db.insertDate(updateLastDate);
@@ -191,7 +191,7 @@ export default class DataProcessor {
     let updateFiles = [];
     let factCourseId = null;
     if (typeof factCourse === 'undefined') {
-      updateFiles.push({filePath, checksum: course.checksum});
+      updateFiles.push({filePath, checksum: course.checksum, id: course.id});
       factCourseId = this.#db.insertFactCourse({
         fact_key: course.key,
         student_id: studentId,
@@ -212,7 +212,7 @@ export default class DataProcessor {
       });
     } else if (course.checksum != factCourse.checksum) {
       updateFiles = JSON.parse(factCourse.update_files);
-      updateFiles.push({filePath, checksum: course.checksum});
+      updateFiles.push({filePath, checksum: course.checksum, id: course.id});
       factCourseId = this.#db.updateFactCourse({
         fact_key: course.key,
         student_id: studentId,
@@ -250,7 +250,7 @@ export default class DataProcessor {
     // Insert dates
     let dueDateId = this.#db.getDateId(homework.dueDate);
     if (!dueDateId && homework.dueDate !== null) {
-      const dueDate = Utils.parseFrenchDate(homework.dueDate);
+      const dueDate = DateWrapper.parseDate(homework.dueDate);
       if (dueDate !== null) {
         dueDateId = this.#db.insertDate(dueDate);
       }
@@ -258,13 +258,13 @@ export default class DataProcessor {
 
     let assignedDateId = this.#db.getDateId(homework.assignedDate);
     if (!assignedDateId && homework.assignedDate !== null) {
-      const assignedDate = Utils.parseFrenchDate(homework.assignedDate);
+      const assignedDate = DateWrapper.parseDate(homework.assignedDate);
       if (assignedDate !== null) {
         assignedDateId = this.#db.insertDate(assignedDate);
       }
     }
 
-    let updateLastDate = crawlDate ? new Date(crawlDate) : new Date();
+    let updateLastDate = crawlDate ? new DateWrapper(crawlDate) : new DateWrapper();
     let updateLastDateId = this.#db.getDateId(updateLastDate);
     if (!updateLastDateId) {
       updateLastDateId = this.#db.insertDate(updateLastDate);
@@ -284,7 +284,7 @@ export default class DataProcessor {
     let updateFiles = [];
     let factHomeworkId = null;
     if (typeof factHomework === 'undefined') {
-      updateFiles.push({filePath, checksum: homework.checksum});
+      updateFiles.push({filePath, checksum: homework.checksum, id: homework.id});
       factHomeworkId = this.#db.insertFactHomework({
         fact_key: homeworkKey,
         fact_course_id: factCourse?.fact_id ?? null,
@@ -313,7 +313,7 @@ export default class DataProcessor {
       });
     } else if (homework.checksum != factHomework.checksum) {
       updateFiles = JSON.parse(factHomework.update_files);
-      updateFiles.push({filePath, checksum: homework.checksum});
+      updateFiles.push({filePath, checksum: homework.checksum, id: homework.id});
       factHomeworkId = this.#db.updateFactHomework({
         fact_key: homeworkKey,
         fact_course_id: factCourse?.fact_id ?? null,

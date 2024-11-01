@@ -37,17 +37,18 @@ export default class DataMetrics {
       FROM fact_homework;
     `;
     const result = await this.#db.get(query);
-    return result.averageDuration;
+      return result.averageDuration;
   }
 
   async getHomeworkLoadPerWeek() {
     const query = `
       SELECT 
-        strftime('%Y-%W', assigned_date_id) AS week,
+        CONCAT(dim_dates.year, '-', dim_dates.week) AS week,
         COUNT(*) AS count
       FROM fact_homework
-      GROUP BY week
-      ORDER BY week;
+      JOIN dim_dates ON fact_homework.assigned_date_id = dim_dates.date_id
+      GROUP BY dim_dates.week
+      ORDER BY dim_dates.year, dim_dates.week;
     `;
     const result = await this.#db.all(query);
     return result;

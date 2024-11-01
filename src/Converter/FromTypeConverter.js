@@ -1,3 +1,5 @@
+import DateWrapper from "#pronote/Utils/DateWrapper.js";
+
 export default class FromTypeConverter {
 
   fromPronote(obj, valueContext = null) {
@@ -46,31 +48,6 @@ export default class FromTypeConverter {
     return result;
   }
 
-
-  parseDate(str) {
-    const date = new Date();
-    const split = str.split(' ');
-
-    const day = split[0].split('/');
-
-    date.setFullYear(~~day[2], (~~day[1]) - 1, ~~day[0]);
-    date.setMilliseconds(0);
-
-    if (split.length > 1) {
-      const time = split[1].split(':');
-
-      date.setHours(~~time[0]);
-      date.setMinutes(~~time[1]);
-      date.setSeconds(~~time[2]);
-    } else {
-      date.setHours(0);
-      date.setMinutes(0);
-      date.setSeconds(0);
-    }
-
-    return date;
-  }
-
   parseRange(str) {
     const content = str.substring(1, str.length - 1).split(',');
     const result = [];
@@ -103,7 +80,7 @@ export default class FromTypeConverter {
 
     switch (type) {
       case 7: // Date
-        return this.parseDate(value);
+        return DateWrapper.parseDate(value);
       case 8: // ? (Range)
       case 11: // ? (Range)
       case 26: // ? (Range)

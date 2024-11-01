@@ -1,3 +1,4 @@
+import DateWrapper from '#pronote/Utils/DateWrapper.js';
 import Utils from '#pronote/Utils/Utils.js'
 import DatabaseConnection from './DatabaseConnection.js';
 
@@ -60,15 +61,16 @@ export default class DataWarehouse {
         date DATETIME,
         year INTEGER,
         month INTEGER,
-        day INTEGER,
+        week INTEGER,
         weekday INTEGER,
+        day INTEGER,
         hour INTEGER,
         minute INTEGER,
         second INTEGER,
         millisecond INTEGER
       );
       CREATE INDEX IF NOT EXISTS idx_dates_date ON dim_dates(date);
-      CREATE INDEX IF NOT EXISTS idx_dates_year_month_day ON dim_dates(year, month, day);
+      CREATE INDEX IF NOT EXISTS idx_dates_year_month_week_day ON dim_dates(year, month, week, weekday, day);
     `;
     const createFactCoursesTable = `
       CREATE TABLE IF NOT EXISTS fact_courses (
@@ -265,20 +267,35 @@ export default class DataWarehouse {
     return info.lastInsertRowid;
   }
 
+  /**
+   * 
+   * @param {DateWrapper} date 
+   * @returns 
+   */
   insertDate(date) {
     let date_time_formatted = null
     if (date) {
-      date_time_formatted = Utils.formatFullDate(date);
+      date_time_formatted = date.formatFullDate();
     } else {
-      throw new Exception('Date is null');
+      throw new Error('Date is null');
     }
-    const stmt = this.#db.prepare('INSERT INTO dim_dates (date, year, month, day, weekday, hour, minute, second, millisecond) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    const info = stmt.run(
-      date_time_formatted, 
-      date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getDay(), 
-      date.getHours(), date.getMinutes(), date.getSeconds(), date.getMilliseconds()
-    );
-    return info.lastInsertRowid;
+    const stmt = this.#db.prepare(`INSERT INTO dim_dates(
+        date, year, month, 
+        week, weekday, day,
+        hour, minute, second, millisecond
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    try {
+      const data = [
+        date_time_formatted, date.getYear(), date.getMonth(), 
+        date.getWeekOfTheYear(), date.getWeekDay(), date.getDayOfTheMonth(), 
+        date.getHour(), date.getMinute(), date.getSecond(), date.getMilliSecond()
+      ]
+      const info = stmt.run(...data);
+      return info.lastInsertRowid;
+    } catch(e) {
+      console.log('Error inserting date', date_time_formatted, e);
+      throw e;
+    }
   }
 
   getFactCourse(fact_key) {

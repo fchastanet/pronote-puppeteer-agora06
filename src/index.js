@@ -10,6 +10,7 @@ import DataMetrics from '#pronote/Database/DataMetrics.js'
 import DataProcessor from '#pronote/Processor/DataProcessor.js'
 import MetricsProcessor from '#pronote/Processor/MetricsProcessor.js'
 import HttpServer from '#pronote/HttpServer/HttpServer.js'
+import DateWrapper from '#pronote/Utils/DateWrapper.js'
 import {Command} from 'commander'
 
 let browser = null;
@@ -111,7 +112,7 @@ async function main() {
   const password = process.env.PASSWORD;
   const databaseFile = process.env.SQLITE_DATABASE_FILE;
 
-  const currentDate = Utils.formatDate(new Date());
+  const currentDate = new DateWrapper().formatDate('YYYY-MM-DD_HH')
   const resultsDir = path.join(process.cwd(), process.env.RESULTS_DIR)
   const publicDir = path.join(process.cwd(), process.env.PUBLIC_DIR)
   const currentResultDir = path.join(resultsDir, currentDate);

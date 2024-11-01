@@ -2,6 +2,7 @@ import {Page} from 'puppeteer';
 import path from 'path';
 import fs from 'fs';
 import Utils from '#pronote/Utils/Utils.js';
+import DateWrapper from '#pronote/Utils/DateWrapper.js';
 
 export default class PronoteCrawler {
   #verbose = false;
@@ -94,7 +95,7 @@ export default class PronoteCrawler {
     // Write response body
     response.text().then((text) => {
       const json = JSON.parse(text)
-      json.crawlDate = new Date().toISOString();
+      json.crawlDate = new DateWrapper().toISOString();
       fs.writeFile(targetFile, JSON.stringify(json, null, "  "), err => {
         if (err) {
           console.error(err);
