@@ -79,6 +79,10 @@ export default class DateWrapper {
     return this.#date.toISOString()
   }
 
+  getUnixTimestamp() {
+    return this.#date.unix()
+  }
+
   /**
    * Parse a date string with the format "DD/MM/YYYY HH:mm:ss".
    * @param {string} dateString - The date string to parse.
@@ -88,6 +92,4 @@ export default class DateWrapper {
     const date = dayjs(dateString, ['DD/MM/YYYY HH:mm:ss', 'DD/MM/YYYY'])
     return new DateWrapper(date)
   }
-
-
 }

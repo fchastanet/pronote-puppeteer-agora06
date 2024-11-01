@@ -20,6 +20,7 @@ export default class DataProcessor {
   #gradeId = null;
   #courseIdFactMapping = {};
   #homeworkUniqueId = {};
+  #currentDate = null;
   
   constructor(db, resultsDir, verbose) {
     this.#db = db
@@ -33,44 +34,73 @@ export default class DataProcessor {
   process() {
     try {
       this.#db.createSchema()
-
-      this.processFiles(this.#resultsDir, 'studentInfo.json', this.processStudentInfoCallback.bind(this));
-      this.processFiles(this.#resultsDir, 'cahierDeTexte-courses.json', this.processCoursesCallback.bind(this));
-      this.processFiles(this.#resultsDir, 'cahierDeTexte-travailAFaire.json', this.processHomeworksCallback.bind(this));
+      this.processDirectories(this.#resultsDir)
     } catch (error) {
       console.error('Unable to connect to the database:', error)
     }
   }
 
-  processFiles(resultsDir, fileType, callback) {
-    const subDirs = fs.readdirSync(resultsDir);
+  processDirectories(resultsDir) {
+    const subDirs = fs.readdirSync(resultsDir)
 
     subDirs.forEach(subDir => {
-      const subFilePath = path.join(subDir, fileType);
-      const filePath = path.join(resultsDir, subFilePath);
-      if (fs.existsSync(filePath)) {
-        if (this.#db.isFileProcessed(subFilePath)) {
-          console.info(`File '${filePath}' already processed`);
-          return;
-        }
-        console.info(`Processing file '${filePath}' ...`);
-        this.#db.insertProcessedFile(subFilePath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING);
+      const studentInfoPath = path.join(resultsDir, subDir, 'studentInfo.json')
+      const coursesPath = path.join(resultsDir, subDir, 'cahierDeTexte-courses.json')
+      const homeworksPath = path.join(resultsDir, subDir, 'cahierDeTexte-travailAFaire.json')
 
-        // Read and parse the JSON file
-        const fileContent = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      if (
+        !fs.existsSync(studentInfoPath) || 
+        !fs.existsSync(coursesPath) || 
+        !fs.existsSync(homeworksPath)
+      ) {
+        console.error(`Missing one or more file in directory '${subDir}'`)
+        return
+      }
+      console.info(`Processing files in directory '${subDir}' ...`)
+      try {        
+        this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
+        const studentInfoContent = JSON.parse(fs.readFileSync(studentInfoPath, 'utf8'))
+        this.#currentDate = new DateWrapper(studentInfoContent.crawlDate)
+        this.processStudentInfo(studentInfoContent)
+        this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
+      } catch (error) {
+        console.error(`Unable to process file '${studentInfoPath}' :`, error)
+        this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
+        return
+      }
+
+      if (this.#db.isFileProcessed(coursesPath)) {
+        console.info(`File '${coursesPath}' already processed`)
+      } else {
         try {
-          callback(resultsDir, subDir, filePath, fileContent);
+          this.#db.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
+          const coursesContent = JSON.parse(fs.readFileSync(coursesPath, 'utf8'))
+          this.processCourses(coursesPath, coursesContent)
+          this.#db.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
         } catch (error) {
-          console.error(`Unable to process file ${filePath}:`, error)
-          this.#db.insertProcessedFile(subFilePath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR);
+          console.error(`Unable to process file '${coursesPath}' :`, error)
+          this.#db.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
           return
         }
-        this.#db.insertProcessedFile(subFilePath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED);
       }
-    });
+      
+      if (this.#db.isFileProcessed(homeworksPath)) {
+        console.info(`File '${homeworksPath}' already processed`)
+      } else {
+        try {
+          this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)  
+          const homeworksContent = JSON.parse(fs.readFileSync(homeworksPath, 'utf8'))
+          this.processHomeworks(homeworksPath, homeworksContent)
+          this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
+        } catch (error) {
+          console.error(`Unable to process file '${homeworksPath}' :`, error)
+          this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
+        }
+      }
+    })
   }
 
-  processStudentInfoCallback(resultsDir, subDir, filePath, studentInfo) {
+  processStudentInfo(studentInfo) {
     this.#studentId = this.#db.getStudentId(studentInfo.name)   
     if (!this.#studentId) {
       this.#studentId = this.#db.insertStudent(studentInfo.name)
@@ -85,7 +115,7 @@ export default class DataProcessor {
     }
   }
 
-  processCoursesCallback(resultsDir, subDir, filePath, data) {
+  processCourses(filePath, data) {
     const items = this.#courseConverter.fromPronote(data)
     // Log the items to debug
     if (this.#verbose) {
@@ -96,29 +126,17 @@ export default class DataProcessor {
     if (items.length === 0) {
       console.warn(`No items found in '${filePath}'`);
     }
-
-    const targetFile = path.join(resultsDir, subDir, "courses.json")
-    const jsonString = JSON.stringify(items, null, 2).replace(/\00/g,'');
-    fs.writeFileSync(targetFile, jsonString, 'utf8', err => {
-      if (err) {
-        console.error(err);
-        process.exit(1);
-      } else {
-        console.log(`Result written into '${targetFile}'`);
-      }
-    });
     
     // Process each item in ListeCahierDeTextes
     for (const [_, course] of Object.entries(items.courses)) {
       this.insertCourse(
         course, 
-        data?.crawlDate ?? false, 
         this.#schoolId, this.#gradeId, this.#studentId, filePath
       );
     }
   }
 
-  processHomeworksCallback(resultsDir, subDir, filePath, data) {
+  processHomeworks(filePath, data) {
     this.#homeworkUniqueId = {};
 
     const homeworks = this.#homeworkConverter.fromPronote(data)
@@ -126,16 +144,27 @@ export default class DataProcessor {
     // Process each homework in travailAFaire
     for (const [_, homework] of Object.entries(homeworks)) {
       this.insertHomework(
-        homework, 
-        data?.crawlDate ?? false,
+        homework,
         this.#schoolId, this.#gradeId, this.#studentId, filePath
       );
     }
+  }  
+
+  getOrInsertDate(date) {
+    if (date === null) {
+      return null
+    }
+    if (!(date instanceof DateWrapper)) {
+      date = DateWrapper.parseDate(date)
+    }
+    let dateId = this.#db.getDateId(date)
+    if (!dateId) {
+      dateId = this.#db.insertDate(date)
+    }
+    return dateId
   }
 
-  
-
-  insertCourse(course, crawlDate, schoolId, gradeId, studentId, filePath) {
+  insertCourse(course, schoolId, gradeId, studentId, filePath) {
     // Insert course
     let subjectId = this.#db.getSubjectId(course.subject);
     if (!subjectId) {
@@ -156,35 +185,10 @@ export default class DataProcessor {
     });
 
     // Insert dates
-    let startDateId = this.#db.getDateId(course.startDate);
-    if (!startDateId && course.startDate !== null) {
-      const startDate = DateWrapper.parseDate(course.startDate);
-      if (startDate !== null) {
-        startDateId = this.#db.insertDate(startDate);
-      }
-    }
-
-    let endDateId = this.#db.getDateId(course.endDate);
-    if (!endDateId && course.endDate !== null) {
-      const endDate = DateWrapper.parseDate(course.endDate);
-      if (endDate !== null) {
-        endDateId = this.#db.insertDate(endDate);
-      }
-    }
-
-    let homeworkDateId = this.#db.getDateId(course.homeworkDate);
-    if (!homeworkDateId && course.homeworkDate !== null) {
-      const homeworkDate = DateWrapper.parseDate(course.homeworkDate);
-      if (homeworkDate !== null) {
-        homeworkDateId = this.#db.insertDate(homeworkDate);
-      }
-    }
-
-    let updateLastDate = crawlDate ? new DateWrapper(crawlDate) : new DateWrapper();
-    let updateLastDateId = this.#db.getDateId(updateLastDate);
-    if (!updateLastDateId) {
-      updateLastDateId = this.#db.insertDate(updateLastDate);
-    }
+    let startDateId = this.getOrInsertDate(course?.startDate);
+    let endDateId = this.getOrInsertDate(course?.endDate);
+    let homeworkDateId = this.getOrInsertDate(course?.homeworkDate);
+    let updateLastDateId = this.getOrInsertDate(this.#currentDate);
     
     // Insert fact course
     let factCourse = this.#db.getFactCourse(course.key);
@@ -237,7 +241,7 @@ export default class DataProcessor {
     }
   }
 
-  insertHomework(homework, crawlDate, schoolId, gradeId, studentId, filePath) {
+  insertHomework(homework, schoolId, gradeId, studentId, filePath) {
     // Insert homework
     let subjectId = this.#db.getSubjectId(homework.subject);
     if (!subjectId) {
@@ -248,27 +252,9 @@ export default class DataProcessor {
     }
 
     // Insert dates
-    let dueDateId = this.#db.getDateId(homework.dueDate);
-    if (!dueDateId && homework.dueDate !== null) {
-      const dueDate = DateWrapper.parseDate(homework.dueDate);
-      if (dueDate !== null) {
-        dueDateId = this.#db.insertDate(dueDate);
-      }
-    }
-
-    let assignedDateId = this.#db.getDateId(homework.assignedDate);
-    if (!assignedDateId && homework.assignedDate !== null) {
-      const assignedDate = DateWrapper.parseDate(homework.assignedDate);
-      if (assignedDate !== null) {
-        assignedDateId = this.#db.insertDate(assignedDate);
-      }
-    }
-
-    let updateLastDate = crawlDate ? new DateWrapper(crawlDate) : new DateWrapper();
-    let updateLastDateId = this.#db.getDateId(updateLastDate);
-    if (!updateLastDateId) {
-      updateLastDateId = this.#db.insertDate(updateLastDate);
-    }
+    let dueDateId = this.getOrInsertDate(homework?.dueDate);
+    let assignedDateId = this.getOrInsertDate(homework?.assignedDate);
+    let updateLastDateId = this.getOrInsertDate(this.#currentDate);
 
     const factCourseKey = this.#courseIdFactMapping?.[homework.plannedCourseId]?.fact_key;
     let factCourse = null;
@@ -282,10 +268,14 @@ export default class DataProcessor {
     const homeworkKey = this.computeHomeworkUniqueId(homework, factCourse, filePath);
     let factHomework = this.#db.getFactHomework(homeworkKey);
     let updateFiles = [];
-    let factHomeworkId = null;
+    let completedDateId = null
+    
     if (typeof factHomework === 'undefined') {
+      if (homework.completed) {
+        completedDateId = this.getOrInsertDate(this.#currentDate);
+      }
       updateFiles.push({filePath, checksum: homework.checksum, id: homework.id});
-      factHomeworkId = this.#db.insertFactHomework({
+      this.#db.insertFactHomework({
         fact_key: homeworkKey,
         fact_course_id: factCourse?.fact_id ?? null,
         student_id: studentId,
@@ -298,6 +288,7 @@ export default class DataProcessor {
         formatted: homework.formatted,
         requires_submission: homework.requiresSubmission,
         completed: homework.completed,
+        completed_date_id: completedDateId, 
         submission_type: homework.submissionType,
         difficulty_level: homework.difficultyLevel,
         duration: homework.duration,
@@ -312,9 +303,14 @@ export default class DataProcessor {
         update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g,''),
       });
     } else if (homework.checksum != factHomework.checksum) {
+      if (homework.completed && factHomework.completed_date_id === null) {
+        completedDateId = this.getOrInsertDate(this.#currentDate);
+      } else {
+        completedDateId = factHomework.completed_date_id;
+      }
       updateFiles = JSON.parse(factHomework.update_files);
       updateFiles.push({filePath, checksum: homework.checksum, id: homework.id});
-      factHomeworkId = this.#db.updateFactHomework({
+      this.#db.updateFactHomework({
         fact_key: homeworkKey,
         fact_course_id: factCourse?.fact_id ?? null,
         student_id: studentId,
@@ -327,6 +323,7 @@ export default class DataProcessor {
         formatted: homework.formatted,
         requires_submission: homework.requiresSubmission,
         completed: homework.completed,
+        completed_date_id: completedDateId,
         submission_type: homework.submissionType,
         difficulty_level: homework.difficultyLevel,
         duration: homework.duration,

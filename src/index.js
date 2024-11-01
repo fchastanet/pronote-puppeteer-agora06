@@ -48,7 +48,9 @@ process.on('SIGUSR2', exitHandler.bind(null, {exit:true}));
 // catches uncaught exceptions
 process.on('uncaughtException', exitHandler.bind(null, {exit:true}));
 
-async function retrievePronoteData({resultDir, casUrl, login, password, debugMode, verbose}) {
+async function retrievePronoteData({
+  resultDir, casUrl, login, password, currentDate, debugMode, verbose
+}) {
   /** @var {Crawler} crawler */
   const crawler = new Crawler(debugMode);
   browser = await crawler.initBrowser();
@@ -57,6 +59,7 @@ async function retrievePronoteData({resultDir, casUrl, login, password, debugMod
   /** @var {PronoteCrawler} pronoteCrawler */
   const pronoteCrawler = new PronoteCrawler({
     page, debugMode, verbose, 
+    currentDate,
     resultDir, login, password, casUrl
   });
   pronoteCrawler.setPageListeners();
@@ -128,7 +131,8 @@ async function main() {
       await retrievePronoteData({
         resultDir: currentResultDir, 
         casUrl, login, password, 
-        debug: commandOptions.debug, 
+        currentDate,
+        debug: commandOptions.debug,
         verbose: commandOptions.verbose
       });
       if (commandOptions.verbose) {

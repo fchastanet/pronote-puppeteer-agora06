@@ -67,7 +67,8 @@ export default class DataWarehouse {
         hour INTEGER,
         minute INTEGER,
         second INTEGER,
-        millisecond INTEGER
+        millisecond INTEGER,
+        unix_timestamp INTEGER
       );
       CREATE INDEX IF NOT EXISTS idx_dates_date ON dim_dates(date);
       CREATE INDEX IF NOT EXISTS idx_dates_year_month_week_day ON dim_dates(year, month, week, weekday, day);
@@ -127,10 +128,11 @@ export default class DataWarehouse {
         subject_id INTEGER,             -- FK dim_subjects
         due_date_id INTEGER,            -- FK dim_dates
         assigned_date_id INTEGER,       -- FK dim_dates
+        completed INTEGER,              -- boolean
+        completed_date_id INTEGER,      -- FK dim_dates
         description TEXT,
         formatted INTEGER,              -- boolean
         requires_submission INTEGER,    -- boolean
-        completed INTEGER,              -- boolean
         submission_type TEXT,           -- enum
         difficulty_level INTEGER,       -- enum
         duration INTEGER,
@@ -152,6 +154,7 @@ export default class DataWarehouse {
         FOREIGN KEY (subject_id) REFERENCES dim_subjects(subject_id),
         FOREIGN KEY (due_date_id) REFERENCES dim_dates(date_id),
         FOREIGN KEY (assigned_date_id) REFERENCES dim_dates(date_id),
+        FOREIGN KEY (completed_date_id) REFERENCES dim_dates(date_id),
         FOREIGN KEY (update_first_date_id) REFERENCES dim_dates(date_id),
         FOREIGN KEY (update_last_date_id) REFERENCES dim_dates(date_id)
       );
@@ -275,26 +278,27 @@ export default class DataWarehouse {
   insertDate(date) {
     let date_time_formatted = null
     if (date) {
-      date_time_formatted = date.formatFullDate();
+      date_time_formatted = date.toISOString()
     } else {
-      throw new Error('Date is null');
+      throw new Error('Date is null')
     }
+    const unixTimestamp = date.getUnixTimestamp() // Assuming DateWrapper has a method getUnixTimestamp
     const stmt = this.#db.prepare(`INSERT INTO dim_dates(
         date, year, month, 
         week, weekday, day,
-        hour, minute, second, millisecond
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+        hour, minute, second, millisecond, unix_timestamp
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     try {
       const data = [
         date_time_formatted, date.getYear(), date.getMonth(), 
         date.getWeekOfTheYear(), date.getWeekDay(), date.getDayOfTheMonth(), 
-        date.getHour(), date.getMinute(), date.getSecond(), date.getMilliSecond()
+        date.getHour(), date.getMinute(), date.getSecond(), date.getMilliSecond(), unixTimestamp
       ]
-      const info = stmt.run(...data);
-      return info.lastInsertRowid;
+      const info = stmt.run(...data)
+      return info.lastInsertRowid
     } catch(e) {
-      console.log('Error inserting date', date_time_formatted, e);
-      throw e;
+      console.log('Error inserting date', date_time_formatted, e)
+      throw e
     }
   }
 
@@ -356,54 +360,52 @@ export default class DataWarehouse {
     return stmt.get(fact_key);
   }
 
-  insertFactHomework({
-    fact_key, fact_course_id, student_id, school_id, grade_id,
-    subject_id, due_date_id, assigned_date_id, description, formatted, requires_submission, 
-    completed, submission_type, difficulty_level, duration, background_color, 
-    public_name, themes, attachments, 
-    checksum, update_count, update_first_date_id, update_last_date_id, update_files
-  }) {
+  insertFactHomework(data) {
+    const {
+      fact_key, fact_course_id, student_id, school_id, grade_id,
+      subject_id, due_date_id, assigned_date_id, description, formatted, requires_submission, 
+      completed, completed_date_id, submission_type, difficulty_level, duration, background_color, 
+      public_name, themes, attachments, 
+      checksum, update_count, update_first_date_id, update_last_date_id, update_files
+    } = data
     const stmt = this.#db.prepare(`
       INSERT INTO fact_homework (
         fact_key, fact_course_id, student_id, school_id, grade_id,
         subject_id, due_date_id, assigned_date_id, description, formatted, requires_submission, 
-        completed, submission_type, difficulty_level, duration, background_color, 
+        completed, completed_date_id, submission_type, difficulty_level, duration, background_color, 
         public_name, themes, attachments, 
         checksum, update_count, update_first_date_id, update_last_date_id, update_files
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     try {
       const info = stmt.run(
         fact_key, fact_course_id, student_id, school_id, grade_id,
         subject_id, due_date_id, assigned_date_id, description, formatted ? 1 : 0, requires_submission ? 1 : 0, 
-        completed ? 1 : 0, submission_type, difficulty_level, duration, background_color, public_name, 
+        completed ? 1 : 0, completed_date_id, submission_type, difficulty_level, duration, background_color, public_name, 
         themes, attachments, 
         checksum, update_count, update_first_date_id, update_last_date_id, update_files
       );
       return info.lastInsertRowid;
     } catch (e) {
-      console.log(e, fact_key, fact_course_id, student_id, school_id, grade_id,
-        subject_id, due_date_id, assigned_date_id, description, formatted ? 1 : 0, requires_submission ? 1 : 0, 
-        completed ? 1 : 0, submission_type, difficulty_level, duration, background_color, public_name, 
-        themes, attachments, 
-        checksum, update_count, update_first_date_id, update_last_date_id, update_files);
+      console.log(e, data);
       throw e;
     }
     
   }
 
-  updateFactHomework({
-    fact_key, fact_course_id, student_id, school_id, grade_id,
-    subject_id, due_date_id, assigned_date_id, description, formatted, requires_submission, 
-    completed, submission_type, difficulty_level, duration, background_color, 
-    public_name, themes, attachments, 
-    checksum, update_count, update_first_date_id, update_last_date_id, update_files
-  }) {
+  updateFactHomework(data) {
+    const {
+      fact_key, fact_course_id, student_id, school_id, grade_id,
+      subject_id, due_date_id, assigned_date_id, description, formatted, requires_submission, 
+      completed, completed_date_id, submission_type, difficulty_level, duration, background_color, 
+      public_name, themes, attachments, 
+      checksum, update_count, update_first_date_id, update_last_date_id, update_files
+    } = data
     const stmt = this.#db.prepare(`
       UPDATE fact_homework SET
         fact_course_id = ?, student_id = ?, school_id = ?, grade_id = ?,
         subject_id = ?, due_date_id = ?, assigned_date_id = ?, description = ?, formatted = ?, requires_submission = ?, 
-        completed = ?, submission_type = ?, difficulty_level = ?, duration = ?, background_color = ?, 
+        completed = ?, completed_date_id = ?, submission_type = ?, difficulty_level = ?, duration = ?, background_color = ?, 
         public_name = ?, themes = ?, attachments = ?, 
         checksum = ?, update_count = ?, update_first_date_id = ?, update_last_date_id = ?, update_files = ?
       WHERE fact_key = ?
@@ -412,19 +414,14 @@ export default class DataWarehouse {
       const info = stmt.run(
         fact_course_id, student_id, school_id, grade_id,
         subject_id, due_date_id, assigned_date_id, description, formatted ? 1 : 0, requires_submission ? 1 : 0, 
-        completed ? 1 : 0, submission_type, difficulty_level, duration, background_color, 
+        completed ? 1 : 0, completed_date_id, submission_type, difficulty_level, duration, background_color, 
         public_name, themes, attachments, 
         checksum, update_count, update_first_date_id, update_last_date_id, update_files, 
         fact_key
       );
       return info.changes;
     } catch (e) {
-      console.log(e, fact_course_id, student_id, school_id, grade_id,
-        subject_id, due_date_id, assigned_date_id, description, formatted ? 1 : 0, requires_submission ? 1 : 0, 
-        completed ? 1 : 0, submission_type, difficulty_level, duration, background_color, 
-        public_name, themes, attachments, 
-        checksum, update_count, update_first_date_id, update_last_date_id, update_files, 
-        fact_key);
+      console.log(e, data);
       throw e;
     }
   }

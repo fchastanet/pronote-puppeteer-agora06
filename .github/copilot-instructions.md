@@ -10,7 +10,8 @@ Avoid using `var` for variable declarations
 Use arrow functions instead of traditional function expressions
 Private fields should start with a #
 A file can only contain one class declaration.
+For object add leading comma before closing accolade.
 
 ## css
 
-For CSS, always include semicolons at the end of each property declaration
+For CSS, always include semicolons at the end of each property declaration.

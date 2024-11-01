@@ -13,6 +13,7 @@ export default class PronoteCrawler {
   #password = "";
   #casUrl = "";
   #sessionNumber = null;
+  #currentDate = null;
   
   /**
    * 
@@ -23,7 +24,7 @@ export default class PronoteCrawler {
    * @param {string} login
    * @param {string} password
    */
-  constructor({page, debugMode, verbose, resultDir, login, password, casUrl}) {
+  constructor({page, debugMode, verbose, resultDir, login, password, casUrl, currentDate}) {
     this.#page = page;
     this.#verbose = verbose;
     this.#debugMode = debugMode;
@@ -31,6 +32,7 @@ export default class PronoteCrawler {
     this.#login = login;
     this.#password = password;
     this.#casUrl = casUrl;
+    this.#currentDate = currentDate;
   }
 
   setPageListeners() {
@@ -95,7 +97,7 @@ export default class PronoteCrawler {
     // Write response body
     response.text().then((text) => {
       const json = JSON.parse(text)
-      json.crawlDate = new DateWrapper().toISOString();
+      json.crawlDate = this.#currentDate.toISOString();
       fs.writeFile(targetFile, JSON.stringify(json, null, "  "), err => {
         if (err) {
           console.error(err);
@@ -182,6 +184,7 @@ export default class PronoteCrawler {
         sessionNumber
       };
     });
+    studentInfo.crawlDate = this.#currentDate.toISOString()
 
     console.log('Student Info:', studentInfo)
     this.#sessionNumber = studentInfo.sessionNumber
