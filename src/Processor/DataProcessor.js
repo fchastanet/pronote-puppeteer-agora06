@@ -4,6 +4,7 @@ import HomeworkConverter from "#pronote/Converter/HomeworkConverter.js";
 import CourseConverter from "#pronote/Converter/CourseConverter.js";
 import DataWarehouse from '#pronote/Database/DataWarehouse.js';
 import DateWrapper from '#pronote/Utils/DateWrapper.js';
+import Utils from '#pronote/Utils/Utils.js';
 
 export default class DataProcessor {
   /**
@@ -369,14 +370,7 @@ export default class DataProcessor {
   // for 2 different homework ids
   computeHomeworkUniqueId(homework, factCourse, filePath) {
     try {
-      let uniqueId = `${homework.subject}-${homework.assignedDate}-${homework.publicName}`;
-      if (factCourse == null) {
-        // worst case scenario where course cannot be deduced
-        // TODO could I deduce the course from assignedDate and subject ?
-        uniqueId = `${homework.dueDate}-${uniqueId}`;
-      } else {
-        uniqueId = `${factCourse.fact_key}-${uniqueId}`;
-      }
+      let uniqueId = this.getHomeworkUniqueId(homework, factCourse)
       if (uniqueId in this.#homeworkUniqueId) {
         let i = 1;
         while (`${uniqueId}-${i}` in this.#homeworkUniqueId) {
@@ -384,6 +378,7 @@ export default class DataProcessor {
         }
         this.#duplicatedIds.push({
           homeworkId: homework.id,
+          homeworkIdUsingConflictedUniqueId: this.#homeworkUniqueId[uniqueId],
           uniqueId: uniqueId,
           filePath,
           factCourse,
@@ -400,5 +395,20 @@ export default class DataProcessor {
       );
     }
   }
+
+  getHomeworkUniqueId(homeworkItem, factCourse) {
+    // if subject is changed, let's consider it's a different homework
+    const data = {
+      subject: homeworkItem.subject,
+      dueDate: homeworkItem.dueDate,
+      assignedDate: homeworkItem.assignedDate,
+      submissionType: homeworkItem.submissionType,
+      description: homeworkItem.description,
+      courseKey: factCourse?.fact_key,
+    };
+    return Utils.md5sum(data);
+  }
+
+
     
 }

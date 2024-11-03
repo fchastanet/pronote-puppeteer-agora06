@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 export default class Utils {
 
   static delay(time) {
@@ -8,6 +10,12 @@ export default class Utils {
   
   static base64encode(str) {
     return Buffer.from(str).toString('base64');
+  }
+
+  static md5sum(data) {
+    const hash = crypto.createHash("md5");
+    hash.update(JSON.stringify(data));
+    return hash.digest("hex");
   }
 
   /**

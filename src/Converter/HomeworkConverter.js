@@ -1,5 +1,4 @@
 import FromTypeConverter from '#pronote/Converter/FromTypeConverter.js';
-import crypto from 'crypto';
 import Utils from '#pronote/Utils/Utils.js';
 
 export default class HomeworkConverter {
@@ -41,18 +40,15 @@ export default class HomeworkConverter {
   }
 
   computeHomeworkItemChecksum(homeworkItem) {
-    const hash = crypto.createHash("md5");
-    const attachments = Utils.removeKey(homeworkItem.attachments, 'id');
-    hash.update(JSON.stringify({
+    const data = {
       subject: homeworkItem.subject,
       dueDate: homeworkItem.dueDate,
       completed: homeworkItem.completed,
       submissionType: homeworkItem.submissionType,
       description: homeworkItem.description,
       requiresSubmission: homeworkItem.requiresSubmission,
-      attachments: attachments,
-    }));
-    return hash.digest("hex");
-}
-
+      attachments: Utils.removeKey(homeworkItem.attachments, 'id'),
+    };
+    return Utils.md5sum(data);
+  }
 }
