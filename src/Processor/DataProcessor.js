@@ -21,6 +21,7 @@ export default class DataProcessor {
   #courseIdFactMapping = {};
   #homeworkUniqueId = {};
   #currentDate = null;
+  #duplicatedIds = [];
   
   constructor(db, resultsDir, verbose) {
     this.#db = db
@@ -98,6 +99,12 @@ export default class DataProcessor {
           this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
           return
         }
+      }
+
+      if (this.#duplicatedIds.length > 0) {
+        const homeworksPath = path.join(resultsDir, subDir, 'duplicatedIds.json')
+        console.warn(`${this.#duplicatedIds.length} duplicated IDs found in '${subDir}'`);
+        fs.writeFileSync(homeworksPath, JSON.stringify(this.#duplicatedIds, null, 2), 'utf8')
       }
       // mark file processed only at the end as all files need to re parsed every time
       this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
@@ -375,8 +382,14 @@ export default class DataProcessor {
         while (`${uniqueId}-${i}` in this.#homeworkUniqueId) {
           i++;
         }
+        this.#duplicatedIds.push({
+          homeworkId: homework.id,
+          uniqueId: uniqueId,
+          filePath,
+          factCourse,
+          homework,
+        });
         uniqueId = `${uniqueId}-${i}`;
-        console.warn(`Duplicate unique ID for homework ID '${homework.id}' in '${filePath}' - new unique ID: '${uniqueId}'`);
       }
       this.#homeworkUniqueId[uniqueId] = homework.id;
       return uniqueId;
