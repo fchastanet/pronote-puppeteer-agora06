@@ -24,9 +24,10 @@
   "github.copilot.chat.codeGeneration.instructions": [
     {
       "file": ".github/copilot-instructions.md",
-    },
-    {
-      "text": "Always generate javascript code without semicolons"
     }
-  ]
+  ],
+  "markdown.preview.openMarkdownLinks": "inEditor",
+  "workbench.editorAssociations": {
+    "*.md": "default"
+  }
 }
