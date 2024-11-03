@@ -169,6 +169,15 @@ export default class PronoteCrawler {
     await this.#page.waitForSelector('.label-membre');
   }
   
+  #extractStartParams(paramsString) {
+    // https://regex101.com/r/ckPf3q/1
+    const startParams = paramsString.match(/Start ?\((?<startParams>{[^}]*})\)/)?.groups?.startParams;
+    if (typeof startParams === 'undefined') {
+      throw new Error('startParams not found');
+    }
+    return JSON.parse(Utils.convertToJsonString(startParams));
+  }
+
   async #extractGeneralInformation() {
     console.info('Step 6: Extract information from the Pronote dashboard');
     const studentInfo = await this.#page.evaluate(() => {
@@ -176,14 +185,17 @@ export default class PronoteCrawler {
       const reMatches = fullName.match(/^(?<name>.*) \((?<grade>[^)]+)\)$/)
       const school = document.querySelector('.ibe_centre .ibe_etab').innerText; // Adjust selector as needed
       const sessionNumber = window.GParametres.application.communication.NumeroDeSession
+      const startParams = document.querySelector('body')?.getAttribute('onload');
       return {
         fullName, 
         name: reMatches.groups.name, 
         grade: reMatches.groups.grade, 
         school, 
-        sessionNumber
+        sessionNumber,
+        startParams
       };
     });
+    studentInfo.startParams = this.#extractStartParams(studentInfo.startParams);
     studentInfo.crawlDate = this.#currentDate.toISOString()
 
     console.log('Student Info:', studentInfo)

@@ -30,4 +30,10 @@ export default class Utils {
     return obj;
   }
 
+  static convertToJsonString(javascriptString) {
+    return javascriptString
+      .replace(/'/g, '"') // Replace single quotes with double quotes
+      .replace(/(\w+):/g, '"$1":') // Enclose property names in double quotes
+  }
+
 }

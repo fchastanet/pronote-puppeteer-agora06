@@ -74,6 +74,7 @@ async function retrievePronoteData({
     }
   } catch (error) {
     console.error('An error occurred during the login process:', error);
+    process.exit(1);
   }
 }
 
@@ -115,10 +116,11 @@ async function main() {
   const password = process.env.PASSWORD;
   const databaseFile = process.env.SQLITE_DATABASE_FILE;
 
-  const currentDate = new DateWrapper().formatDate('YYYY-MM-DD_HH')
+  const currentDate = new DateWrapper()
+  const folderDate = currentDate.formatDate('YYYY-MM-DD_HH')
   const resultsDir = path.join(process.cwd(), process.env.RESULTS_DIR)
   const publicDir = path.join(process.cwd(), process.env.PUBLIC_DIR)
-  const currentResultDir = path.join(resultsDir, currentDate);
+  const currentResultDir = path.join(resultsDir, folderDate);
 
   const commandOptions = parseCommandOptions(process.argv)
   const databaseConnection = new DatabaseConnection(databaseFile, commandOptions.verbose);
