@@ -57,26 +57,27 @@ export default class DataProcessor {
         return
       }
       console.info(`Processing files in directory '${subDir}' ...`)
+      this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
+      this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)  
+      this.#db.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
       try {        
-        this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
+        console.info(`Processing '${studentInfoPath}' ...`)
         const studentInfoContent = JSON.parse(fs.readFileSync(studentInfoPath, 'utf8'))
         this.#currentDate = new DateWrapper(studentInfoContent.crawlDate)
         this.processStudentInfo(studentInfoContent)
-        this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
       } catch (error) {
         console.error(`Unable to process file '${studentInfoPath}' :`, error)
         this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
         return
       }
-
+      
       if (this.#db.isFileProcessed(coursesPath)) {
         console.info(`File '${coursesPath}' already processed`)
       } else {
         try {
-          this.#db.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
+          console.info(`Processing '${coursesPath}' ...`)
           const coursesContent = JSON.parse(fs.readFileSync(coursesPath, 'utf8'))
           this.processCourses(coursesPath, coursesContent)
-          this.#db.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
         } catch (error) {
           console.error(`Unable to process file '${coursesPath}' :`, error)
           this.#db.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
@@ -88,15 +89,20 @@ export default class DataProcessor {
         console.info(`File '${homeworksPath}' already processed`)
       } else {
         try {
-          this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)  
+          console.info(`Processing '${homeworksPath}' ...`)
+          
           const homeworksContent = JSON.parse(fs.readFileSync(homeworksPath, 'utf8'))
           this.processHomeworks(homeworksPath, homeworksContent)
-          this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
         } catch (error) {
           console.error(`Unable to process file '${homeworksPath}' :`, error)
           this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
+          return
         }
       }
+      // mark file processed only at the end as all files need to re parsed every time
+      this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
+      this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
+      this.#db.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
     })
   }
 
@@ -214,30 +220,34 @@ export default class DataProcessor {
         update_last_date_id: updateLastDateId,
         update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g,''),
       });
-    } else if (course.checksum != factCourse.checksum) {
-      updateFiles = JSON.parse(factCourse.update_files);
-      updateFiles.push({filePath, checksum: course.checksum, id: course.id});
-      factCourseId = this.#db.updateFactCourse({
-        fact_key: course.key,
-        student_id: studentId,
-        school_id: schoolId,
-        subject_id: subjectId,
-        grade_id: gradeId,
-        teacher_id: teacherIds.length > 0 ? teacherIds[0] : null, // Assuming only one teacher is used for simplicity
-        start_date_id: startDateId,
-        end_date_id: endDateId,
-        checksum: course.checksum,
-        homework_date_id: homeworkDateId,
-        content_list: JSON.stringify(course.contentList, null, 2)?.replace(/\00/g,''),
-        locked: course.locked,
-        update_first_date_id: factCourse.update_first_date_id,
-        update_last_date_id: updateLastDateId,
-        update_count: factCourse.update_count + 1,
-        update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g,''),
-      });
+    } else {
+      factCourseId = factCourse.fact_id;
+      if (course.checksum != factCourse.checksum) {
+        updateFiles = JSON.parse(factCourse.update_files);
+        updateFiles.push({filePath, checksum: course.checksum, id: course.id});
+        this.#db.updateFactCourse({
+          fact_key: course.key,
+          student_id: studentId,
+          school_id: schoolId,
+          subject_id: subjectId,
+          grade_id: gradeId,
+          teacher_id: teacherIds.length > 0 ? teacherIds[0] : null, // Assuming only one teacher is used for simplicity
+          start_date_id: startDateId,
+          end_date_id: endDateId,
+          checksum: course.checksum,
+          homework_date_id: homeworkDateId,
+          content_list: JSON.stringify(course.contentList, null, 2)?.replace(/\00/g,''),
+          locked: course.locked,
+          update_first_date_id: factCourse.update_first_date_id,
+          update_last_date_id: updateLastDateId,
+          update_count: factCourse.update_count + 1,
+          update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g,''),
+        });
+      }
     }
     if (factCourseId !== null) {
       this.#courseIdFactMapping[course.id] = {fact_id: factCourseId, fact_key: course.key};
+
     }
   }
 
