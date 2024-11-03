@@ -252,8 +252,11 @@ export default class DataProcessor {
     }
 
     // Insert dates
-    let dueDateId = this.getOrInsertDate(homework?.dueDate);
-    let assignedDateId = this.getOrInsertDate(homework?.assignedDate);
+    const dueDate = homework?.dueDate ? DateWrapper.parseDate(homework.dueDate) : null;
+    let dueDateId = this.getOrInsertDate(dueDate);
+    const assignedDate = homework?.dueDate ? DateWrapper.parseDate(homework.assignedDate) : null;
+    let assignedDateId = this.getOrInsertDate(assignedDate);
+    let maxCompletionDuration = (dueDate !== null && assignedDate !== null) ? dueDate.diff(assignedDate, 'second') : null;
     let updateLastDateId = this.getOrInsertDate(this.#currentDate);
 
     const factCourseKey = this.#courseIdFactMapping?.[homework.plannedCourseId]?.fact_key;
@@ -269,10 +272,11 @@ export default class DataProcessor {
     let factHomework = this.#db.getFactHomework(homeworkKey);
     let updateFiles = [];
     let completedDateId = null
-    
+    let completionDuration = null;
+
     if (typeof factHomework === 'undefined') {
       if (homework.completed) {
-        completedDateId = this.getOrInsertDate(this.#currentDate);
+        console.log(`Homework ${homework.id} is completed before being inserted, cannot compute completion duration`);
       }
       updateFiles.push({filePath, checksum: homework.checksum, id: homework.id});
       this.#db.insertFactHomework({
@@ -291,7 +295,8 @@ export default class DataProcessor {
         completed_date_id: completedDateId, 
         submission_type: homework.submissionType,
         difficulty_level: homework.difficultyLevel,
-        duration: homework.duration,
+        completion_duration: completionDuration,
+        max_completion_duration: maxCompletionDuration,
         background_color: homework.backgroundColor,
         public_name: homework.publicName,
         themes: JSON.stringify(homework.themes, null, 2)?.replace(/\00/g,''),
@@ -303,8 +308,10 @@ export default class DataProcessor {
         update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g,''),
       });
     } else if (homework.checksum != factHomework.checksum) {
+      completionDuration = factHomework.completion_duration;
       if (homework.completed && factHomework.completed_date_id === null) {
         completedDateId = this.getOrInsertDate(this.#currentDate);
+        completionDuration = this.#currentDate.diff(assignedDate, 'second');
       } else {
         completedDateId = factHomework.completed_date_id;
       }
@@ -324,9 +331,10 @@ export default class DataProcessor {
         requires_submission: homework.requiresSubmission,
         completed: homework.completed,
         completed_date_id: completedDateId,
+        completion_duration: completionDuration,
+        max_completion_duration: maxCompletionDuration,
         submission_type: homework.submissionType,
         difficulty_level: homework.difficultyLevel,
-        duration: homework.duration,
         background_color: homework.backgroundColor,
         public_name: homework.publicName,
         themes: JSON.stringify(homework.themes, null, 2)?.replace(/\00/g,''),

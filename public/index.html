@@ -35,7 +35,7 @@
     }
     .dashboard {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
       gap: 20px;
       padding: 20px;
     }
@@ -101,27 +101,6 @@
           }]
         }
         onTimeCompletionRateChart.setOption(onTimeCompletionRateOption)
-
-        const averageDurationChart = echarts.init(document.getElementById('averageDurationChart'))
-        const averageDurationOption = {
-          title: {
-            text: 'Average Homework Duration'
-          },
-          tooltip: {},
-          xAxis: {
-            type: 'category',
-            data: data.averageDuration.map(item => item.subject)
-          },
-          yAxis: {
-            type: 'value'
-          },
-          series: [{
-            data: data.averageDuration.map(item => item.duration),
-            type: 'bar',
-            color: '#ff9800'
-          }]
-        }
-        averageDurationChart.setOption(averageDurationOption)
 
         const homeworkLoadPerWeekChart = echarts.init(document.getElementById('homeworkLoadPerWeekChart'))
         const homeworkLoadPerWeekOption = {

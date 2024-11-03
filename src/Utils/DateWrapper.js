@@ -83,6 +83,10 @@ export default class DateWrapper {
     return this.#date.unix()
   }
 
+  diff(date) {
+    return this.#date.diff(date.#date)
+  }
+
   /**
    * Parse a date string with the format "DD/MM/YYYY HH:mm:ss".
    * @param {string} dateString - The date string to parse.

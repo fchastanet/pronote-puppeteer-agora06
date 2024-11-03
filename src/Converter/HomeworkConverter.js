@@ -46,6 +46,7 @@ export default class HomeworkConverter {
     hash.update(JSON.stringify({
       subject: homeworkItem.subject,
       dueDate: homeworkItem.dueDate,
+      completed: homeworkItem.completed,
       submissionType: homeworkItem.submissionType,
       description: homeworkItem.description,
       requiresSubmission: homeworkItem.requiresSubmission,

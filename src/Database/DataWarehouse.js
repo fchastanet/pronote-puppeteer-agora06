@@ -130,12 +130,13 @@ export default class DataWarehouse {
         assigned_date_id INTEGER,       -- FK dim_dates
         completed INTEGER,              -- boolean
         completed_date_id INTEGER,      -- FK dim_dates
+        completion_duration INTEGER,
+        max_completion_duration INTEGER,
         description TEXT,
         formatted INTEGER,              -- boolean
         requires_submission INTEGER,    -- boolean
         submission_type TEXT,           -- enum
         difficulty_level INTEGER,       -- enum
-        duration INTEGER,
         background_color TEXT,
         public_name TEXT,
         themes TEXT,                    -- Storing as JSON string or comma-separated values
@@ -364,25 +365,25 @@ export default class DataWarehouse {
     const {
       fact_key, fact_course_id, student_id, school_id, grade_id,
       subject_id, due_date_id, assigned_date_id, description, formatted, requires_submission, 
-      completed, completed_date_id, submission_type, difficulty_level, duration, background_color, 
-      public_name, themes, attachments, 
+      completed, completed_date_id, submission_type, difficulty_level, completion_duration, max_completion_duration,
+      background_color, public_name, themes, attachments, 
       checksum, update_count, update_first_date_id, update_last_date_id, update_files
     } = data
     const stmt = this.#db.prepare(`
       INSERT INTO fact_homework (
         fact_key, fact_course_id, student_id, school_id, grade_id,
         subject_id, due_date_id, assigned_date_id, description, formatted, requires_submission, 
-        completed, completed_date_id, submission_type, difficulty_level, duration, background_color, 
-        public_name, themes, attachments, 
+        completed, completed_date_id, submission_type, difficulty_level, completion_duration, max_completion_duration,
+        background_color, public_name, themes, attachments, 
         checksum, update_count, update_first_date_id, update_last_date_id, update_files
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     try {
       const info = stmt.run(
         fact_key, fact_course_id, student_id, school_id, grade_id,
         subject_id, due_date_id, assigned_date_id, description, formatted ? 1 : 0, requires_submission ? 1 : 0, 
-        completed ? 1 : 0, completed_date_id, submission_type, difficulty_level, duration, background_color, public_name, 
-        themes, attachments, 
+        completed ? 1 : 0, completed_date_id, submission_type, difficulty_level, completion_duration, max_completion_duration,
+        background_color, public_name, themes, attachments, 
         checksum, update_count, update_first_date_id, update_last_date_id, update_files
       );
       return info.lastInsertRowid;
@@ -397,16 +398,16 @@ export default class DataWarehouse {
     const {
       fact_key, fact_course_id, student_id, school_id, grade_id,
       subject_id, due_date_id, assigned_date_id, description, formatted, requires_submission, 
-      completed, completed_date_id, submission_type, difficulty_level, duration, background_color, 
-      public_name, themes, attachments, 
+      completed, completed_date_id, submission_type, difficulty_level, completion_duration, max_completion_duration,
+      background_color, public_name, themes, attachments, 
       checksum, update_count, update_first_date_id, update_last_date_id, update_files
     } = data
     const stmt = this.#db.prepare(`
       UPDATE fact_homework SET
         fact_course_id = ?, student_id = ?, school_id = ?, grade_id = ?,
         subject_id = ?, due_date_id = ?, assigned_date_id = ?, description = ?, formatted = ?, requires_submission = ?, 
-        completed = ?, completed_date_id = ?, submission_type = ?, difficulty_level = ?, duration = ?, background_color = ?, 
-        public_name = ?, themes = ?, attachments = ?, 
+        completed = ?, completed_date_id = ?, submission_type = ?, difficulty_level = ?, completion_duration = ?, max_completion_duration = ?,
+        background_color = ?, public_name = ?, themes = ?, attachments = ?, 
         checksum = ?, update_count = ?, update_first_date_id = ?, update_last_date_id = ?, update_files = ?
       WHERE fact_key = ?
     `);
@@ -414,8 +415,8 @@ export default class DataWarehouse {
       const info = stmt.run(
         fact_course_id, student_id, school_id, grade_id,
         subject_id, due_date_id, assigned_date_id, description, formatted ? 1 : 0, requires_submission ? 1 : 0, 
-        completed ? 1 : 0, completed_date_id, submission_type, difficulty_level, duration, background_color, 
-        public_name, themes, attachments, 
+        completed ? 1 : 0, completed_date_id, submission_type, difficulty_level, completion_duration, max_completion_duration,
+        background_color, public_name, themes, attachments, 
         checksum, update_count, update_first_date_id, update_last_date_id, update_files, 
         fact_key
       );
