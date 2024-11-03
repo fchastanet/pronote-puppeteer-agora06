@@ -23,8 +23,10 @@ export default class DataMetrics {
   async getOnTimeCompletionRate() {
     const query = `
       SELECT 
-        (SUM(CASE WHEN completed = 1 AND due_date_id >= assigned_date_id THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) AS onTimeCompletionRate
-      FROM fact_homework;
+        (SUM(CASE WHEN completed = 1 AND due_date.unix_timestamp >= assigned_date.unix_timestamp THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) AS onTimeCompletionRate
+      FROM fact_homework
+      JOIN dim_dates AS due_date ON fact_homework.due_date_id = due_date.date_id
+      JOIN dim_dates AS assigned_date ON fact_homework.assigned_date_id = assigned_date.date_id;
     `;
     const result = await this.#db.get(query);
     return result.onTimeCompletionRate;
@@ -43,12 +45,12 @@ export default class DataMetrics {
   async getHomeworkLoadPerWeek() {
     const query = `
       SELECT 
-        CONCAT(dim_dates.year, '-', dim_dates.week) AS week,
+        CONCAT(assigned_date.year, '-', assigned_date.week) AS week,
         COUNT(*) AS count
       FROM fact_homework
-      JOIN dim_dates ON fact_homework.assigned_date_id = dim_dates.date_id
-      GROUP BY dim_dates.week
-      ORDER BY dim_dates.year, dim_dates.week;
+      JOIN dim_dates as assigned_date ON fact_homework.assigned_date_id = assigned_date.date_id
+      GROUP BY assigned_date.year, assigned_date.week
+      ORDER BY assigned_date.year, assigned_date.week;
     `;
     const result = await this.#db.all(query);
     return result;
@@ -77,6 +79,37 @@ export default class DataMetrics {
       JOIN dim_subjects ON fact_homework.subject_id = dim_subjects.subject_id
       GROUP BY fact_homework.subject_id
       ORDER BY completionRate DESC;
+    `;
+    const result = await this.#db.all(query);
+    return result;
+  }
+
+  async getAverageDurationPerSubjectGivenToExpected() {
+    const query = `
+      SELECT 
+        subject,
+        AVG(due_date.unix_timestamp - assigned_date.unix_timestamp) AS averageDuration
+      FROM fact_homework
+      JOIN dim_subjects ON fact_homework.subject_id = dim_subjects.subject_id
+      JOIN dim_dates AS due_date ON fact_homework.due_date_id = due_date.date_id
+      JOIN dim_dates AS assigned_date ON fact_homework.assigned_date_id = assigned_date.date_id
+      GROUP BY fact_homework.subject_id;
+    `;
+    const result = await this.#db.all(query);
+    return result;
+  }
+
+  async getAverageDurationPerSubjectGivenToDone() {
+    const query = `
+      SELECT 
+        subject,
+        AVG(completed_date.unix_timestamp - assigned_date.unix_timestamp) AS averageDuration
+      FROM fact_homework
+      JOIN dim_subjects ON fact_homework.subject_id = dim_subjects.subject_id
+      JOIN dim_dates AS completed_date ON fact_homework.completed_date_id = completed_date.date_id
+      JOIN dim_dates AS assigned_date ON fact_homework.assigned_date_id = assigned_date.date_id
+      WHERE completed = 1
+      GROUP BY fact_homework.subject_id;
     `;
     const result = await this.#db.all(query);
     return result;

@@ -1,3 +1,5 @@
+import DataMetrics from '../Database/DataMetrics.js'
+
 export default class MetricsProcessor {
   
   /**
@@ -23,6 +25,8 @@ export default class MetricsProcessor {
     const homeworkLoadPerWeek = await this.#db.getHomeworkLoadPerWeek();
     const homeworkLoadPerSubject = await this.#db.getHomeworkLoadPerSubject();
     const completionPerSubject = await this.#db.getCompletionPerSubject();
+    const averageDurationPerSubjectGivenToExpected = await this.#db.getAverageDurationPerSubjectGivenToExpected();
+    const averageDurationPerSubjectGivenToDone = await this.#db.getAverageDurationPerSubjectGivenToDone();
 
     const metrics = {
       completionRate,
@@ -30,7 +34,9 @@ export default class MetricsProcessor {
       averageDuration,
       homeworkLoadPerWeek,
       homeworkLoadPerSubject,
-      completionPerSubject
+      completionPerSubject,
+      averageDurationPerSubjectGivenToExpected,
+      averageDurationPerSubjectGivenToDone
     };
 
     if (this.#verbose) {
