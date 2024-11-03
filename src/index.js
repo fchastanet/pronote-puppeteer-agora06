@@ -49,23 +49,23 @@ process.on('SIGUSR2', exitHandler.bind(null, {exit:true}));
 process.on('uncaughtException', exitHandler.bind(null, {exit:true}));
 
 async function retrievePronoteData({
-  resultDir, casUrl, login, password, currentDate, debugMode, verbose
+  resultDir, casUrl, login, password, currentDate, debug, verbose
 }) {
   /** @var {Crawler} crawler */
-  const crawler = new Crawler(debugMode);
-  browser = await crawler.initBrowser();
-  const page = await crawler.initPage(browser);
-
-  /** @var {PronoteCrawler} pronoteCrawler */
-  const pronoteCrawler = new PronoteCrawler({
-    page, debugMode, verbose, 
-    currentDate,
-    resultDir, login, password, casUrl
-  });
-  pronoteCrawler.setPageListeners();
+  const crawler = new Crawler(debug);
+  const browser = await crawler.initBrowser();
   try {
+    const page = await crawler.initPage(browser);
+
+    /** @var {PronoteCrawler} pronoteCrawler */
+    const pronoteCrawler = new PronoteCrawler({
+      page, debug, verbose, 
+      currentDate,
+      resultDir, login, password, casUrl
+    });
+    pronoteCrawler.setPageListeners();
     await pronoteCrawler.crawl();
-    if (debugMode) {
+    if (debug) {
       console.log("keep window opened for debugging");
       await Utils.delay(600000);
     } else {
@@ -75,6 +75,10 @@ async function retrievePronoteData({
   } catch (error) {
     console.error('An error occurred during the login process:', error);
     process.exit(1);
+  } finally {
+    if (browser !== null) {
+      browser.close();
+    }
   }
 }
 

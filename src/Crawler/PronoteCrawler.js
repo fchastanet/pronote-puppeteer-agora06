@@ -219,6 +219,16 @@ export default class PronoteCrawler {
       document.querySelector(sel).click();
     });
     await this.#page.waitForSelector('.conteneur-CDT');
+    await Utils.delay(2000); // wait some time to let the page to be fully loaded
+    console.log('change date to 1st september')
+    await this.#page.evaluate(() => {
+      // start date selector
+      document.getElementById('GInterface.Instances[2].Instances[2].cellule_Edit').click();
+      // september selection
+      document.querySelector('.ObjetFenetre_Date_racine .liste-as-options li:first-child div').click()
+      // 1st active day of the month
+      document.querySelector('.ObjetFenetre_Date_racine .date.actif').click();
+    });
     await Utils.delay(2000); // wait some time to let the page to be fully loaded before screenshot
     await this.#page.screenshot({path: this.#getResultFile('cahierDeTexte-courses.png'), fullPage: true});
   }
