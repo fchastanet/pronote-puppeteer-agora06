@@ -87,6 +87,21 @@ export default class DateWrapper {
     return this.#date.diff(date.#date)
   }
 
+  isAfter(date) {
+    return this.#date.isAfter(date.#date)
+  }
+
+  /**
+   * Add a specified amount of time to the current date.
+   * @param {number} value - The amount of time to add.
+   * @param {string} unit - The unit of time (e.g., 'day', 'month', 'year').
+   * @returns {DateWrapper} The updated DateWrapper instance.
+   */
+  add(value, unit) {
+    this.#date = this.#date.add(value, unit)
+    return this
+  }
+
   /**
    * Parse a date string with the format "DD/MM/YYYY HH:mm:ss".
    * @param {string} dateString - The date string to parse.

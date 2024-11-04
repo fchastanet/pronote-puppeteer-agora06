@@ -9,6 +9,7 @@ export default class DataWarehouse {
   static COMPLETION_STATE_IN_PROGRESS = 0;
   static COMPLETION_STATE_COMPLETED = 1;
   static COMPLETION_STATE_OVER_DUE = 2;
+  static COMPLETION_STATE_UNKNOWN = 3;
 
   /**
    * @type {DatabaseConnection}

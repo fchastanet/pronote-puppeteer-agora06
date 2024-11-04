@@ -272,6 +272,7 @@ export default class DataProcessor {
     // Insert dates
     const dueDate = homework?.dueDate ? DateWrapper.parseDate(homework.dueDate) : null;
     let dueDateId = this.getOrInsertDate(dueDate);
+    const threeDaysAfterDueDate = dueDate.add(3, 'days')
     const assignedDate = homework?.dueDate ? DateWrapper.parseDate(homework.assignedDate) : null;
     let assignedDateId = this.getOrInsertDate(assignedDate);
     let maxCompletionDuration = (dueDate !== null && assignedDate !== null) ? dueDate.diff(assignedDate, 'second') : null;
@@ -289,15 +290,26 @@ export default class DataProcessor {
     const homeworkKey = this.computeHomeworkUniqueId(homework, factCourse, filePath);
     let factHomework = this.#db.getFactHomework(homeworkKey);
     let updateFiles = [];
-    let completedDateId = null
-    let completionDuration = null;
-    let completionState = DataWarehouse.COMPLETION_STATE_IN_PROGRESS;
+    let completedDateId = factHomework?.completed_date_id || null
+    let completionState = factHomework?.completion_state || DataWarehouse.COMPLETION_STATE_IN_PROGRESS;
+    let completionDuration = factHomework?.completion_duration || null;
+
+    if (completionState === DataWarehouse.COMPLETION_STATE_IN_PROGRESS) { 
+      if (homework.completed) {
+        if (typeof factHomework === 'undefined' ) {
+          console.log(`Homework ${homework.id} is completed before being inserted, cannot compute completion duration`);
+          completionState = DataWarehouse.COMPLETION_STATE_UNKNOWN
+        } else {
+          completedDateId = this.getOrInsertDate(this.#currentDate)
+          completionDuration = this.#currentDate.diff(assignedDate, 'second')
+          completionState = DataWarehouse.COMPLETION_STATE_COMPLETED
+        }
+      } else if (this.#currentDate.isAfter(threeDaysAfterDueDate)) {
+        completionState = DataWarehouse.COMPLETION_STATE_OVER_DUE
+      }
+    }
 
     if (typeof factHomework === 'undefined') {
-      if (homework.completed) {
-        console.log(`Homework ${homework.id} is completed before being inserted, cannot compute completion duration`);
-        completionState = DataWarehouse.COMPLETION_STATE_COMPLETED;
-      }
       updateFiles.push({filePath, checksum: homework.checksum, id: homework.id});
       this.#db.insertFactHomework({
         fact_key: homeworkKey,
@@ -311,10 +323,10 @@ export default class DataProcessor {
         description: homework.description,
         formatted: homework.formatted,
         requires_submission: homework.requiresSubmission,
-        completed: homework.completed,
-        completed_date_id: completedDateId, 
         submission_type: homework.submissionType,
         difficulty_level: homework.difficultyLevel,
+        completed: homework.completed,
+        completed_date_id: completedDateId, 
         completion_duration: completionDuration,
         completion_state: completionState,
         max_completion_duration: maxCompletionDuration,
@@ -329,16 +341,6 @@ export default class DataProcessor {
         update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g,''),
       });
     } else if (homework.checksum != factHomework.checksum) {
-      completionDuration = factHomework.completion_duration;
-      if (homework.completed && factHomework.completed_date_id === null) {
-        completedDateId = this.getOrInsertDate(this.#currentDate);
-        completionDuration = this.#currentDate.diff(assignedDate, 'second');
-        completionState = DataWarehouse.COMPLETION_STATE_COMPLETED;
-      } else {
-        completedDateId = factHomework.completed_date_id;
-        completionState = factHomework.completion_state;
-      }
-      
       updateFiles = JSON.parse(factHomework.update_files);
       updateFiles.push({filePath, checksum: homework.checksum, id: homework.id});
       this.#db.updateFactHomework({
