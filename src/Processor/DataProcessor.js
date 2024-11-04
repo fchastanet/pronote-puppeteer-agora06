@@ -23,6 +23,7 @@ export default class DataProcessor {
   #homeworkUniqueId = {};
   #currentDate = null;
   #duplicatedIds = [];
+  #unknownCompletionIds = [];
   
   constructor(db, resultsDir, verbose) {
     this.#db = db
@@ -103,9 +104,18 @@ export default class DataProcessor {
       }
 
       if (this.#duplicatedIds.length > 0) {
-        const homeworksPath = path.join(resultsDir, subDir, 'duplicatedIds.json')
         console.warn(`${this.#duplicatedIds.length} duplicated IDs found in '${subDir}'`);
-        fs.writeFileSync(homeworksPath, JSON.stringify(this.#duplicatedIds, null, 2), 'utf8')
+      }
+      if (this.#unknownCompletionIds.length > 0) {
+        console.warn(`${this.#unknownCompletionIds.length} homeworks already completed before being inserted found in '${subDir}'`);
+      }
+      if (this.#duplicatedIds.length > 0 || this.#unknownCompletionIds.length > 0) {
+        const errorsReportPath = path.join(resultsDir, subDir, 'errorsReport.json')
+        const data = {
+          duplicatedIds: this.#duplicatedIds,
+          unknownCompletionIds: this.#unknownCompletionIds,
+        }
+        fs.writeFileSync(errorsReportPath, JSON.stringify(data, null, 2), 'utf8')
       }
       // mark file processed only at the end as all files need to re parsed every time
       this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
@@ -297,7 +307,11 @@ export default class DataProcessor {
     if (completionState === DataWarehouse.COMPLETION_STATE_IN_PROGRESS) { 
       if (homework.completed) {
         if (typeof factHomework === 'undefined' ) {
-          console.log(`Homework ${homework.id} is completed before being inserted, cannot compute completion duration`);
+          if (this.#verbose) {
+            console.log(`Homework ${homework.id} is completed before being inserted, cannot compute completion duration`);
+          }
+          this.#unknownCompletionIds.push(homework.id);
+
           completionState = DataWarehouse.COMPLETION_STATE_UNKNOWN
         } else {
           completedDateId = this.getOrInsertDate(this.#currentDate)
