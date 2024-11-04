@@ -291,10 +291,12 @@ export default class DataProcessor {
     let updateFiles = [];
     let completedDateId = null
     let completionDuration = null;
+    let completionState = DataWarehouse.COMPLETION_STATE_IN_PROGRESS;
 
     if (typeof factHomework === 'undefined') {
       if (homework.completed) {
         console.log(`Homework ${homework.id} is completed before being inserted, cannot compute completion duration`);
+        completionState = DataWarehouse.COMPLETION_STATE_COMPLETED;
       }
       updateFiles.push({filePath, checksum: homework.checksum, id: homework.id});
       this.#db.insertFactHomework({
@@ -314,6 +316,7 @@ export default class DataProcessor {
         submission_type: homework.submissionType,
         difficulty_level: homework.difficultyLevel,
         completion_duration: completionDuration,
+        completion_state: completionState,
         max_completion_duration: maxCompletionDuration,
         background_color: homework.backgroundColor,
         public_name: homework.publicName,
@@ -330,9 +333,12 @@ export default class DataProcessor {
       if (homework.completed && factHomework.completed_date_id === null) {
         completedDateId = this.getOrInsertDate(this.#currentDate);
         completionDuration = this.#currentDate.diff(assignedDate, 'second');
+        completionState = DataWarehouse.COMPLETION_STATE_COMPLETED;
       } else {
         completedDateId = factHomework.completed_date_id;
+        completionState = factHomework.completion_state;
       }
+      
       updateFiles = JSON.parse(factHomework.update_files);
       updateFiles.push({filePath, checksum: homework.checksum, id: homework.id});
       this.#db.updateFactHomework({
@@ -350,6 +356,7 @@ export default class DataProcessor {
         completed: homework.completed,
         completed_date_id: completedDateId,
         completion_duration: completionDuration,
+        completion_state: completionState,
         max_completion_duration: maxCompletionDuration,
         submission_type: homework.submissionType,
         difficulty_level: homework.difficultyLevel,
