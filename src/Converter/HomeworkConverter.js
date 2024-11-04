@@ -33,6 +33,7 @@ export default class HomeworkConverter {
       description: this.fromTypeConverter.convertItem(item.descriptif, "Literal"),
       themes: item.ListeThemes ? item.ListeThemes.V.map(theme => this.fromTypeConverter.fromPronote(theme)) : [],
       attachments: item.ListePieceJointe ? item.ListePieceJointe.V.map(theme => this.fromTypeConverter.fromPronote(theme, "ListePieceJointe")) : [],
+      json: item,
     };
     resultItem.checksum = this.computeHomeworkItemChecksum(resultItem);
 

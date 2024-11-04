@@ -21,7 +21,7 @@ export default class DataProcessor {
   #gradeId = null;
   #courseIdFactMapping = {};
   #homeworkUniqueId = {};
-  #currentDate = null;
+  #crawlDate = null;
   #duplicatedIds = [];
   #unknownCompletionIds = [];
   
@@ -50,6 +50,9 @@ export default class DataProcessor {
       const studentInfoPath = path.join(resultsDir, subDir, 'studentInfo.json')
       const coursesPath = path.join(resultsDir, subDir, 'cahierDeTexte-courses.json')
       const homeworksPath = path.join(resultsDir, subDir, 'cahierDeTexte-travailAFaire.json')
+      this.#duplicatedIds = [];
+      this.#unknownCompletionIds = [];
+      this.#courseIdFactMapping = {};
 
       if (
         !fs.existsSync(studentInfoPath) || 
@@ -66,7 +69,7 @@ export default class DataProcessor {
       try {        
         console.info(`Processing '${studentInfoPath}' ...`)
         const studentInfoContent = JSON.parse(fs.readFileSync(studentInfoPath, 'utf8'))
-        this.#currentDate = new DateWrapper(studentInfoContent.crawlDate)
+        this.#crawlDate = new DateWrapper(studentInfoContent.crawlDate)
         this.processStudentInfo(studentInfoContent)
       } catch (error) {
         console.error(`Unable to process file '${studentInfoPath}' :`, error)
@@ -117,6 +120,21 @@ export default class DataProcessor {
         }
         fs.writeFileSync(errorsReportPath, JSON.stringify(data, null, 2), 'utf8')
       }
+
+      // remove Homeworks that were marked as temporary before this crawlDate and that are still temporary
+      let temporaryHomeworksToRemove = this.#db.reportTemporaryHomeworks(this.#crawlDate)
+      temporaryHomeworksToRemove = temporaryHomeworksToRemove.map(homework => {
+        homework.json = JSON.parse(homework.json)
+        return homework
+      })
+      const deletedHomeworkCount = this.#db.removeTemporaryHomeworks(this.#crawlDate)
+      if (deletedHomeworkCount > 0) {
+        const temporaryHomeworksRemovedPath = path.join(resultsDir, subDir, 'temporaryHomeworksRemoved.json')
+        
+        fs.writeFileSync(temporaryHomeworksRemovedPath, JSON.stringify(temporaryHomeworksToRemove, null, 2), 'utf8')
+        console.info(`Removed ${deletedHomeworkCount} temporary homeworks - report in '${temporaryHomeworksRemovedPath}'`)
+      }
+
       // mark file processed only at the end as all files need to re parsed every time
       this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
       this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
@@ -212,7 +230,7 @@ export default class DataProcessor {
     let startDateId = this.getOrInsertDate(course?.startDate);
     let endDateId = this.getOrInsertDate(course?.endDate);
     let homeworkDateId = this.getOrInsertDate(course?.homeworkDate);
-    let updateLastDateId = this.getOrInsertDate(this.#currentDate);
+    let updateLastDateId = this.getOrInsertDate(this.#crawlDate);
     
     // Insert fact course
     let factCourse = this.#db.getFactCourse(course.key);
@@ -286,7 +304,7 @@ export default class DataProcessor {
     const assignedDate = homework?.dueDate ? DateWrapper.parseDate(homework.assignedDate) : null;
     let assignedDateId = this.getOrInsertDate(assignedDate);
     let maxCompletionDuration = (dueDate !== null && assignedDate !== null) ? dueDate.diff(assignedDate, 'second') : null;
-    let updateLastDateId = this.getOrInsertDate(this.#currentDate);
+    let updateLastDateId = this.getOrInsertDate(this.#crawlDate);
 
     const factCourseKey = this.#courseIdFactMapping?.[homework.plannedCourseId]?.fact_key;
     let factCourse = null;
@@ -314,11 +332,11 @@ export default class DataProcessor {
 
           completionState = DataWarehouse.COMPLETION_STATE_UNKNOWN
         } else {
-          completedDateId = this.getOrInsertDate(this.#currentDate)
-          completionDuration = this.#currentDate.diff(assignedDate, 'second')
+          completedDateId = this.getOrInsertDate(this.#crawlDate)
+          completionDuration = this.#crawlDate.diff(assignedDate, 'second')
           completionState = DataWarehouse.COMPLETION_STATE_COMPLETED
         }
-      } else if (this.#currentDate.isAfter(threeDaysAfterDueDate)) {
+      } else if (this.#crawlDate.isAfter(threeDaysAfterDueDate)) {
         completionState = DataWarehouse.COMPLETION_STATE_OVER_DUE
       }
     }
@@ -353,6 +371,7 @@ export default class DataProcessor {
         update_first_date_id: updateLastDateId,
         update_last_date_id: updateLastDateId,
         update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g,''),
+        json: JSON.stringify(homework.json, null, 2)?.replace(/\00/g,''),
       });
     } else if (homework.checksum != factHomework.checksum) {
       updateFiles = JSON.parse(factHomework.update_files);
@@ -385,6 +404,7 @@ export default class DataProcessor {
         update_last_date_id: updateLastDateId,
         update_count: factHomework.update_count + 1,
         update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g,''),
+        json: JSON.stringify(homework.json, null, 2)?.replace(/\00/g,''),
       });
     }
   }
@@ -431,7 +451,4 @@ export default class DataProcessor {
     };
     return Utils.md5sum(data);
   }
-
-
-    
 }
