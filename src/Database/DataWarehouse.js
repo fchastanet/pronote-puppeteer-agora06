@@ -182,6 +182,59 @@ export default class DataWarehouse {
         processing_status INTEGER DEFAULT 0  -- enum (0: not processed, 1: processed, 2: error)
       );
     `;
+
+    const createViewQuery = `
+      DROP VIEW IF EXISTS view_homework;
+      CREATE VIEW view_homework AS
+      SELECT 
+        hw.fact_id AS fact_id,
+        hw.fact_key AS fact_key,
+        hw.description AS description,
+        dd.date AS due_date,
+        ad.date AS assigned_date,
+        hw.completed AS completed,
+        cd.date AS completed_date,
+        hw.completion_duration AS completion_duration,
+        hw.completion_state AS completion_state,
+        hw.max_completion_duration AS max_completion_duration,
+        hw.formatted AS formatted,
+        hw.requires_submission AS requires_submission,
+        hw.submission_type AS submission_type,
+        hw.difficulty_level AS difficulty_level,
+        hw.background_color AS background_color,
+        hw.public_name AS public_name,
+        hw.themes AS themes,
+        hw.attachments AS attachments,
+        hw.checksum AS checksum,
+        hw.update_count AS update_count,
+        ufd.date AS update_first_date,
+        uld.date AS update_last_date,
+        hw.update_files AS update_files,
+        hw.temporary AS temporary,
+        hw.json AS json,
+        s.name AS student_name,
+        sc.name AS school_name,
+        g.name AS grade_name,
+        sub.subject AS subject_name,
+        t.name AS teacher_name,
+        sd.date AS course_start_date,
+        ed.date AS course_end_date
+      FROM fact_homework hw
+      LEFT JOIN dim_students s ON hw.student_id = s.student_id
+      LEFT JOIN dim_schools sc ON hw.school_id = sc.school_id
+      LEFT JOIN dim_subjects sub ON hw.subject_id = sub.subject_id
+      LEFT JOIN dim_grades g ON hw.grade_id = g.grade_id
+      LEFT JOIN dim_dates dd ON hw.due_date_id = dd.date_id
+      LEFT JOIN dim_dates ad ON hw.assigned_date_id = ad.date_id
+      LEFT JOIN dim_dates cd ON hw.completed_date_id = cd.date_id
+      LEFT JOIN dim_dates ufd ON hw.update_first_date_id = ufd.date_id
+      LEFT JOIN dim_dates uld ON hw.update_last_date_id = uld.date_id
+      LEFT JOIN fact_courses c ON hw.fact_course_id = c.fact_id
+      LEFT JOIN dim_teachers t ON c.teacher_id = t.teacher_id
+      LEFT JOIN dim_dates sd ON c.start_date_id = sd.date_id
+      LEFT JOIN dim_dates ed ON c.end_date_id = ed.date_id
+      ;
+    `
     
     this.#db.exec(createDimStudentsTable);
     this.#db.exec(createDimSchoolsTable);
@@ -192,6 +245,7 @@ export default class DataWarehouse {
     this.#db.exec(createFactCoursesTable);
     this.#db.exec(createFactHomeworkTable);
     this.#db.exec(createProcessedFilesTable);
+    this.#db.exec(createViewQuery);    
   }
 
   getStudentId(name) {
