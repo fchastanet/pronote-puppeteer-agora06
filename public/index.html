@@ -5,6 +5,9 @@
   <meta name='viewport' content='width=device-width, initial-scale=1.0'>
   <title>Homework Metrics Dashboard</title>
   <script src='https://cdn.jsdelivr.net/npm/echarts@5.3.3/dist/echarts.min.js'></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/duration.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/relativeTime.js"></script>
   <style type='text/css'>
     body {
       font-family: Arial, sans-serif;
@@ -58,7 +61,6 @@
   <div class='dashboard'>
     <div class='chart-container' id='completionRateChart'></div>
     <div class='chart-container' id='onTimeCompletionRateChart'></div>
-    <div class='chart-container' id='averageDurationChart'></div>
     <div class='chart-container' id='homeworkLoadPerWeekChart'></div>
     <div class='chart-container' id='homeworkLoadPerSubjectChart'></div>
     <div class='chart-container' id='completionPerSubjectChart'></div>
@@ -67,6 +69,21 @@
   </div>
 
   <script>
+    dayjs.extend(window.dayjs_plugin_duration);
+    dayjs.extend(window.dayjs_plugin_relativeTime);
+    String.prototype.capitalize = String.prototype.capitalize || function() {
+      return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase();
+    }
+    const toolbox = {
+      show: true,
+      orient: 'horizontal',
+      top: 'left',
+      feature: {
+        dataView: { show: true, readOnly: false },
+        saveAsImage: { show: true },
+      }
+    };
+
     fetch('metrics.json')
       .then(response => response.json())
       .then(data => {
@@ -76,6 +93,7 @@
             text: 'Homework Completion Rate'
           },
           tooltip: {},
+          toolbox,
           series: [{
             type: 'pie',
             data: [
@@ -92,6 +110,7 @@
             text: 'On Time Homework Completion Rate'
           },
           tooltip: {},
+          toolbox,
           series: [{
             type: 'pie',
             data: [
@@ -103,22 +122,40 @@
         onTimeCompletionRateChart.setOption(onTimeCompletionRateOption)
 
         const homeworkLoadPerWeekChart = echarts.init(document.getElementById('homeworkLoadPerWeekChart'))
+        const convertDateToWeek = date => dayjs(date).startOf('week').format('MMM-DD')
         const homeworkLoadPerWeekOption = {
           title: {
             text: 'Homework Load Per Week'
           },
           tooltip: {},
+          toolbox,
           xAxis: {
             type: 'category',
-            data: data.homeworkLoadPerWeek.map(item => item.week)
+            data: data.homeworkLoadPerWeek.map(item => item.date),
+            axisLabel: {
+              formatter: (item) => convertDateToWeek(item),
+            },        
           },
           yAxis: {
             type: 'value'
           },
           series: [{
-            data: data.homeworkLoadPerWeek.map(item => item.count),
+            data: data.homeworkLoadPerWeek.map(item => ({
+              value: item.count,
+              date: item.date
+            })),
             type: 'line',
-            color: '#2196f3'
+            color: '#2196f3',
+            tooltip: {
+              formatter: function (param) {
+                const week = convertDateToWeek(param.data.date);
+                return [
+                  '<b>Date:</b> ' + dayjs(param.data.date).format('YYYY-MM-DD') + '<br>',  
+                  '<b>Week:</b> ' + week + '<br>',
+                  '<b>Homework count:</b> ' + param.data.value + '<br>'
+                ].join('');
+              }
+            }
           }]
         }
         homeworkLoadPerWeekChart.setOption(homeworkLoadPerWeekOption)
@@ -129,12 +166,13 @@
             text: 'Homework Load Per Subject'
           },
           tooltip: {},
+          toolbox,
           xAxis: {
             type: 'value'
           },
           yAxis: {
             type: 'category',
-            data: data.homeworkLoadPerSubject.map(item => item.subject),
+            data: data.homeworkLoadPerSubject.map(item => item.subject.capitalize()),
             axisLabel: {
               fontSize: 8,
             }
@@ -153,12 +191,16 @@
             text: 'Homework Completion Per Subject'
           },
           tooltip: {},
+          toolbox,
+          grid: {
+            left: 150,
+          },
           xAxis: {
             type: 'value'
           },
           yAxis: {
             type: 'category',
-            data: data.completionPerSubject.map(item => item.subject),
+            data: data.completionPerSubject.map(item => item.subject.capitalize()),
             axisLabel: {
               fontSize: 8,
             }
@@ -171,23 +213,47 @@
         }
         completionPerSubjectChart.setOption(completionPerSubjectOption)
 
+        const capitalizeFirstChar = str => str.charAt(0).toUpperCase() + str.substring(1);
         const averageDurationPerSubjectGivenToExpectedChart = echarts.init(document.getElementById('averageDurationPerSubjectGivenToExpectedChart'))
         const averageDurationPerSubjectGivenToExpectedOption = {
           title: {
             text: 'Average Duration Per Subject (Given to Expected)'
           },
           tooltip: {},
+          toolbox,
+          grid: {
+            left: 150,
+          },
           xAxis: {
-            type: 'category',
-            data: data.averageDurationPerSubjectGivenToExpected.map(item => item.subject)
+            type: 'value',
+            axisLabel: {
+              formatter: function(value) {
+                if (value <= 0 || value == null) {
+                  return 'N/A';
+                }
+                const duration = dayjs.duration(value, "seconds").humanize();
+                return duration;
+              }
+            }
           },
           yAxis: {
-            type: 'value'
+            type: 'category',
+            data: data.averageDurationPerSubjectGivenToExpected.map(item => item.subject.capitalize())
           },
           series: [{
-            data: data.averageDurationPerSubjectGivenToExpected.map(item => item.averageDuration),
+            data: data.averageDurationPerSubjectGivenToExpected.map(item => item.averageDuration/1000),
             type: 'bar',
-            color: '#ff5722'
+            color: '#ff5722',
+            tooltip: {
+              formatter: function (param) {
+                const subject = param.name;
+                const duration = (param.data <= 0 || param.data == null) ? 'N/A' : dayjs.duration(param.data, "seconds").humanize();
+                return [
+                  '<b>Subject:</b> ' + subject + '<br>',
+                  '<b>Average Duration:</b> ' + duration + '<br>'
+                ].join('');
+              }
+            }
           }]
         }
         averageDurationPerSubjectGivenToExpectedChart.setOption(averageDurationPerSubjectGivenToExpectedOption)
@@ -198,17 +264,51 @@
             text: 'Average Duration Per Subject (Given to Done)'
           },
           tooltip: {},
+          grid: {
+            left: 150,
+          },
+          toolbox,
           xAxis: {
-            type: 'category',
-            data: data.averageDurationPerSubjectGivenToDone.map(item => item.subject)
+            type: 'value',
+            axisLabel: {
+              formatter: function(value) {
+                if (value <= 0 || value == null) {
+                  return 'N/A';
+                }
+                const duration = dayjs.duration(value, "seconds").humanize();
+                return duration;
+              }
+            }
           },
           yAxis: {
-            type: 'value'
+            type: 'category',
+            axisTick: {
+              alignWithLabel: true
+            },
+            axisLabel: {
+              fontSize: 12,
+              formatter: function (value, index) {
+                  return value.capitalize();
+              },
+              width: 200,
+              overflow: 'truncate'
+            },
+            data: data.averageDurationPerSubjectGivenToDone.map(item => item.subject.capitalize())
           },
           series: [{
-            data: data.averageDurationPerSubjectGivenToDone.map(item => item.averageDuration),
+            data: data.averageDurationPerSubjectGivenToDone.map(item => item.averageDuration/1000),
             type: 'bar',
-            color: '#3f51b5'
+            color: '#3f51b5',
+            tooltip: {
+              formatter: function (param) {
+                const subject = param.name;
+                const duration = (param.data <= 0 || param.data == null) ? 'N/A' : dayjs.duration(param.data, "seconds").humanize();
+                return [
+                  '<b>Subject:</b> ' + subject + '<br>',
+                  '<b>Average Duration:</b> ' + duration + '<br>'
+                ].join('');
+              }
+            }
           }]
         }
         averageDurationPerSubjectGivenToDoneChart.setOption(averageDurationPerSubjectGivenToDoneOption)

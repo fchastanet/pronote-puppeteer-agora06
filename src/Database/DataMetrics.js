@@ -34,6 +34,7 @@ export default class DataMetrics {
   async getHomeworkLoadPerWeek() {
     const query = `
       SELECT 
+        assigned_date.date AS date,
         CONCAT(assigned_date.year, '-', assigned_date.week) AS week,
         COUNT(*) AS count
       FROM fact_homework
@@ -94,7 +95,6 @@ export default class DataMetrics {
         AVG(completion_duration) AS averageDuration
       FROM fact_homework
       JOIN dim_subjects ON fact_homework.subject_id = dim_subjects.subject_id
-      WHERE completion_duration IS NOT null
       GROUP BY fact_homework.subject_id;
     `;
     const result = await this.#db.all(query);
