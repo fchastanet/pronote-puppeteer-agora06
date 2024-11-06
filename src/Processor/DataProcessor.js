@@ -15,15 +15,24 @@ export default class DataProcessor {
   #verbose = false
   #homeworkConverter
   #courseConverter
+  
   #resultsDir = "";
   #studentId = null;
   #schoolId = null;
   #gradeId = null;
-  #courseIdFactMapping = {};
-  #homeworkUniqueId = {};
   #crawlDate = null;
-  #duplicatedIds = [];
+  
+  #globalKnownHomeworkUniqueId = {};
+
+  // per result directory attributes
+  #courseIdFactMapping = {};
   #unknownCompletionIds = [];
+  #duplicatedIds = [];
+  #homeworkUniqueId = {};
+  #homeworkIds = [];
+  #knownHomeworkUniqueId = {};
+  #newHomeworkKeys = [];
+  #deletedHomeworkKeys = [];
   
   constructor(db, resultsDir, verbose) {
     this.#db = db
@@ -99,6 +108,9 @@ export default class DataProcessor {
           
           const homeworksContent = JSON.parse(fs.readFileSync(homeworksPath, 'utf8'))
           this.processHomeworks(homeworksPath, homeworksContent)
+          const homeworkIdsPath = path.join(resultsDir, subDir, 'homeworkIds.json')
+          console.info(`Writing ${homeworkIdsPath} ...`)
+          fs.writeFileSync(homeworkIdsPath, JSON.stringify(this.#homeworkIds, null, 2), 'utf8')
         } catch (error) {
           console.error(`Unable to process file '${homeworksPath}' :`, error)
           this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
@@ -112,14 +124,6 @@ export default class DataProcessor {
       if (this.#unknownCompletionIds.length > 0) {
         console.warn(`${this.#unknownCompletionIds.length} homeworks already completed before being inserted found in '${subDir}'`);
       }
-      if (this.#duplicatedIds.length > 0 || this.#unknownCompletionIds.length > 0) {
-        const errorsReportPath = path.join(resultsDir, subDir, 'errorsReport.json')
-        const data = {
-          duplicatedIds: this.#duplicatedIds,
-          unknownCompletionIds: this.#unknownCompletionIds,
-        }
-        fs.writeFileSync(errorsReportPath, JSON.stringify(data, null, 2), 'utf8')
-      }
 
       // remove Homeworks that were marked as temporary before this crawlDate and that are still temporary
       let temporaryHomeworksToRemove = this.#db.reportTemporaryHomeworks(this.#crawlDate)
@@ -131,9 +135,20 @@ export default class DataProcessor {
       if (deletedHomeworkCount > 0) {
         const temporaryHomeworksRemovedPath = path.join(resultsDir, subDir, 'temporaryHomeworksRemoved.json')
         
-        fs.writeFileSync(temporaryHomeworksRemovedPath, JSON.stringify(temporaryHomeworksToRemove, null, 2), 'utf8')
-        console.info(`Removed ${deletedHomeworkCount} temporary homeworks - report in '${temporaryHomeworksRemovedPath}'`)
+        console.info(`Removed ${deletedHomeworkCount} temporary homeworks in '${subDir}'`)
       }
+    
+      // write errors report
+      const errorsReportPath = path.join(resultsDir, subDir, 'errorsReport.json')
+      const data = {
+        duplicatedIds: this.#duplicatedIds,
+        unknownCompletionIds: this.#unknownCompletionIds,
+        deletedHomeworkKeys: this.#deletedHomeworkKeys,
+        newHomeworkKeys: this.#newHomeworkKeys,
+        temporaryHomeworksToRemove: temporaryHomeworksToRemove,
+      }
+      fs.writeFileSync(errorsReportPath, JSON.stringify(data, null, 2), 'utf8')
+      console.info(`Writing ${errorsReportPath} ...`)
 
       // mark file processed only at the end as all files need to re parsed every time
       this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
@@ -180,6 +195,10 @@ export default class DataProcessor {
 
   processHomeworks(filePath, data) {
     this.#homeworkUniqueId = {};
+    this.#homeworkIds = []
+    this.#knownHomeworkUniqueId = {};
+    this.#newHomeworkKeys = [];
+    this.#deletedHomeworkKeys = [];
 
     const homeworks = this.#homeworkConverter.fromPronote(data)
 
@@ -190,6 +209,26 @@ export default class DataProcessor {
         this.#schoolId, this.#gradeId, this.#studentId, filePath
       );
     }
+
+    // Diff globalKnownHomeworkUniqueId with knownHomeworkUniqueId
+    this.#newHomeworkKeys = Object.keys(this.#knownHomeworkUniqueId).filter(key => !(key in this.#globalKnownHomeworkUniqueId))
+    this.#deletedHomeworkKeys = Object.keys(this.#globalKnownHomeworkUniqueId).filter(key => !(key in this.#knownHomeworkUniqueId))
+    console.log(`${Object.keys(this.#knownHomeworkUniqueId).length} unique IDs found in '${filePath}'`)
+    if (this.#newHomeworkKeys.length > 0) {
+      console.warn(`${this.#newHomeworkKeys.length} new unique IDs found in '${filePath}'`)
+    }
+    if (this.#deletedHomeworkKeys.length > 0) {
+      console.warn(`${this.#deletedHomeworkKeys.length} unique IDs deleted in '${filePath}'`)
+    }
+    // add new keys to globalKnownHomeworkUniqueId
+    this.#newHomeworkKeys.forEach(key => {
+      this.#globalKnownHomeworkUniqueId[key] = this.#knownHomeworkUniqueId[key]
+    })
+    // remove deleted keys from globalKnownHomeworkUniqueId
+    this.#deletedHomeworkKeys.forEach(key => {
+      delete this.#globalKnownHomeworkUniqueId[key]
+    })
+
   }  
 
   getOrInsertDate(date) {
@@ -316,12 +355,24 @@ export default class DataProcessor {
     
     // Insert fact homework
     const homeworkKey = this.computeHomeworkUniqueId(homework, factCourse, filePath);
+    this.#knownHomeworkUniqueId[homeworkKey] = homework.id
     let factHomework = this.#db.getFactHomework(homeworkKey);
     let updateFiles = [];
     let completedDateId = factHomework?.completed_date_id || null
     let completionState = factHomework?.completion_state || DataWarehouse.COMPLETION_STATE_IN_PROGRESS;
     let completionDuration = factHomework?.completion_duration || null;
 
+    this.#homeworkIds.push({
+      homeworkId: homework.id,
+      homeworkKey: homeworkKey,
+      subject: homework.subject,
+      dueDate: homework.dueDate,
+      assignedDate: homework.assignedDate,
+      submissionType: homework.submissionType,
+      description: homework.description,
+      plannedCourseId: homework.plannedCourseId,
+      courseKey: factCourse?.fact_key,
+    });
     if (completionState === DataWarehouse.COMPLETION_STATE_IN_PROGRESS) { 
       if (homework.completed) {
         if (typeof factHomework === 'undefined' ) {
@@ -400,17 +451,18 @@ export default class DataProcessor {
         themes: JSON.stringify(homework.themes, null, 2)?.replace(/\00/g,''),
         attachments: JSON.stringify(homework.attachments, null, 2)?.replace(/\00/g,''),
         checksum: homework.checksum,
+        temporary: 0,
         update_first_date_id: factHomework.update_first_date_id,
         update_last_date_id: updateLastDateId,
         update_count: factHomework.update_count + 1,
         update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g,''),
         json: JSON.stringify(homework.json, null, 2)?.replace(/\00/g,''),
       });
+    } else {
+      this.#db.updateFactHomeworkTemporary(homeworkKey, 0);
     }
   }
 
-  // TODO check if in the same travailAFaire.json we cannot generate the same uniqueId
-  // for 2 different homework ids
   computeHomeworkUniqueId(homework, factCourse, filePath) {
     try {
       let uniqueId = this.getHomeworkUniqueId(homework, factCourse)
@@ -428,6 +480,7 @@ export default class DataProcessor {
           homework,
         });
         uniqueId = `${uniqueId}-${i}`;
+        console.warn(`Duplicated unique ID for homework ID '${homework.id}' in '${filePath}' - new unique ID: '${uniqueId}'`);
       }
       this.#homeworkUniqueId[uniqueId] = homework.id;
       return uniqueId;

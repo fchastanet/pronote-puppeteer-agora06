@@ -495,6 +495,24 @@ export default class DataWarehouse {
     }
   }
 
+  updateFactHomeworkTemporary(fact_key, temporary) {
+    const stmt = this.#db.prepare(`
+      UPDATE fact_homework SET
+        temporary = ?
+      WHERE fact_key = ?
+    `);
+    try {
+      const info = stmt.run(
+        temporary ? 1 : 0,
+        fact_key
+      );
+      return info.changes;
+    } catch (e) {
+      console.log(e, data);
+      throw e;
+    }
+  }
+
   insertContent(content) {
     const stmt = this.#db.prepare(`
       INSERT INTO content (id, courseItemId, description, date, endDate)
