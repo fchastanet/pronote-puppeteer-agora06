@@ -26,6 +26,8 @@ export default class MetricsProcessor {
     const completionPerSubject = await this.#db.getCompletionPerSubject();
     const averageDurationPerSubjectGivenToExpected = await this.#db.getAverageDurationPerSubjectGivenToExpected();
     const averageDurationPerSubjectGivenToDone = await this.#db.getAverageDurationPerSubjectGivenToDone();
+    const homeworksDuration = await this.#db.getHomeworksDuration()
+
 
     const metrics = {
       completionRate,
@@ -34,7 +36,8 @@ export default class MetricsProcessor {
       homeworkLoadPerSubject,
       completionPerSubject,
       averageDurationPerSubjectGivenToExpected,
-      averageDurationPerSubjectGivenToDone
+      averageDurationPerSubjectGivenToDone,
+      homeworksDuration,
     };
 
     if (this.#verbose) {

@@ -100,4 +100,24 @@ export default class DataMetrics {
     const result = await this.#db.all(query);
     return result;
   }
+
+  async getHomeworksDuration() {
+    const query = `
+       SELECT 
+        row_number() OVER(ORDER BY fact_id) AS id,
+        assignedDate.date AS assignedDate,
+        IFNULL(completionDate.date, strftime('%Y-%m-%dT%H:%M:%S', julianday())) AS completionDate,
+        completion_state as completionState,
+        dim_subjects.subject AS subject,
+        fact_homework.description
+      FROM fact_homework
+      JOIN dim_subjects ON fact_homework.subject_id = dim_subjects.subject_id
+      JOIN dim_dates as assignedDate ON fact_homework.assigned_date_id = assignedDate.date_id
+      LEFT JOIN dim_dates as completionDate ON fact_homework.completed_date_id = completionDate.date_id
+      WHERE completion_state != 3 -- state unknown
+      ORDER BY completion_duration DESC;
+    `
+    const result = await this.#db.all(query)
+    return result
+  }
 }
