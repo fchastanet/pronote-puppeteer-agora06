@@ -24,9 +24,10 @@ export default class HttpServer {
       res.sendFile(path.join(this.#staticPath, 'index.html'));
     });
 
-    // Serve metrics.json
-    app.get('/metrics.json', (req, res) => {
-      res.sendFile(path.join(this.#staticPath, 'metrics.json'));
+    // Serve any file in the static directory
+    app.get('/:filename', (req, res) => {
+      const filename = req.params.filename;
+      res.sendFile(path.join(this.#staticPath, filename));
     });
 
     app.listen(this.#port, '0.0.0.0', () => {
