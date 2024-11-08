@@ -76,6 +76,7 @@
     <div class='chart-container' id='onTimeCompletionRateChart'></div>
     <div class='chart-container' id='homeworkLoadPerWeekChart'></div>
     <div class='chart-container' id='homeworkLoadPerDayChart'></div>
+    <div class='chart-container' id='homeworkLoadPerWeekDayChart'></div>
     <div class='chart-container' id='homeworkLoadPerSubjectChart'></div>
     <div class='chart-container' id='completionPerSubjectChart'></div>
     <div class='chart-container' id='averageDurationPerSubjectGivenToExpectedChart'></div>
@@ -95,6 +96,15 @@
       1: '#4caf50',
       2: '#ff5722',
       3: '#9e9e9e'
+    };
+    const WEEK_DAY_LABELS = {
+      0: 'Monday',
+      1: 'Tuesday',
+      2: 'Wednesday',
+      3: 'Thursday',
+      4: 'Friday',
+      5: 'Saturday',
+      6: 'Sunday',
     };
 
     dayjs.extend(window.dayjs_plugin_duration);
@@ -152,6 +162,12 @@
         const homeworkLoadPerWeekChart = echarts.init(document.getElementById('homeworkLoadPerWeekChart'))
         const convertDateToWeek = date => dayjs(date).startOf('week').format('MMM-DD')
         const convertDateToDay = date => dayjs(date).format('MMM-DD')
+        const convertDateToWeekInterval = date => {
+          date = dayjs(date)
+          const startDate = date.startOf('week').format('MMM-DD')
+          const endDate = date.endOf('week').format('MMM-DD')
+          return `${startDate} - ${endDate}`
+        }
         const homeworkLoadPerWeekOption = {
           title: {
             text: 'Homework Load Per Week'
@@ -163,7 +179,22 @@
             data: data.homeworkLoadPerWeek.map(item => item.date),
             axisLabel: {
               formatter: (item) => convertDateToWeek(item),
-            },        
+            },       
+            axisPointer: {
+              snap: true,
+              label: {
+                show: true,
+                formatter: function(item) {
+                  return convertDateToWeekInterval(item.value);
+                }
+              },
+              handle: {
+                show: true
+              }
+            },
+            splitLine: {
+              show: false
+            } 
           },
           yAxis: {
             type: 'value'
@@ -177,9 +208,8 @@
             color: '#2196f3',
             tooltip: {
               formatter: function (param) {
-                const week = convertDateToWeek(param.data.date);
+                const week = convertDateToWeekInterval(param.data.date);
                 return [
-                  '<b>Date:</b> ' + dayjs(param.data.date).format('YYYY-MM-DD') + '<br>',  
                   '<b>Week:</b> ' + week + '<br>',
                   '<b>Homework count:</b> ' + param.data.value + '<br>'
                 ].join('');
@@ -199,6 +229,21 @@
           xAxis: {
             type: 'category',
             data: data.homeworkLoadPerDay.map(item => item.day),
+            axisPointer: {
+              snap: true,
+              label: {
+                show: true,
+                formatter: function(item) {
+                  return item.value;
+                }
+              },
+              handle: {
+                show: true
+              }
+            },
+            splitLine: {
+              show: false
+            }
           },
           yAxis: {
             type: 'value'
@@ -222,6 +267,54 @@
         }
         homeworkLoadPerDayChart.setOption(homeworkLoadPerDayOption)
 
+        const homeworkLoadPerWeekDayChart = echarts.init(document.getElementById('homeworkLoadPerWeekDayChart'))
+        const homeworkLoadPerWeekDayOption = {
+          title: {
+            text: 'Homework Load Per Week Day'
+          },
+          tooltip: {},
+          toolbox,
+          xAxis: {
+            type: 'category',
+            data: data.homeworkLoadPerWeekDay.map(item => WEEK_DAY_LABELS[item.weekday]),
+            axisPointer: {
+              snap: true,
+              label: {
+                show: true,
+                formatter: function(item) {
+                  return item.value;
+                }
+              },
+              handle: {
+                show: true
+              }
+            },
+            splitLine: {
+              show: false
+            }
+          },
+          yAxis: {
+            type: 'value'
+          },
+          series: [{
+            data: data.homeworkLoadPerWeekDay.map(item => ({
+              value: item.count,
+              weekday: WEEK_DAY_LABELS[item.weekday],
+            })),
+            type: 'line',
+            color: '#2196f3',
+            tooltip: {
+              formatter: function (param) {
+                return [
+                  '<b>Day:</b> ' + param.data.weekday + '<br>', 
+                  '<b>Homework count:</b> ' + param.data.value + '<br>'
+                ].join('');
+              }
+            }
+          }]
+        }
+        homeworkLoadPerWeekDayChart.setOption(homeworkLoadPerWeekDayOption)
+
         const homeworkLoadPerSubjectChart = echarts.init(document.getElementById('homeworkLoadPerSubjectChart'))
         const homeworkLoadPerSubjectOption = {
           title: {
@@ -229,6 +322,9 @@
           },
           tooltip: {},
           toolbox,
+          grid: {
+            left: 150,
+          },
           xAxis: {
             type: 'value'
           },
@@ -236,7 +332,7 @@
             type: 'category',
             data: data.homeworkLoadPerSubject.map(item => item.subject.capitalize()),
             axisLabel: {
-              fontSize: 8,
+              fontSize: 12,
             }
           },
           series: [{
@@ -264,7 +360,7 @@
             type: 'category',
             data: data.completionPerSubject.map(item => item.subject.capitalize()),
             axisLabel: {
-              fontSize: 8,
+              fontSize: 12,
             }
           },
           series: [{

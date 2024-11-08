@@ -60,6 +60,19 @@ export default class DataMetrics {
     return result;
   }
 
+  async getHomeworkLoadPerWeekDay() {
+    const query = `
+      SELECT
+        assigned_date.weekday AS weekday,
+        COUNT(*) AS count
+      FROM fact_homework
+      JOIN dim_dates as assigned_date ON fact_homework.assigned_date_id = assigned_date.date_id
+      GROUP BY assigned_date.weekday
+      ORDER BY assigned_date.weekday;
+    `;
+    const result = await this.#db.all(query);
+    return result;
+  }
 
   async getHomeworkLoadPerSubject() {
     const query = `
