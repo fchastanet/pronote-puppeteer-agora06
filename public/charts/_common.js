@@ -14,11 +14,16 @@ const COMPLETION_STATE_LABELS = {
   3: 'Unknown'
 };
 const COMPLETION_STATE_COLORS = {
-  0: '#2196f3',
+  0: '#87CEEB', // Light Blue
   1: '#4caf50',
   2: '#ff5722',
   3: '#9e9e9e'
 };
+
+const COMPLETION_STATE_IN_PROGRESS = 0;
+const COMPLETION_STATE_COMPLETED = 1;
+const COMPLETION_STATE_OVER_DUE = 2;
+const COMPLETION_STATE_UNKNOWN = 3;
 
 const initDayjs = (dayjs) => {
   dayjs.extend(window.dayjs_plugin_duration);

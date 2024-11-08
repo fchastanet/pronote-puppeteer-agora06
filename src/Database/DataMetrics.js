@@ -134,13 +134,15 @@ export default class DataMetrics {
        SELECT 
         row_number() OVER(ORDER BY fact_id) AS id,
         assignedDate.date AS assignedDate,
-        IFNULL(completionDate.date, strftime('%Y-%m-%dT%H:%M:%S', julianday())) AS completionDate,
+        completionDate.date AS completionDate,
+        dueDate.date AS dueDate,
         completion_state as completionState,
         dim_subjects.subject AS subject,
         fact_homework.description
       FROM fact_homework
       JOIN dim_subjects ON fact_homework.subject_id = dim_subjects.subject_id
       JOIN dim_dates as assignedDate ON fact_homework.assigned_date_id = assignedDate.date_id
+      JOIN dim_dates as dueDate ON fact_homework.due_date_id = dueDate.date_id
       LEFT JOIN dim_dates as completionDate ON fact_homework.completed_date_id = completionDate.date_id
       WHERE completion_state != 3 -- state unknown
       ORDER BY completion_duration DESC;
