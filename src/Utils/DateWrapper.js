@@ -67,6 +67,11 @@ export default class DateWrapper {
     return this.#date.hour()
   }
 
+  setHour(hour) {
+    this.#date = this.#date.hour(hour)
+    return this
+  }
+
   getMinute() {
     return this.#date.minute()
   }
