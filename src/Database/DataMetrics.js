@@ -46,6 +46,21 @@ export default class DataMetrics {
     return result;
   }
 
+  async getHomeworkLoadPerDay() {
+    const query = `
+      SELECT
+        STRFTIME('%Y-%m-%d', assigned_date.date) AS day,
+        COUNT(*) AS count
+      FROM fact_homework
+      JOIN dim_dates as assigned_date ON fact_homework.assigned_date_id = assigned_date.date_id
+      GROUP BY assigned_date.year, assigned_date.month, assigned_date.day
+      ORDER BY date ASC;
+    `;
+    const result = await this.#db.all(query);
+    return result;
+  }
+
+
   async getHomeworkLoadPerSubject() {
     const query = `
       SELECT 

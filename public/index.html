@@ -75,6 +75,7 @@
     <div class='chart-container' id='completionRateChart'></div>
     <div class='chart-container' id='onTimeCompletionRateChart'></div>
     <div class='chart-container' id='homeworkLoadPerWeekChart'></div>
+    <div class='chart-container' id='homeworkLoadPerDayChart'></div>
     <div class='chart-container' id='homeworkLoadPerSubjectChart'></div>
     <div class='chart-container' id='completionPerSubjectChart'></div>
     <div class='chart-container' id='averageDurationPerSubjectGivenToExpectedChart'></div>
@@ -150,6 +151,7 @@
 
         const homeworkLoadPerWeekChart = echarts.init(document.getElementById('homeworkLoadPerWeekChart'))
         const convertDateToWeek = date => dayjs(date).startOf('week').format('MMM-DD')
+        const convertDateToDay = date => dayjs(date).format('MMM-DD')
         const homeworkLoadPerWeekOption = {
           title: {
             text: 'Homework Load Per Week'
@@ -186,6 +188,39 @@
           }]
         }
         homeworkLoadPerWeekChart.setOption(homeworkLoadPerWeekOption)
+
+        const homeworkLoadPerDayChart = echarts.init(document.getElementById('homeworkLoadPerDayChart'))
+        const homeworkLoadPerDayOption = {
+          title: {
+            text: 'Homework Load Per Day'
+          },
+          tooltip: {},
+          toolbox,
+          xAxis: {
+            type: 'category',
+            data: data.homeworkLoadPerDay.map(item => item.day),
+          },
+          yAxis: {
+            type: 'value'
+          },
+          series: [{
+            data: data.homeworkLoadPerDay.map(item => ({
+              value: item.count,
+              day: item.day,
+            })),
+            type: 'line',
+            color: '#2196f3',
+            tooltip: {
+              formatter: function (param) {
+                return [
+                  '<b>Date:</b> ' + convertDateToDay(param.data.day) + '<br>', 
+                  '<b>Homework count:</b> ' + param.data.value + '<br>'
+                ].join('');
+              }
+            }
+          }]
+        }
+        homeworkLoadPerDayChart.setOption(homeworkLoadPerDayOption)
 
         const homeworkLoadPerSubjectChart = echarts.init(document.getElementById('homeworkLoadPerSubjectChart'))
         const homeworkLoadPerSubjectOption = {
