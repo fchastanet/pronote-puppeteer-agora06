@@ -49,6 +49,9 @@
       padding: 20px;
       height: 400px;
     }
+    #homeworksDurationChart {
+      grid-column: span 3;
+    }
     .descriptionEllipsis {
       display: inline-block;
       width: 200px;
@@ -502,7 +505,10 @@
           title: {
             text: 'Homework Duration Gantt Chart'
           },
-          grid: {},
+          grid: {
+            left: 30,
+            right: 50,
+          },
           toolbox,
           tooltip: {
             trigger: 'item',
