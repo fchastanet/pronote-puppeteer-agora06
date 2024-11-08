@@ -10,8 +10,19 @@ const initHomeworkLoadPerWeekDayChart = (data) => {
         type: 'cross',
         animation: false,
         label: {
-          backgroundColor: '#505765'
-        }
+          backgroundColor: '#505765',
+          formatter: function (params) {
+            if (params.axisDimension === 'y') {
+              return Math.round(params.value);
+            }
+            return params.value;
+          }
+        },
+      },
+      position: function (point, params, dom, rect, size) {
+        // fixed at top
+        console.log(size.viewSize[0], dom.offsetWidth, size)
+        return [size.viewSize[0] - 150, -30];
       }
     },
     toolbox: defaultToolbox,
