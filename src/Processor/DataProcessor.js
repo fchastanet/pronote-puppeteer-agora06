@@ -339,7 +339,7 @@ export default class DataProcessor {
     // Insert dates
     const dueDate = homework?.dueDate ? DateWrapper.parseDate(homework.dueDate) : null;
     let dueDateId = this.getOrInsertDate(dueDate);
-    const threeDaysAfterDueDate = dueDate.add(3, 'days')
+    const threeDaysAfterDueDate = dueDate.clone().add(3, 'days')
     const assignedDate = homework?.dueDate ? DateWrapper.parseDate(homework.assignedDate) : null;
     let assignedDateId = this.getOrInsertDate(assignedDate);
     let maxCompletionDuration = (dueDate !== null && assignedDate !== null) ? dueDate.diff(assignedDate, 'second') : null;
@@ -385,7 +385,11 @@ export default class DataProcessor {
         } else {
           completedDateId = this.getOrInsertDate(this.#crawlDate)
           completionDuration = this.#crawlDate.diff(assignedDate, 'second')
-          completionState = DataWarehouse.COMPLETION_STATE_COMPLETED
+          if (this.#crawlDate.isAfter(dueDate)) {
+            completionState = DataWarehouse.COMPLETION_STATE_OVER_DUE
+          } else {
+            completionState = DataWarehouse.COMPLETION_STATE_COMPLETED
+          }
         }
       } else if (this.#crawlDate.isAfter(threeDaysAfterDueDate)) {
         completionState = DataWarehouse.COMPLETION_STATE_OVER_DUE

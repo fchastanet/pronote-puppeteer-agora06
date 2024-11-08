@@ -31,6 +31,10 @@ export default class DateWrapper {
     }
   }
 
+  clone() {
+    return new DateWrapper(this.#date.clone())
+  }
+
   formatDate(format) {
     return this.#date.format(format)
   }
