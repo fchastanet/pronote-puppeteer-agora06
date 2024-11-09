@@ -12,6 +12,9 @@ import MetricsProcessor from '#pronote/Processor/MetricsProcessor.js'
 import HttpServer from '#pronote/HttpServer/HttpServer.js'
 import DateWrapper from '#pronote/Utils/DateWrapper.js'
 import {Command} from 'commander'
+import PushSubscriptionService from './Services/PushSubscriptionService.js';
+import PushSubscriptionController from './Controllers/PushSubscriptionController.js';
+import IndexController from './Controllers/IndexController.js';
 
 let browser = null;
 
@@ -193,8 +196,22 @@ async function main() {
 
     
     if (commandOptions.server) {
-      const server = new HttpServer()
-      server.start();
+      const publicDir = path.join(process.cwd(), 'public')
+      const pushSubscriptionService = new PushSubscriptionService(
+        path.join(publicDir, 'pushNotifications'),
+        path.join(process.cwd(), 'src', 'HttpServer')
+      )
+      await pushSubscriptionService.init()
+      const pushSubscriptionController = new PushSubscriptionController(pushSubscriptionService)
+      const indexController = new IndexController(publicDir)
+      const server = new HttpServer(
+        publicDir,
+        indexController,
+        pushSubscriptionController,
+        process.env?.SERVER_PORT ?? 3000
+      )
+      
+      server.start()
     }
   
   } finally {

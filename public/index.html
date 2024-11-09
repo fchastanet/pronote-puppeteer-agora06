@@ -8,14 +8,16 @@
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/duration.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/relativeTime.js"></script>
-  <script src="charts/_common.js"></script>
-  <script src="charts/completionRateChart.js"></script>
-  <script src="charts/onTimeCompletionRateChart.js"></script>
-  <script src="charts/homeworkLoadChart.js"></script>
-  <script src="charts/homeworkLoadPerWeekDayChart.js"></script>
-  <script src="charts/subjectMetricsChart.js"></script>
-  <script src="charts/homeworksDurationChart.js"></script>
-  <link rel='stylesheet' href='css/style.css'>
+  <script src="charts/_common.js?t=@timestamp@"></script>
+  <script src="charts/completionRateChart.js?t=@timestamp@"></script>
+  <script src="charts/onTimeCompletionRateChart.js?t=@timestamp@"></script>
+  <script src="charts/homeworkLoadChart.js?t=@timestamp@"></script>
+  <script src="charts/homeworkLoadPerWeekDayChart.js?t=@timestamp@"></script>
+  <script src="charts/subjectMetricsChart.js?t=@timestamp@"></script>
+  <script src="charts/homeworksDurationChart.js?t=@timestamp@"></script>
+  <script src='pushNotifications/publicVapidKey.js?t=@timestamp@'></script>
+  <script src='pushNotifications/client.js?t=@timestamp@'></script>
+  <link rel='stylesheet' href='css/style.css?t=@timestamp@'>
 </head>
 <body>
   <div class='navbar'>
@@ -23,6 +25,16 @@
     <a href='#'>Metrics</a>
     <a href='#'>Settings</a>
   </div>
+  <div class='notification-container'>
+    <div class='notification'></div>
+    Push Notifications:
+    <button id="subscribeButton" onclick='subscribeToPushNotifications()'>Subscribe</button>
+    <button id="unsubscribeButton" onclick="unsubscribeFromPushNotifications()">Unsubscribe</button>
+    <script>
+      initSubscription();
+    </script>
+  </div>
+  
   <h1>Homework Metrics Dashboard</h1>
   <div class='dashboard'>
     <div class='chart-container' id='completionRateChart'></div>

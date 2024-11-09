@@ -5,3 +5,5 @@ oldResults/
 db/
 public/metrics.json
 TODO.md
+public/pushNotifications/publicVapidKey.js
+src/HttpServer/privateVapidKey.js
