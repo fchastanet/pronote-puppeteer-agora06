@@ -8,7 +8,6 @@ export default class DatabaseConnection {
     if (debug) {
       opts.verbose = console.log
     }
-    
     this.#db = new SqliteDatabase(databaseFile, opts)
     this.#db.pragma('journal_mode = WAL') // it is generally important to set the WAL pragma for performance reasons.
   }

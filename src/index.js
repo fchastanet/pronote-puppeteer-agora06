@@ -121,6 +121,7 @@ async function main() {
     processorDataService,
     processorMetricsService,
     processorNotificationsService,
+    runOnInit: !dataWarehouse.isSchemaInitialized(),
     skipCron: commandOptions.skipCron, 
     skipPronoteDataRetrieval: commandOptions.skipPronote,
     skipDataProcess: commandOptions.skipDataProcess, 

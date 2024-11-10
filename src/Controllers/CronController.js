@@ -13,6 +13,7 @@ export default class CronController {
   #processorMetricsService
   /** @type {ProcessorNotificationsService} */
   #processorNotificationsService
+  #runOnInit
   #skipCron
   #skipPronoteDataRetrieval
   #skipDataProcess
@@ -23,15 +24,16 @@ export default class CronController {
 
   constructor({
     pronoteRetrievalService, processorDataService, processorMetricsService, processorNotificationsService,
-    skipCron, skipPronoteDataRetrieval, skipDataProcess, skipDataMetrics, skipNotifications,
+    runOnInit, skipCron, skipPronoteDataRetrieval, skipDataProcess, skipDataMetrics, skipNotifications,
     debug, verbose
   }) {
     this.#pronoteRetrievalService = pronoteRetrievalService
     this.#processorDataService = processorDataService
     this.#processorMetricsService = processorMetricsService
     this.#processorNotificationsService = processorNotificationsService
-    this.#skipPronoteDataRetrieval = skipPronoteDataRetrieval
+    this.#runOnInit = runOnInit
     this.#skipCron = skipCron
+    this.#skipPronoteDataRetrieval = skipPronoteDataRetrieval
     this.#skipDataProcess = skipDataProcess
     this.#skipDataMetrics = skipDataMetrics
     this.#skipNotifications = skipNotifications
@@ -48,18 +50,16 @@ export default class CronController {
     } else {
       // every hour between 9am and 6pm
       let cronTime='0 9-18 * * *'
-      if (this.#verbose) {
+      if (this.#debug) {
         // every minute
         cronTime='* * * * *'
       }
-      if (this.#verbose) {
-        console.debug("Setting up cron job with cronTime: ", cronTime)
-      }
+      console.log("Setting up cron job with cronTime: ", cronTime)
       const job = CronJob.from({
         cronTime,
         onTick: this.mainCronTask.bind(this),
         start: true,
-        runOnInit: true,
+        runOnInit: this.#runOnInit,
         timeZone: 'Europe/Paris'
       });
     }

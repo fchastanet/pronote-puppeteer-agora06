@@ -248,6 +248,12 @@ export default class DataWarehouse {
     this.#db.exec(createViewQuery);    
   }
 
+  isSchemaInitialized() {
+    const stmt = this.#db.prepare("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE `type`='table' AND name = ?) as tableExists");
+    const row = stmt.get('dim_students');
+    return row?.tableExists == 1 ? true : false;
+  }
+
   getStudentId(name) {
     const stmt = this.#db.prepare('SELECT student_id FROM dim_students WHERE name = ?');
     const row = stmt.get(name);
