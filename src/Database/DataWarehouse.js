@@ -154,7 +154,7 @@ export default class DataWarehouse {
         update_files TEXT,
         temporary INTEGER DEFAULT 1,    -- boolean
         json TEXT,
-
+        notification_sent INTEGER DEFAULT 0,  -- boolean
         FOREIGN KEY (student_id) REFERENCES dim_students(student_id),
         FOREIGN KEY (school_id) REFERENCES dim_schools(school_id),
         FOREIGN KEY (grade_id) REFERENCES dim_grades(grade_id),
@@ -519,6 +519,68 @@ export default class DataWarehouse {
     }
   }
 
+  updatePastFactHomeworkNotifications(notification_sent = true) {
+    const stmt = this.#db.prepare(`
+      UPDATE fact_homework 
+      SET notification_sent = ?
+      WHERE fact_key IN (
+        SELECT fact_key
+        FROM fact_homework
+        JOIN dim_dates as assigned_date ON fact_homework.assigned_date_id = assigned_date.date_id
+        WHERE assigned_date.date < DATE('now','-1 day')
+      )
+    `)
+    try {
+      const info = stmt.run(
+        notification_sent ? 1 : 0
+      )
+      return info.changes
+    } catch (e) {
+      console.log(e)
+      throw e
+    }
+  }
+
+  updateFactHomeworkNotification(fact_key, notification_sent = true) {
+    const stmt = this.#db.prepare(`
+      UPDATE fact_homework SET
+        notification_sent = ?
+      WHERE fact_key = ?
+    `)
+    try {
+      const info = stmt.run(
+        notification_sent ? 1 : 0,
+        fact_key
+      )
+      return info.changes
+    } catch (e) {
+      console.log(e)
+      throw e
+    }
+  }
+
+  getHomeworksWithNotification(notification_sent = false) {
+    const stmt = this.#db.prepare(`
+      SELECT 
+        fact_homework.fact_key as factKey, 
+        fact_homework.description,
+        due_date.date as dueDate, 
+        assigned_date.date as assignedDate,
+        dim_teachers.name as teacherName,
+        dim_subjects.subject as subject
+      FROM fact_homework
+      JOIN dim_dates as assigned_date ON fact_homework.assigned_date_id = assigned_date.date_id
+      JOIN dim_dates as due_date ON fact_homework.due_date_id = due_date.date_id
+      JOIN fact_courses ON fact_homework.fact_course_id = fact_courses.fact_id
+      JOIN dim_teachers ON fact_courses.teacher_id = dim_teachers.teacher_id
+      LEFT JOIN dim_subjects ON fact_homework.subject_id = dim_subjects.subject_id
+      WHERE notification_sent = ? AND completed = 0
+    `)
+    return stmt.all(
+      notification_sent ? 1 : 0,
+    )
+  }
+
   insertContent(content) {
     const stmt = this.#db.prepare(`
       INSERT INTO content (id, courseItemId, description, date, endDate)
@@ -586,5 +648,23 @@ export default class DataWarehouse {
     `)
     const results = stmt.run(dateTime.toISOString())
     return results.changes
+  }
+
+  sendNotification(homework) {
+    const notification = {
+      title: 'Homework Reminder',
+      body: `You have homework due for ${homework.subject_name} on ${homework.due_date}`,
+      icon: '/path/to/icon.png'
+    }
+
+    if (Notification.permission === 'granted') {
+      new Notification(notification.title, notification)
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          new Notification(notification.title, notification)
+        }
+      })
+    }
   }
 }

@@ -87,11 +87,15 @@ export default class PushSubscriptionService {
     this.#subscriptions = this.#subscriptions.filter(sub => sub !== subscription)
   }
 
-  async sendNotification(payload) {
+  async sendNotification(notification) {
+    const payloadStr = JSON.stringify(notification)
     const subscriptions = await this.getSubscriptions()
-    const payloadStr = JSON.stringify(payload)
     subscriptions.forEach(subscription => {
-      webpush.sendNotification(subscription, payloadStr).catch(error => console.error(error))
+      webpush.sendNotification(subscription, payloadStr)
+        .then(response => {
+          console.log('Notification sent successfully:', response)
+      })
+        .catch(error => console.error('Error sending notification:', error))
     })
   }
 

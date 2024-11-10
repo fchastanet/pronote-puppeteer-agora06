@@ -59,9 +59,14 @@ export default class CronController {
         cronTime,
         onTick: this.mainCronTask.bind(this),
         start: true,
-        runOnInit: this.#runOnInit,
         timeZone: 'Europe/Paris'
       });
+
+      if (true || this.#runOnInit) {
+        setTimeout(() => {
+          this.mainCronTask()
+        }, 1000);
+      }
     }
   }
 

@@ -113,34 +113,22 @@ async function main() {
   const processorMetricsService = new ProcessorMetricsService(
     dataMetrics, publicDir, commandOptions.debug, commandOptions.verbose
   )
-  
-  const processorNotificationsService = new ProcessorNotificationsService(commandOptions.verbose)
 
-  const cronController = new CronController({
-    pronoteRetrievalService,
-    processorDataService,
-    processorMetricsService,
-    processorNotificationsService,
-    runOnInit: !dataWarehouse.isSchemaInitialized(),
-    skipCron: commandOptions.skipCron, 
-    skipPronoteDataRetrieval: commandOptions.skipPronote,
-    skipDataProcess: commandOptions.skipDataProcess, 
-    skipDataMetrics: commandOptions.skipDataMetrics, 
-    skipNotifications: commandOptions.skipNotifications,
-    debug: commandOptions.debug, 
+  const pushSubscriptionService = new PushSubscriptionService(
+    path.join(publicDir, 'pushNotifications'),
+    path.join(process.cwd(), 'src', 'HttpServer')
+  )
+  await pushSubscriptionService.init()
+  const pushSubscriptionController = new PushSubscriptionController(pushSubscriptionService)
+  const indexController = new IndexController(publicDir)
+    
+  const processorNotificationsService = new ProcessorNotificationsService({
+    dataWarehouse,
+    pushSubscriptionService,
     verbose: commandOptions.verbose,
   })
-  cronController.setupCronJobs()  
 
   if (commandOptions.server) {
-    const publicDir = path.join(process.cwd(), 'public')
-    const pushSubscriptionService = new PushSubscriptionService(
-      path.join(publicDir, 'pushNotifications'),
-      path.join(process.cwd(), 'src', 'HttpServer')
-    )
-    await pushSubscriptionService.init()
-    const pushSubscriptionController = new PushSubscriptionController(pushSubscriptionService)
-    const indexController = new IndexController(publicDir)
     const server = new HttpServer(
       publicDir,
       indexController,
@@ -150,6 +138,22 @@ async function main() {
     
     server.start()
   }
+  
+  const cronController = new CronController({
+    pronoteRetrievalService,
+    processorDataService,
+    processorMetricsService,
+    processorNotificationsService,
+    runOnInit: true || !dataWarehouse.isSchemaInitialized(),
+    skipCron: commandOptions.skipCron, 
+    skipPronoteDataRetrieval: commandOptions.skipPronote,
+    skipDataProcess: commandOptions.skipDataProcess, 
+    skipDataMetrics: commandOptions.skipDataMetrics, 
+    skipNotifications: commandOptions.skipNotifications,
+    debug: commandOptions.debug, 
+    verbose: commandOptions.verbose,
+  })
+  cronController.setupCronJobs()  
 }
 
 await main();
