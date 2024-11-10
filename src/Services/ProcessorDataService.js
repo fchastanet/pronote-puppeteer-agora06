@@ -6,13 +6,14 @@ import DataWarehouse from '#pronote/Database/DataWarehouse.js';
 import DateWrapper from '#pronote/Utils/DateWrapper.js';
 import Utils from '#pronote/Utils/Utils.js';
 
-export default class DataProcessor {
+export default class ProcessorDataService {
   /**
    * @type {DataWarehouse}
    * @private
    */
   #db
   #verbose = false
+  #debug = false
   #homeworkConverter
   #courseConverter
   
@@ -34,12 +35,13 @@ export default class DataProcessor {
   #newHomeworkKeys = [];
   #deletedHomeworkKeys = [];
   
-  constructor(db, resultsDir, verbose) {
+  constructor(db, resultsDir, debug, verbose) {
     this.#db = db
     this.#resultsDir = resultsDir
     this.#homeworkConverter = new HomeworkConverter();
-    this.#courseConverter = new CourseConverter(verbose);
+    this.#courseConverter = new CourseConverter(debug, verbose);
     this.#courseIdFactMapping = {};
+    this.#debug = debug;
     this.#verbose = verbose;
   }
 
@@ -175,7 +177,7 @@ export default class DataProcessor {
   processCourses(filePath, data) {
     const items = this.#courseConverter.fromPronote(data)
     // Log the items to debug
-    if (this.#verbose) {
+    if (this.#debug) {
       console.debug('Converted Items:', items);
     }
 

@@ -3,9 +3,12 @@ import crypto from 'crypto';
 import Utils from '#pronote/Utils/Utils.js';
 
 export default class CourseConverter {
-  #verbose;
-  constructor(verbose = false) {
+  #verbose = false
+  #debug = false
+
+  constructor(debug = false, verbose = false) {
     this.fromTypeConverter = new FromTypeConverter();
+    this.#debug	= debug;
     this.#verbose	= verbose;
   }
 
@@ -37,11 +40,11 @@ export default class CourseConverter {
         result.courses[courseItem.key] = courseItem;
       }
     }
-    if (this.#verbose) {
-      console.log('CourseConverter Subjects:');
-      console.log( JSON.stringify(result.subjects));
-      console.log('CourseConverter Courses:');
-      console.log( JSON.stringify(result.courses));
+    if (this.#debug) {
+      console.debug('CourseConverter Subjects:');
+      console.debug( JSON.stringify(result.subjects));
+      console.debug('CourseConverter Courses:');
+      console.debug( JSON.stringify(result.courses));
     }
     return result;
   }

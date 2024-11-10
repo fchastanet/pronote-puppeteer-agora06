@@ -3,9 +3,9 @@ import { default as SqliteDatabase} from 'better-sqlite3'
 export default class DatabaseConnection {
   #db
 
-  constructor(databaseFile, verbose) {
+  constructor(databaseFile, debug) {
     const opts = {}
-    if (verbose) {
+    if (debug) {
       opts.verbose = console.log
     }
     

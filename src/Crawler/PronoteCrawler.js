@@ -1,45 +1,59 @@
-import {Page} from 'puppeteer';
+import {Browser, Page} from 'puppeteer';
 import path from 'path';
 import fs from 'fs';
 import Utils from '#pronote/Utils/Utils.js';
-import DateWrapper from '#pronote/Utils/DateWrapper.js';
+import Crawler from '#pronote/Crawler/Crawler.js';
 
 export default class PronoteCrawler {
-  #verbose = false;
-  #debugMode = false;
+  /** @type {Crawler} #crawler */
+  #crawler
+  /** @type {Browser} #browser */
+  #browser = null;
+  /** @type {Page} #page */
   #page = null;
-  #resultDir = "";
+  /** @type {Boolean} #debugMode */
+  #debugMode = false;
+  /** @type {Boolean} #verbose */
+  #verbose = false;
+  /** @type {string} #login */
   #login = "";
+  /** @type {string} #password */
   #password = "";
+  /** @type {string} #casUrl */
   #casUrl = "";
   #sessionNumber = null;
+  // crawl session related variables
+  /** @type {string} #resultDir */
+  #resultDir = "";
+  /** @type {DateWrapper} #currentDate */
   #currentDate = null;
   
-  /**
-   * 
-   * @param {Page} page 
-   * @param {boolean} debugMode 
-   * @param {boolean} verbose 
-   * @param {string} resultDir
-   * @param {string} login
-   * @param {string} password
-   */
-  constructor({page, debugMode, verbose, resultDir, login, password, casUrl, currentDate}) {
-    this.#page = page;
+  constructor({crawler, login, password, casUrl, debugMode, verbose}) {
+    this.#crawler = crawler;
     this.#verbose = verbose;
     this.#debugMode = debugMode;
-    this.#resultDir = resultDir;
     this.#login = login;
     this.#password = password;
     this.#casUrl = casUrl;
-    this.#currentDate = currentDate;
   }
+  
+  async init() {
+    console.log('Initializing browser');
+    this.#browser = await this.#crawler.initBrowser();
+    
+    console.log('Initializing page');
+    try {
+      this.#page = await this.#crawler.initPage(this.#browser);
+    } catch (error) {
+      console.error('An error occurred during the page initialization', error);
+      return;
+    }
 
-  setPageListeners() {
     if (this.#verbose) {
       this.#page.on('console', msg => console.log('PAGE CONSOLE LOGS:', msg.text()));
     }
 
+    console.log('Initializing page listeners');
     this.#page.on("request", (request) => {
       // Allow the request to be sent
       request.continue();
@@ -69,6 +83,12 @@ export default class PronoteCrawler {
         }
       }
     });
+  }
+
+  close() {
+    if (this.#browser !== null) {
+      this.#browser.close();
+    }
   }
 
   #getResultFile(name) {
@@ -123,7 +143,10 @@ export default class PronoteCrawler {
     return null;
   }
 
-  async crawl() {
+  async crawl(resultDir, currentDate) {
+    this.#currentDate = currentDate;
+    this.#resultDir = resultDir;
+
     await this.#loginToPronote();
     await this.#extractGeneralInformation();
     await this.#navigateToCahierDeTexte();

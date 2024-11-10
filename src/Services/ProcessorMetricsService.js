@@ -1,24 +1,22 @@
 import DataMetrics from '../Database/DataMetrics.js'
+import path from 'path'
+import fs from 'fs'
 
-export default class MetricsProcessor {
+export default class ProcessorMetricsService {
+  /** @type {DataMetrics} */
+  #db
+  #publicDir
+  #verbose
+  #debug
   
-  /**
-   * @type {DataMetrics}
-   * @private
-  */
- #db
- #verbose
-  
-  constructor(db, verbose = false) {
+  constructor(db, publicDir, debug = false, verbose = false) {
     this.#db = db
+    this.#publicDir = publicDir
+    this.#debug = debug
     this.#verbose = verbose
   }
 
   async process() {
-    if (this.#verbose) {
-      console.log('MetricsProcessor process');
-    }
-
     const completionRate = await this.#db.getCompletionRate();
     const onTimeCompletionRate = await this.#db.getOnTimeCompletionRate();
     const homeworkLoadPerWeek = await this.#db.getHomeworkLoadPerWeek();
@@ -29,7 +27,6 @@ export default class MetricsProcessor {
     const averageDurationPerSubjectGivenToExpected = await this.#db.getAverageDurationPerSubjectGivenToExpected();
     const averageDurationPerSubjectGivenToDone = await this.#db.getAverageDurationPerSubjectGivenToDone();
     const homeworksDuration = await this.#db.getHomeworksDuration()
-
 
     const metrics = {
       completionRate,
@@ -43,11 +40,30 @@ export default class MetricsProcessor {
       averageDurationPerSubjectGivenToDone,
       homeworksDuration,
     };
+    this.save(metrics)
 
+    return new Promise((resolve) => resolve(metrics))
+  }
+
+  save(metrics) {
+    const jsonString = JSON.stringify(metrics, null, 2).replace(/\00/g,'')
+    const targetFile = path.join(this.#publicDir, 'metrics.json')
     if (this.#verbose) {
-      console.log('MetricsProcessor process done', metrics);
+      console.debug(`Writing metrics to '${targetFile}'.`)
     }
-
-    return metrics
+    if (this.#debug) {
+      console.debug(`Metrics: ${jsonString}`)
+    }
+    try {
+      fs.writeFileSync(
+        targetFile, 
+        jsonString, 
+        {encoding: 'utf8'}
+      )
+    } catch (err) {
+      console.error(err);
+      throw err;
+    } 
+    console.log(`Metrics written into '${targetFile}'`);
   }
 }
