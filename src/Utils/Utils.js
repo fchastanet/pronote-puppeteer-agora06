@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 
 export default class Utils {
-
   static delay(time) {
     return new Promise(function(resolve) { 
         setTimeout(resolve, time)
@@ -42,6 +41,10 @@ export default class Utils {
     return javascriptString
       .replace(/'/g, '"') // Replace single quotes with double quotes
       .replace(/(\w+):/g, '"$1":') // Enclose property names in double quotes
+  }
+
+  static stripTags(html) {
+    return html.replace(/<[^>]*>?/gm, '');
   }
 
 }

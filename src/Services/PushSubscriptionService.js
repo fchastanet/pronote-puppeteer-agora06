@@ -1,19 +1,24 @@
 import webpush from 'web-push'
 import path from 'path';
 import fs from 'fs';
+import DataWarehouse from '#pronote/Database/DataWarehouse.js';
 
 export default class PushSubscriptionService {
-  #subscriptions = []
+  /** @type {DataWarehouse} */
+  #dataWarehouse
   #pushNotificationsPath
   #privatePath
   #publicKeyTargetFile
   #privateKeysTargetFile
+  #debug = false
   
-  constructor(pushNotificationsPath, privatePath) {
+  constructor(dataWarehouse, pushNotificationsPath, privatePath, debug) {
+    this.#dataWarehouse = dataWarehouse
     this.#pushNotificationsPath = pushNotificationsPath
     this.#privatePath = privatePath
     this.#publicKeyTargetFile = path.join(this.#pushNotificationsPath, 'publicVapidKey.js')
     this.#privateKeysTargetFile = path.join(this.#privatePath, 'privateVapidKey.js')
+    this.#debug = debug
   }
 
   async init() {
@@ -72,30 +77,45 @@ export default class PushSubscriptionService {
   }
 
   async getSubscriptions() {
-    return this.#subscriptions
+    return this.#dataWarehouse.getPushSubscriptions()
   }
 
   async getSubscriptionByEndpoint(endpoint) {
-    return this.#subscriptions.find(sub => sub.endpoint === endpoint)
+    return this.#dataWarehouse.getSubscriptionByEndpoint(endpoint)
   }
 
   async pushSubscription(subscription) {
-    this.#subscriptions.push(subscription)
+    this.#dataWarehouse.insertSubscription(
+      subscription.endpoint, 
+      subscription.keys.auth, 
+      subscription.keys.p256dh, 
+      subscription.expirationTime
+    )
   }
 
-  async removeSubscription(subscription) {
-    this.#subscriptions = this.#subscriptions.filter(sub => sub !== subscription)
+  async removeSubscriptionByEndpoint(endpoint) {
+    this.#dataWarehouse.deletePushSubscriptionByEndpoint(endpoint)
   }
 
-  async sendNotification(notification) {
+  async sendNotification(notification, notificationKey) {
     const payloadStr = JSON.stringify(notification)
     const subscriptions = await this.getSubscriptions()
+    console.log(`Send Notification ${notificationKey} to ${subscriptions.length} subscribers`);
     subscriptions.forEach(subscription => {
-      webpush.sendNotification(subscription, payloadStr)
-        .then(response => {
+      webpush.sendNotification(subscription, payloadStr).then(response => {
+        if (this.#debug) {
           console.log('Notification sent successfully:', response)
+        } else {
+          console.log('Notification sent successfully')
+        }
+      }).catch(error => {
+        if (error.statusCode === 410) {
+          console.error('Error endpoint has gone, removing endpoint:', subscription.endpoint)
+          this.#dataWarehouse.deletePushSubscriptionByEndpoint(subscription.endpoint)
+        } else {
+          console.error('Error sending notification:', error)
+        }
       })
-        .catch(error => console.error('Error sending notification:', error))
     })
   }
 

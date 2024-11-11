@@ -103,7 +103,7 @@ const subscribeUser = async () => {
   })
   await fetch('/subscription', {
     method: 'POST',
-    body: JSON.stringify(subscription),
+    body: JSON.stringify({new: subscription}),
     headers: {
       'Content-Type': 'application/json'
     }

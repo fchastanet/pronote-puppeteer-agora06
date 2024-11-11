@@ -1,5 +1,6 @@
 import DataWarehouse from "#pronote/Database/DataWarehouse.js";
 import PushSubscriptionService from "#pronote/Services/PushSubscriptionService.js";
+import Utils from "#pronote/Utils/Utils.js";
 
 export default class ProcessorNotificationsService {
   /** @type {DataWarehouse} */
@@ -15,22 +16,35 @@ export default class ProcessorNotificationsService {
   }
 
   #stylizeHomeworkNotification(homework) {
-    const { assignedDate, dueDate, subject, description, teacherName } = homework
+    let { assignedDate, dueDate, subject, description, teacherName } = homework
+    description = Utils.stripTags(description)
+    if (description.length > 65) {
+      description = description.substr(0, 60) + " ...";
+    }
+
     return {
       title: `Homework - ${subject}`,
       body: `Teacher: ${teacherName}\nAssigned: ${assignedDate}\nDue: ${dueDate}\nDescription: ${description}`,
-      icon: 'http://localhost:3000/favicon.png'
+      icon: 'http://localhost:3000/favicon.png',
+      tag: 'homework',
+      renotify: true,
+      requireInteraction: true,
     }
   }
 
   async process() {
     //this.#dataWarehouse.updatePastFactHomeworkNotifications();
     const homeworks = this.#dataWarehouse.getHomeworksWithNotification();
-    homeworks.forEach(homework => {
+    for (const homework of homeworks) {
       const homeworkNotification = this.#stylizeHomeworkNotification(homework);
-      this.#pushSubscriptionService.sendNotification(homeworkNotification);
-      console.log(`Send Notification for Homework ${homework.factKey}`);
-    });
+      console.log('Sending notification for homework:', homeworkNotification);
+      await this.#pushSubscriptionService.sendNotification(homeworkNotification, homework.factKey).then(() => {
+        console.log('Notification sent');
+        this.#dataWarehouse.updateHomeworkNotificationSent(homework.factKey);
+      }).catch((error) => {
+        console.error('Error sending notification:', error);
+      });
+    }
     return new Promise(resolve => resolve())
   }
 }

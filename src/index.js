@@ -115,8 +115,10 @@ async function main() {
   )
 
   const pushSubscriptionService = new PushSubscriptionService(
+    dataWarehouse,
     path.join(publicDir, 'pushNotifications'),
-    path.join(process.cwd(), 'src', 'HttpServer')
+    path.join(process.cwd(), 'src', 'HttpServer'),
+    commandOptions.debug,
   )
   await pushSubscriptionService.init()
   const pushSubscriptionController = new PushSubscriptionController(pushSubscriptionService)
@@ -138,7 +140,7 @@ async function main() {
     
     server.start()
   }
-  
+
   const cronController = new CronController({
     pronoteRetrievalService,
     processorDataService,

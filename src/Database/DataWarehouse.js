@@ -183,6 +183,16 @@ export default class DataWarehouse {
       );
     `;
 
+    const createPushSubscriptionsTable = `
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        subscription_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        endpoint TEXT,
+        auth TEXT,
+        p256dh TEXT,
+        expiration_time DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `
+
     const createViewQuery = `
       DROP VIEW IF EXISTS view_homework;
       CREATE VIEW view_homework AS
@@ -245,6 +255,7 @@ export default class DataWarehouse {
     this.#db.exec(createFactCoursesTable);
     this.#db.exec(createFactHomeworkTable);
     this.#db.exec(createProcessedFilesTable);
+    this.#db.exec(createPushSubscriptionsTable);
     this.#db.exec(createViewQuery);    
   }
 
@@ -574,10 +585,13 @@ export default class DataWarehouse {
       JOIN fact_courses ON fact_homework.fact_course_id = fact_courses.fact_id
       JOIN dim_teachers ON fact_courses.teacher_id = dim_teachers.teacher_id
       LEFT JOIN dim_subjects ON fact_homework.subject_id = dim_subjects.subject_id
-      WHERE notification_sent = ? AND completed = 0
+      WHERE notification_sent = ? AND completed = 0 AND dueDate > datetime('now')
+      ORDER BY assigned_date.date DESC
+      LIMIT ?
     `)
     return stmt.all(
       notification_sent ? 1 : 0,
+      3
     )
   }
 
@@ -613,6 +627,64 @@ export default class DataWarehouse {
     const selectStmt = this.#db.prepare('SELECT processing_status FROM processed_files WHERE file_id = ?');
     const result = selectStmt.get(fileId);
     return result?.processing_status == DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED;
+  }
+
+  getPushSubscriptions() {
+    const stmt = this.#db.prepare('SELECT * FROM push_subscriptions')
+    return stmt.all().map(row => {
+      return {
+        endpoint: row.endpoint,
+        keys: {
+          auth: row.auth,
+          p256dh: row.p256dh,
+        },
+        expirationTime: row.expiration_time
+      }
+    })
+  }
+
+  deletePushSubscriptionByEndpoint(endpoint) {
+    const stmt = this.#db.prepare(`
+      DELETE FROM push_subscriptions
+      WHERE endpoint = ?
+    `)
+    const info = stmt.run(endpoint)
+    return info.changes
+  }
+
+  getSubscriptionByEndpoint(endpoint) {
+    const stmt = this.#db.prepare('SELECT * FROM push_subscriptions WHERE endpoint = ?')
+    const row = stmt.get(endpoint)
+    if (!row) {
+      return null
+    }
+    return {
+      endpoint: row.endpoint,
+      expirationTime: row.expiration_time,
+      keys: {
+        auth: row.auth,
+        p256dh: row.p256dh
+      }
+    }
+  }
+
+  insertSubscription(endpoint, auth, p256dh, expirationTime) {
+    const stmt = this.#db.prepare(`
+      INSERT INTO push_subscriptions (endpoint, auth, p256dh, expiration_time)
+      VALUES (?, ?, ?, ?)
+    `)
+    const info = stmt.run(endpoint, auth, p256dh, expirationTime)
+    return info.lastInsertRowid
+  }
+
+  updateHomeworkNotificationSent(fact_key, notification_sent = true) {
+    const stmt = this.#db.prepare(`
+      UPDATE fact_homework SET
+        notification_sent = ?
+      WHERE fact_key = ?
+    `)
+    const info = stmt.run(notification_sent ? 1 : 0, fact_key)
+    return info.changes
   }
 
   /**
