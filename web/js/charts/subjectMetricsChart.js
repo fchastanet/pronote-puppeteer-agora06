@@ -1,11 +1,10 @@
-import * as echarts from 'echarts'
 import dayjs from 'dayjs'
 import {countFormatter, durationFormatter, rateFormatter} from '../utils/dayjs'
-import {defaultToolbox} from './_charts'
+import {init, defaultToolbox} from './_charts'
 
 const initSubjectMetricsChart = (data) => {
   const xAxisFormatter = [durationFormatter, countFormatter, rateFormatter]
-  const subjectMetricsChart = echarts.init(document.getElementById('subjectMetricsChart'))
+  const subjectMetricsChart = init(document.getElementById('subjectMetricsChart'))
   const subjectMetricsOption = {
     title: {
       text: 'Subject Metrics',

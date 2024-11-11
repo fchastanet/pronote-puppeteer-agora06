@@ -1,10 +1,9 @@
-import {defaultToolbox} from './_charts'
-import * as echarts from 'echarts'
+import {init, defaultToolbox} from './_charts'
 import {convertDateToDay, convertDateToWeek, convertDateToWeekInterval} from '../utils/dayjs'
 
 const initHomeworkLoadChart = (data) => {
   const xAxisFormatter = [convertDateToWeekInterval, convertDateToDay]
-  const homeworkLoadChart = echarts.init(document.getElementById('homeworkLoadChart'))
+  const homeworkLoadChart = init(document.getElementById('homeworkLoadChart'))
   const homeworkLoadOption = {
     title: {
       text: 'Homework Load',

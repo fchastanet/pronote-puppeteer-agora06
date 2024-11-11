@@ -6,7 +6,6 @@ import HttpServer from '#pronote/HttpServer/HttpServer.js'
 import {Command} from 'commander'
 import PushSubscriptionService from '#pronote/Services/PushSubscriptionService.js'
 import PushSubscriptionController from '#pronote/Controllers/PushSubscriptionController.js'
-import IndexController from '#pronote/Controllers/IndexController.js'
 import PronoteRetrievalService from '#pronote/Services/PronoteRetrievalService.js'
 import CronController from '#pronote/Controllers/CronController.js'
 import DataMetrics from '#pronote/Database/DataMetrics.js'
@@ -142,7 +141,6 @@ async function main() {
   )
   await pushSubscriptionService.init()
   const pushSubscriptionController = new PushSubscriptionController(pushSubscriptionService)
-  const indexController = new IndexController(publicDir)
 
   const processorNotificationsService = new ProcessorNotificationsService({
     dataWarehouse,
@@ -153,7 +151,6 @@ async function main() {
   if (commandOptions.server) {
     const server = new HttpServer(
       publicDir,
-      indexController,
       pushSubscriptionController,
       process.env?.SERVER_PORT ?? 3000
     )

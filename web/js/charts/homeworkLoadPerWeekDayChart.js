@@ -1,9 +1,8 @@
-import * as echarts from 'echarts'
 import {WEEK_DAY_LABELS} from '../utils/dayjs'
-import {defaultToolbox} from './_charts'
+import {init, defaultToolbox} from './_charts'
 
 const initHomeworkLoadPerWeekDayChart = (data) => {
-  const homeworkLoadPerWeekDayChart = echarts.init(document.getElementById('homeworkLoadPerWeekDayChart'))
+  const homeworkLoadPerWeekDayChart = init(document.getElementById('homeworkLoadPerWeekDayChart'))
   const homeworkLoadPerWeekDayOption = {
     title: {
       text: 'Homework Load Per Week Day',

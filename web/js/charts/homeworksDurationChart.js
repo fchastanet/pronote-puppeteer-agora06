@@ -1,11 +1,10 @@
-import * as echarts from 'echarts'
 import dayjs from 'dayjs'
 import {COMPLETION_STATE_COLORS, COMPLETION_STATE_LABELS} from '../utils/dayjs'
 import {stripTags} from '../utils/utils'
-import {defaultToolbox} from './_charts'
+import {init, defaultToolbox} from './_charts'
 
 const initHomeworksDurationChart = (data) => {
-  const homeworksDurationChart = echarts.init(document.getElementById('homeworksDurationChart'))
+  const homeworksDurationChart = init(document.getElementById('homeworksDurationChart'))
   const renderItem = (params, api) => {
     const categoryIndex = api.value(0)
     const assignmentDate = dayjs(api.value(1)).format('YYYY-MM-DD')

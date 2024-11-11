@@ -1,8 +1,7 @@
-import * as echarts from 'echarts'
-import {defaultToolbox} from './_charts'
+import {init, defaultToolbox} from './_charts'
 
 const initOnTimeCompletionRateChart = (data) => {
-  const onTimeCompletionRateChart = echarts.init(document.getElementById('onTimeCompletionRateChart'))
+  const onTimeCompletionRateChart = init(document.getElementById('onTimeCompletionRateChart'))
   const onTimeCompletionRateOption = {
     title: {
       text: 'On Time Homework Completion Rate',
