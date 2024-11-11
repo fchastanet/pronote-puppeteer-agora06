@@ -17,12 +17,6 @@ repos:
           )
       - id: check-added-large-files
 
-  - repo: https://github.com/ComPWA/prettier-pre-commit
-    rev: v3.3.3
-    hooks:
-      - id: prettier
-        files: \.(js|json|css|yaml|html)$
-
   - repo: https://github.com/executablebooks/mdformat
     rev: 0.7.18 # Use the ref you want to point at
     hooks:

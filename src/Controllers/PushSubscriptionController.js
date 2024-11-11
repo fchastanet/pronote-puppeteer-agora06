@@ -62,11 +62,11 @@ export default class PushSubscriptionController {
       body: 'A new homework has been added',
     }
     this.#pushSubscriptionService.sendNotification(homework)
-    res.status(200).json({ message: 'Notification sent' })
+    res.status(200).json({message: 'Notification sent'})
   }
 
-  getPublicVapidKey(req, res) {
-    const publicVapidKeyFile = this.#pushSubscriptionService.getPublicVapidKeyFile()
-    res.sendFile(publicVapidKeyFile)
+  async getPublicVapidKey(req, res) {
+    const publicVapidKey = await this.#pushSubscriptionService.getPublicVapidKey()
+    return res.json({publicVapidKey})
   }
 }

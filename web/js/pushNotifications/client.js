@@ -100,15 +100,19 @@ const subscribeUser = async () => {
     console.error('Service Worker is not supported by this browser')
     return
   }
+  const response = await fetch(`publicVapidKey.json?${Date.now()}`)
+  const keys = await response.json()
   const registration = await navigator.serviceWorker.ready
   const subscription = await registration.pushManager
     .subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicVapidKey),
+      // eslint-disable-next-line no-undef
+      applicationServerKey: urlBase64ToUint8Array(keys.publicVapidKey),
     })
     .catch((error) => {
       console.error('Error subscribing:', error)
     })
+
   await fetch('/subscription', {
     method: 'POST',
     body: JSON.stringify({new: subscription}),
@@ -129,6 +133,10 @@ const subscribeUser = async () => {
     })
 }
 
-initSubscription = async () => {
+const initSubscription = async () => {
   setSubscribeMessage()
+  document.getElementById('subscribeButton').addEventListener('click', subscribeToPushNotifications)
+  document.getElementById('unsubscribeButton').addEventListener('click', unsubscribeFromPushNotifications)
 }
+
+export {initSubscription}

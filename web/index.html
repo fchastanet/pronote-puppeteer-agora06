@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Homework Metrics Dashboard</title>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script type="module" src="/main.js"></script>
+  <div class="navbar">
+    <a href="#">Home</a>
+    <a href="#">Metrics</a>
+    <a href="#">Settings</a>
+  </div>
+  <div class="notification-container">
+    <div class="notification"></div>
+    Push Notifications:
+    <button id="subscribeButton">Subscribe</button>
+    <button id="unsubscribeButton">Unsubscribe</button>
+  </div>
+
+  <h1>Homework Metrics Dashboard</h1>
+  <div class="dashboard">
+    <div class="chart-container" id="completionRateChart"></div>
+    <div class="chart-container" id="onTimeCompletionRateChart"></div>
+    <div class="chart-container" id="homeworkLoadChart"></div>
+    <div class="chart-container" id="homeworkLoadPerWeekDayChart"></div>
+    <div class="chart-container" id="subjectMetricsChart"></div>
+    <div class="chart-container" id="homeworksDurationChart"></div>
+  </div>
+</body>
+
+</html>

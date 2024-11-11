@@ -133,7 +133,7 @@ export default class FromTypeConverter {
 
   // Define reverse mapping for type constants
   static ATTACHMENT_TYPE_REVERSE = Object.fromEntries(
-    Object.entries(FromTypeConverter.ATTACHMENT_TYPE).map(([key, value]) => [value, parseInt(key)])
+    Object.entries(ATTACHMENT_TYPE).map(([key, value]) => [value, parseInt(key)])
   )
 
   convertAttachmentType(value) {

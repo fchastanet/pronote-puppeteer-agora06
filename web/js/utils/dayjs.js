@@ -1,3 +1,7 @@
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
+import duration from 'dayjs/plugin/duration'
+
 const WEEK_DAY_LABELS = {
   0: 'Monday',
   1: 'Tuesday',
@@ -26,8 +30,8 @@ const COMPLETION_STATE_OVER_DUE = 2
 const COMPLETION_STATE_UNKNOWN = 3
 
 const initDayjs = (dayjs) => {
-  dayjs.extend(window.dayjs_plugin_duration)
-  dayjs.extend(window.dayjs_plugin_relativeTime)
+  dayjs.extend(duration)
+  dayjs.extend(relativeTime)
 }
 
 String.prototype.capitalize =
@@ -35,16 +39,6 @@ String.prototype.capitalize =
   function () {
     return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase()
   }
-
-const defaultToolbox = {
-  show: true,
-  orient: 'horizontal',
-  top: 'left',
-  feature: {
-    dataView: { show: true, readOnly: false },
-    saveAsImage: { show: true },
-  },
-}
 
 const convertDateToWeek = (date) => dayjs(date).startOf('week').format('MMM-DD')
 const convertDateToDay = (date) => dayjs(date).format('MMM-DD')
@@ -62,14 +56,25 @@ const durationFormatter = (value) => {
   return dayjs.duration(value, 'seconds').humanize()
 }
 const rateFormatter = (value) => {
-  return Math.round(value)
+  return `${Math.round(value)}%`
 }
 const countFormatter = (value) => {
   return Math.round(value)
 }
 
-const div = document.createElement('div')
-const stripTags = (html) => {
-  div.innerHTML = html
-  return div.textContent || div.innerText || ''
+export {
+  WEEK_DAY_LABELS,
+  COMPLETION_STATE_LABELS,
+  COMPLETION_STATE_COLORS,
+  COMPLETION_STATE_IN_PROGRESS,
+  COMPLETION_STATE_COMPLETED,
+  COMPLETION_STATE_OVER_DUE,
+  COMPLETION_STATE_UNKNOWN,
+  initDayjs,
+  convertDateToWeek,
+  convertDateToDay,
+  convertDateToWeekInterval,
+  durationFormatter,
+  rateFormatter,
+  countFormatter,
 }

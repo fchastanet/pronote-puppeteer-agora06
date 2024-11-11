@@ -16,13 +16,18 @@
     "cron": "^3.1.9",
     "dayjs": "^1.11.13",
     "dotenv": "^16.4.5",
+    "echarts": "^5.5.1",
     "express": "^4.21.1",
     "puppeteer": "^23.6.0",
     "tough-cookie": "^5.0.0",
+    "vite-express": "^0.19.0",
     "web-push": "^3.6.7"
   },
   "scripts": {
-    "start": "node ./src/index.js"
+    "start": "node ./src/index.js",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",
@@ -32,7 +37,8 @@
     "eslint-plugin-html": "^8.1.2",
     "eslint-plugin-jsdoc": "^50.4.3",
     "prettier": "^3.1.0",
-    "prettier-eslint": "^16.1.2"
+    "prettier-eslint": "^16.1.2",
+    "vite": "^5.4.11"
   },
   "[markdown]": {
     "editor.wordWrap": "bounded",

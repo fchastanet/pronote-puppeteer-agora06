@@ -1,4 +1,9 @@
+import {defaultToolbox} from './_charts'
+import * as echarts from 'echarts'
+import {convertDateToDay, convertDateToWeek, convertDateToWeekInterval} from '../utils/dayjs'
+
 const initHomeworkLoadChart = (data) => {
+  const xAxisFormatter = [convertDateToWeekInterval, convertDateToDay]
   const homeworkLoadChart = echarts.init(document.getElementById('homeworkLoadChart'))
   const homeworkLoadOption = {
     title: {
@@ -18,7 +23,7 @@ const initHomeworkLoadChart = (data) => {
           },
         },
       },
-      position: function (point, params, dom, rect, size) {
+      position: function (point) {
         // fixed at top
         return [point[0] + 20, -50]
       },
@@ -119,3 +124,5 @@ const initHomeworkLoadChart = (data) => {
   }
   homeworkLoadChart.setOption(homeworkLoadOption)
 }
+
+export default initHomeworkLoadChart

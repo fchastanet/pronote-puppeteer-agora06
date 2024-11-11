@@ -6,17 +6,13 @@ import DataWarehouse from '#pronote/Database/DataWarehouse.js'
 export default class PushSubscriptionService {
   /** @type {DataWarehouse} */
   #dataWarehouse
-  #pushNotificationsPath
   #privatePath
-  #publicKeyTargetFile
   #privateKeysTargetFile
   #debug = false
 
-  constructor(dataWarehouse, pushNotificationsPath, privatePath, debug) {
+  constructor(dataWarehouse, privatePath, debug) {
     this.#dataWarehouse = dataWarehouse
-    this.#pushNotificationsPath = pushNotificationsPath
     this.#privatePath = privatePath
-    this.#publicKeyTargetFile = path.join(this.#pushNotificationsPath, 'publicVapidKey.js')
     this.#privateKeysTargetFile = path.join(this.#privatePath, 'privateVapidKey.js')
     this.#debug = debug
   }
@@ -27,8 +23,8 @@ export default class PushSubscriptionService {
   }
 
   async #generateVapidKeys() {
-    if (fs.existsSync(this.#privateKeysTargetFile) && fs.existsSync(this.#publicKeyTargetFile)) {
-      console.log(`VAPID keys already exist in '${this.#privateKeysTargetFile}' and '${this.#publicKeyTargetFile}'`)
+    if (fs.existsSync(this.#privateKeysTargetFile)) {
+      console.log(`VAPID keys already exist in '${this.#privateKeysTargetFile}'`)
       const keys = await import(this.#privateKeysTargetFile)
       console.log('Public VAPID Key:', keys.publicVapidKey)
       console.log('Private VAPID Key:', keys.privateVapidKey)
@@ -40,14 +36,13 @@ export default class PushSubscriptionService {
     console.log('Private VAPID Key:', vapidKeys.privateKey)
 
     console.log('Writing VAPID keys to files')
-    this.#writeFile(this.#publicKeyTargetFile, `const publicVapidKey = '${vapidKeys.publicKey}';`)
     this.#writeFile(
       this.#privateKeysTargetFile,
-      `const publicVapidKey = '${vapidKeys.publicKey}';\nconst privateVapidKey = '${vapidKeys.privateKey}';\nexport { publicVapidKey, privateVapidKey };`
+      `const publicVapidKey = '${vapidKeys.publicKey}'\nconst privateVapidKey = '${vapidKeys.privateKey}'\nexport { publicVapidKey, privateVapidKey }`
     )
 
     // eslint-disable-next-line no-undef
-    return {publicVapidKey, privateVapidKey}
+    return {publicVapidKey: vapidKeys.publicKey, privateVapidKey: vapidKeys.privateKey}
   }
 
   #writeFile(targetFile, content) {
@@ -59,10 +54,6 @@ export default class PushSubscriptionService {
         console.log(`Result written into '${targetFile}'`)
       }
     })
-  }
-
-  getPublicVapidKeyFile() {
-    return this.#publicKeyTargetFile
   }
 
   async getSubscriptions() {
@@ -115,4 +106,10 @@ export default class PushSubscriptionService {
     const payloadStr = JSON.stringify(payload)
     webpush.sendNotification(subscriber, payloadStr).catch((error) => console.error(error))
   }
+
+  async getPublicVapidKey() {
+    const keys = await this.#generateVapidKeys()
+    return keys.publicVapidKey
+  }
+
 }

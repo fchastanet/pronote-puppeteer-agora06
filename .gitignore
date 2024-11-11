@@ -3,7 +3,8 @@ node_modules/
 results/
 oldResults/
 db/
-public/metrics.json
+web/metrics.json
 TODO.md
-public/pushNotifications/publicVapidKey.js
 src/HttpServer/privateVapidKey.js
+stat.html
+dist/

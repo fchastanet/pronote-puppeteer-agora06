@@ -1,3 +1,8 @@
+import * as echarts from 'echarts'
+import dayjs from 'dayjs'
+import {countFormatter, durationFormatter, rateFormatter} from '../utils/dayjs'
+import {defaultToolbox} from './_charts'
+
 const initSubjectMetricsChart = (data) => {
   const xAxisFormatter = [durationFormatter, countFormatter, rateFormatter]
   const subjectMetricsChart = echarts.init(document.getElementById('subjectMetricsChart'))
@@ -36,7 +41,7 @@ const initSubjectMetricsChart = (data) => {
           `<span class="bullet" style="background-color:${params[3].color}"></span><b>Avg Duration Given to Done:</b> ${avgDurationGivenToDone}<br>`,
         ].join('')
       },
-      position: function (point, params, dom, rect, size) {
+      position: function (point) {
         // fixed at top
         return [point[0] + 20, -50]
       },
@@ -57,13 +62,7 @@ const initSubjectMetricsChart = (data) => {
         name: 'Duration',
         type: 'value',
         axisLabel: {
-          formatter: function (value) {
-            if (value <= 0 || value == null) {
-              return 'N/A'
-            }
-            const duration = dayjs.duration(value, 'seconds').humanize()
-            return duration
-          },
+          formatter: durationFormatter,
         },
       },
       {
@@ -73,9 +72,7 @@ const initSubjectMetricsChart = (data) => {
           show: true,
         },
         axisLabel: {
-          formatter: function (value) {
-            return value
-          },
+          formatter: countFormatter,
         },
       },
       {
@@ -88,9 +85,7 @@ const initSubjectMetricsChart = (data) => {
         },
         offset: 25,
         axisLabel: {
-          formatter: function (value) {
-            return `${value}%`
-          },
+          formatter: rateFormatter,
         },
       },
     ],
@@ -166,3 +161,5 @@ const initSubjectMetricsChart = (data) => {
   }
   subjectMetricsChart.setOption(subjectMetricsOption)
 }
+
+export default initSubjectMetricsChart

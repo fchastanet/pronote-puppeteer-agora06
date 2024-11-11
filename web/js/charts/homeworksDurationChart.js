@@ -1,4 +1,8 @@
-/* global echarts, dayjs, stripTags */
+import * as echarts from 'echarts'
+import dayjs from 'dayjs'
+import {COMPLETION_STATE_COLORS, COMPLETION_STATE_LABELS} from '../utils/dayjs'
+import {stripTags} from '../utils/utils'
+import {defaultToolbox} from './_charts'
 
 const initHomeworksDurationChart = (data) => {
   const homeworksDurationChart = echarts.init(document.getElementById('homeworksDurationChart'))
@@ -34,7 +38,7 @@ const initHomeworksDurationChart = (data) => {
       },
       style: api.style(),
     }
-    let children = [dueRect, completionRect]
+    const children = [dueRect, completionRect]
 
     return {
       type: 'group',
@@ -221,3 +225,5 @@ const initHomeworksDurationChart = (data) => {
   }
   homeworksDurationChart.setOption(homeworksDurationOption)
 }
+
+export default initHomeworksDurationChart
