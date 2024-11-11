@@ -1,8 +1,8 @@
-import ProcessorDataService from "#pronote/Services/ProcessorDataService.js"
-import ProcessorMetricsService from "#pronote/Services/ProcessorMetricsService.js"
-import ProcessorNotificationsService from "#pronote/Services/ProcessorNotificationsService.js"
-import {CronJob} from "cron"
-import PronoteRetrievalService from "../Services/PronoteRetrievalService.js"
+import ProcessorDataService from '#pronote/Services/ProcessorDataService.js'
+import ProcessorMetricsService from '#pronote/Services/ProcessorMetricsService.js'
+import ProcessorNotificationsService from '#pronote/Services/ProcessorNotificationsService.js'
+import {CronJob} from 'cron'
+import PronoteRetrievalService from '../Services/PronoteRetrievalService.js'
 
 export default class CronController {
   /** @type {PronoteRetrievalService} */
@@ -23,9 +23,18 @@ export default class CronController {
   #verbose
 
   constructor({
-    pronoteRetrievalService, processorDataService, processorMetricsService, processorNotificationsService,
-    runOnInit, skipCron, skipPronoteDataRetrieval, skipDataProcess, skipDataMetrics, skipNotifications,
-    debug, verbose
+    pronoteRetrievalService,
+    processorDataService,
+    processorMetricsService,
+    processorNotificationsService,
+    runOnInit,
+    skipCron,
+    skipPronoteDataRetrieval,
+    skipDataProcess,
+    skipDataMetrics,
+    skipNotifications,
+    debug,
+    verbose,
   }) {
     this.#pronoteRetrievalService = pronoteRetrievalService
     this.#processorDataService = processorDataService
@@ -44,107 +53,107 @@ export default class CronController {
   setupCronJobs() {
     if (this.#skipCron) {
       if (this.#verbose) {
-        console.debug("Cron jobs skipped, run programmed jobs immediately.")
+        console.debug('Cron jobs skipped, run programmed jobs immediately.')
       }
       this.mainCronTask()
     } else {
       // every hour between 9am and 6pm
-      let cronTime='0 9-18 * * *'
+      let cronTime = '0 9-18 * * *'
       if (this.#debug) {
         // every minute
-        cronTime='* * * * *'
+        cronTime = '* * * * *'
       }
-      console.log("Setting up cron job with cronTime: ", cronTime)
-      const job = CronJob.from({
+      console.log('Setting up cron job with cronTime: ', cronTime)
+      CronJob.from({
         cronTime,
         onTick: this.mainCronTask.bind(this),
         start: true,
-        timeZone: 'Europe/Paris'
-      });
+        timeZone: 'Europe/Paris',
+      })
 
-      if (true || this.#runOnInit) {
+      if (this.#runOnInit) {
         setTimeout(() => {
           this.mainCronTask()
-        }, 1000);
+        }, 1000)
       }
     }
   }
 
   async mainCronTask() {
     if (this.#verbose) {
-      console.debug("Start mainCronTask ...")
+      console.debug('Start mainCronTask ...')
     }
     await this.#retrievePronoteData()
     await this.#processPronoteData()
     await this.#processDataMetrics()
     await this.#generateNotifications()
     if (this.#verbose) {
-      console.debug("End mainCronTask ...")
+      console.debug('End mainCronTask ...')
     }
   }
 
   async #retrievePronoteData() {
     if (this.#skipPronoteDataRetrieval) {
       if (this.#verbose) {
-        console.debug("Pronote data retrieval skipped.")
+        console.debug('Pronote data retrieval skipped.')
       }
       return
     }
     if (this.#verbose) {
-      console.debug("Retrieving Pronote data ...")
+      console.debug('Retrieving Pronote data ...')
     }
 
     await this.#pronoteRetrievalService.process()
     if (this.#verbose) {
-      console.debug("Pronote data retrieved")
+      console.debug('Pronote data retrieved')
     }
   }
 
   async #processPronoteData() {
     if (this.#skipDataProcess) {
       if (this.#verbose) {
-        console.debug("Pronote data processing skipped.")
+        console.debug('Pronote data processing skipped.')
       }
       return
     }
     if (this.#verbose) {
-      console.debug("Pronote data warehouse processing ...")
+      console.debug('Pronote data warehouse processing ...')
     }
     await this.#processorDataService.process()
     if (this.#verbose) {
-      console.debug("Pronote data warehouse processed.")
+      console.debug('Pronote data warehouse processed.')
     }
   }
 
   async #processDataMetrics() {
     if (this.#skipDataMetrics) {
       if (this.#verbose) {
-        console.debug("Pronote data metrics processing skipped.")
+        console.debug('Pronote data metrics processing skipped.')
       }
       return
     }
     if (this.#verbose) {
-      console.debug("Pronote data metrics processing ...")
+      console.debug('Pronote data metrics processing ...')
     }
     await this.#processorMetricsService.process()
     if (this.#verbose) {
-      console.debug("Pronote data metrics processed.")
+      console.debug('Pronote data metrics processed.')
     }
   }
 
   async #generateNotifications() {
     if (this.#skipNotifications) {
       if (this.#verbose) {
-        console.debug("Notifications generation skipped.")
+        console.debug('Notifications generation skipped.')
       }
       return
     }
     if (this.#verbose) {
-      console.debug("Notifications generation ...")
+      console.debug('Notifications generation ...')
     }
     await this.#processorNotificationsService.process()
     if (this.#verbose) {
-      console.debug("Notifications generated.")
+      console.debug('Notifications generated.')
     }
   }
 }

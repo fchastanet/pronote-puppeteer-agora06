@@ -1,16 +1,16 @@
-import DateWrapper from '#pronote/Utils/DateWrapper.js';
-import DatabaseConnection from './DatabaseConnection.js';
+import DateWrapper from '#pronote/Utils/DateWrapper.js'
+import DatabaseConnection from './DatabaseConnection.js'
 
 export default class DataWarehouse {
-  static FILE_PROCESSING_STATUS_WAITING = 0;
-  static FILE_PROCESSING_STATUS_PROCESSED = 1;
-  static FILE_PROCESSING_STATUS_ERROR = 0;
+  static FILE_PROCESSING_STATUS_WAITING = 0
+  static FILE_PROCESSING_STATUS_PROCESSED = 1
+  static FILE_PROCESSING_STATUS_ERROR = 0
 
-  static COMPLETION_STATE_IN_PROGRESS = 0;
-  static COMPLETION_STATE_COMPLETED = 1;
-  static COMPLETION_STATE_OVER_DUE = 2;
-  static COMPLETION_STATE_UNKNOWN = 3;
-  
+  static COMPLETION_STATE_IN_PROGRESS = 0
+  static COMPLETION_STATE_COMPLETED = 1
+  static COMPLETION_STATE_OVER_DUE = 2
+  static COMPLETION_STATE_UNKNOWN = 3
+
   /**
    * @type {DatabaseConnection}
    */
@@ -27,21 +27,21 @@ export default class DataWarehouse {
         name VARCHAR(50)
       );
       CREATE INDEX IF NOT EXISTS idx_students_name ON dim_students(name);
-    `;
+    `
     const createDimSchoolsTable = `
       CREATE TABLE IF NOT EXISTS dim_schools (
         school_id INTEGER PRIMARY KEY AUTOINCREMENT,
         name VARCHAR(50)
       );
       CREATE INDEX IF NOT EXISTS idx_schools_name ON dim_schools(name);
-    `;
+    `
     const createDimGradesTable = `
       CREATE TABLE IF NOT EXISTS dim_grades (
         grade_id INTEGER PRIMARY KEY AUTOINCREMENT,
         name VARCHAR(50)
       );
       CREATE INDEX IF NOT EXISTS idx_grades_name ON dim_grades(name);
-    `;
+    `
     const createDimSubjectsTable = `
       CREATE TABLE IF NOT EXISTS dim_subjects (
         subject_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,7 +49,7 @@ export default class DataWarehouse {
         backgroundColor TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_courses_subject ON dim_subjects(subject);
-    `;
+    `
     const createDimTeachersTable = `
       CREATE TABLE IF NOT EXISTS dim_teachers (
         teacher_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,7 +58,7 @@ export default class DataWarehouse {
         FOREIGN KEY (subject_id) REFERENCES dim_subjects(subject_id)
       );
       CREATE INDEX IF NOT EXISTS idx_teachers_name ON dim_teachers(name);
-    `;
+    `
     const createDimDatesTable = `
       CREATE TABLE IF NOT EXISTS dim_dates (
         date_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,7 +76,7 @@ export default class DataWarehouse {
       );
       CREATE INDEX IF NOT EXISTS idx_dates_date ON dim_dates(date);
       CREATE INDEX IF NOT EXISTS idx_dates_year_month_week_day ON dim_dates(year, month, week, weekday, day);
-    `;
+    `
     const createFactCoursesTable = `
       CREATE TABLE IF NOT EXISTS fact_courses (
         fact_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -119,11 +119,11 @@ export default class DataWarehouse {
       CREATE INDEX IF NOT EXISTS idx_fact_courses_update_first_date_id ON fact_courses(update_first_date_id);
       CREATE INDEX IF NOT EXISTS idx_fact_courses_update_last_date_id ON fact_courses(update_last_date_id);
       CREATE INDEX IF NOT EXISTS idx_fact_courses_homework_date_id ON fact_courses(homework_date_id);
-    `;
+    `
 
     const createFactHomeworkTable = `
       CREATE TABLE IF NOT EXISTS fact_homework (
-        fact_id INTEGER PRIMARY KEY AUTOINCREMENT,  
+        fact_id INTEGER PRIMARY KEY AUTOINCREMENT,
         fact_key TEXT,
         student_id INTEGER,             -- FK dim_students
         school_id INTEGER,              -- FK dim_schools
@@ -166,7 +166,7 @@ export default class DataWarehouse {
         FOREIGN KEY (update_first_date_id) REFERENCES dim_dates(date_id),
         FOREIGN KEY (update_last_date_id) REFERENCES dim_dates(date_id)
       );
-      
+
       CREATE INDEX IF NOT EXISTS idx_fact_homework_fact_key ON fact_homework(fact_key);
       CREATE INDEX IF NOT EXISTS idx_fact_homework_subject_id ON fact_homework(subject_id);
       CREATE INDEX IF NOT EXISTS idx_fact_homework_student_id ON fact_courses(student_id);
@@ -174,14 +174,14 @@ export default class DataWarehouse {
       CREATE INDEX IF NOT EXISTS idx_fact_homework_grade_id ON fact_courses(grade_id);
       CREATE INDEX IF NOT EXISTS idx_fact_homework_due_date_id ON fact_homework(due_date_id);
       CREATE INDEX IF NOT EXISTS idx_fact_homework_assigned_date_id ON fact_homework(assigned_date_id);
-    `;
+    `
 
     const createProcessedFilesTable = `
       CREATE TABLE IF NOT EXISTS processed_files (
         file_id TEXT PRIMARY KEY,
         processing_status INTEGER DEFAULT 0  -- enum (0: not processed, 1: processed, 2: error)
       );
-    `;
+    `
 
     const createPushSubscriptionsTable = `
       CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -196,7 +196,7 @@ export default class DataWarehouse {
     const createViewQuery = `
       DROP VIEW IF EXISTS view_homework;
       CREATE VIEW view_homework AS
-      SELECT 
+      SELECT
         hw.fact_id AS fact_id,
         hw.fact_key AS fact_key,
         hw.description AS description,
@@ -245,114 +245,116 @@ export default class DataWarehouse {
       LEFT JOIN dim_dates ed ON c.end_date_id = ed.date_id
       ;
     `
-    
-    this.#db.exec(createDimStudentsTable);
-    this.#db.exec(createDimSchoolsTable);
-    this.#db.exec(createDimGradesTable);
-    this.#db.exec(createDimSubjectsTable);
-    this.#db.exec(createDimTeachersTable);
-    this.#db.exec(createDimDatesTable);
-    this.#db.exec(createFactCoursesTable);
-    this.#db.exec(createFactHomeworkTable);
-    this.#db.exec(createProcessedFilesTable);
-    this.#db.exec(createPushSubscriptionsTable);
-    this.#db.exec(createViewQuery);    
+
+    this.#db.exec(createDimStudentsTable)
+    this.#db.exec(createDimSchoolsTable)
+    this.#db.exec(createDimGradesTable)
+    this.#db.exec(createDimSubjectsTable)
+    this.#db.exec(createDimTeachersTable)
+    this.#db.exec(createDimDatesTable)
+    this.#db.exec(createFactCoursesTable)
+    this.#db.exec(createFactHomeworkTable)
+    this.#db.exec(createProcessedFilesTable)
+    this.#db.exec(createPushSubscriptionsTable)
+    this.#db.exec(createViewQuery)
   }
 
   isSchemaInitialized() {
-    const stmt = this.#db.prepare("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE `type`='table' AND name = ?) as tableExists");
-    const row = stmt.get('dim_students');
-    return row?.tableExists == 1 ? true : false;
+    const stmt = this.#db.prepare(
+      'SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE `type`=\'table\' AND name = ?) as tableExists'
+    )
+    const row = stmt.get('dim_students')
+    return row?.tableExists == 1 ? true : false
   }
 
   getStudentId(name) {
-    const stmt = this.#db.prepare('SELECT student_id FROM dim_students WHERE name = ?');
-    const row = stmt.get(name);
-    return row ? row.student_id : null;
+    const stmt = this.#db.prepare('SELECT student_id FROM dim_students WHERE name = ?')
+    const row = stmt.get(name)
+    return row ? row.student_id : null
   }
 
   getSubjectId(subject) {
-    const stmt = this.#db.prepare('SELECT subject_id FROM dim_subjects WHERE subject = ?');
-    const row = stmt.get(subject);
-    return row ? row.subject_id : null;
+    const stmt = this.#db.prepare('SELECT subject_id FROM dim_subjects WHERE subject = ?')
+    const row = stmt.get(subject)
+    return row ? row.subject_id : null
   }
-  
+
   getSchoolId(name) {
-    const stmt = this.#db.prepare('SELECT school_id FROM dim_schools WHERE name = ?');
-    const row = stmt.get(name);
-    return row ? row.school_id : null;
+    const stmt = this.#db.prepare('SELECT school_id FROM dim_schools WHERE name = ?')
+    const row = stmt.get(name)
+    return row ? row.school_id : null
   }
 
   getGradeId(name) {
-    const stmt = this.#db.prepare('SELECT grade_id FROM dim_grades WHERE name = ?');
-    const row = stmt.get(name);
-    return row ? row.grade_id : null;
+    const stmt = this.#db.prepare('SELECT grade_id FROM dim_grades WHERE name = ?')
+    const row = stmt.get(name)
+    return row ? row.grade_id : null
   }
 
   getTeacherId(name, subjectId) {
-    const stmt = this.#db.prepare('SELECT teacher_id FROM dim_teachers WHERE name = ? AND subject_id = ?');
-    const row = stmt.get(name, subjectId);
-    return row ? row.teacher_id : null;
+    const stmt = this.#db.prepare('SELECT teacher_id FROM dim_teachers WHERE name = ? AND subject_id = ?')
+    const row = stmt.get(name, subjectId)
+    return row ? row.teacher_id : null
   }
 
   getDateId(date) {
     if (date === null) {
-      return null;
+      return null
     }
     if (typeof date?.toISOString === 'function') {
-      date = date.toISOString();
+      date = date.toISOString()
     }
-    const stmt = this.#db.prepare('SELECT date_id FROM dim_dates WHERE date = ?');
-    const row = stmt.get(date);
-    return row ? row.date_id : null;
+    const stmt = this.#db.prepare('SELECT date_id FROM dim_dates WHERE date = ?')
+    const row = stmt.get(date)
+    return row ? row.date_id : null
   }
 
   getContentId(contentId) {
-    const stmt = this.#db.prepare('SELECT id FROM content WHERE id = ?');
-    const row = stmt.get(contentId);
-    return row ? row.id : null;
+    const stmt = this.#db.prepare('SELECT id FROM content WHERE id = ?')
+    const row = stmt.get(contentId)
+    return row ? row.id : null
   }
 
   getAttachmentId(attachmentId) {
-    const stmt = this.#db.prepare('SELECT id FROM attachments WHERE id = ?');
-    const row = stmt.get(attachmentId);
-    return row ? row.id : null;
+    const stmt = this.#db.prepare('SELECT id FROM attachments WHERE id = ?')
+    const row = stmt.get(attachmentId)
+    return row ? row.id : null
   }
 
   insertStudent(name) {
-    const stmt = this.#db.prepare('INSERT INTO dim_students (name) VALUES (?)');
-    const info = stmt.run(name);
-    return info.lastInsertRowid;
+    const stmt = this.#db.prepare('INSERT INTO dim_students (name) VALUES (?)')
+    const info = stmt.run(name)
+    return info.lastInsertRowid
   }
 
   insertSchool(name) {
-    const stmt = this.#db.prepare('INSERT INTO dim_schools (name) VALUES (?)');
-    const info = stmt.run(name);
-    return info.lastInsertRowid;
+    const stmt = this.#db.prepare('INSERT INTO dim_schools (name) VALUES (?)')
+    const info = stmt.run(name)
+    return info.lastInsertRowid
   }
 
   insertGrade(name) {
-    const stmt = this.#db.prepare('INSERT INTO dim_grades (name) VALUES (?)');
-    const info = stmt.run(name);
-    return info.lastInsertRowid;
+    const stmt = this.#db.prepare('INSERT INTO dim_grades (name) VALUES (?)')
+    const info = stmt.run(name)
+    return info.lastInsertRowid
   }
 
   insertSubject({subject, backgroundColor}) {
-    const stmt = this.#db.prepare('INSERT INTO dim_subjects (subject, backgroundColor) VALUES (?, ?)');
-    const info = stmt.run(subject, backgroundColor);
-    return info.lastInsertRowid;
+    const stmt = this.#db.prepare('INSERT INTO dim_subjects (subject, backgroundColor) VALUES (?, ?)')
+    const info = stmt.run(subject, backgroundColor)
+    return info.lastInsertRowid
   }
 
   insertTeacher(name, subjectId) {
-    const stmt = this.#db.prepare('INSERT INTO dim_teachers (name, subject_id) VALUES (?, ?)');
-    const info = stmt.run(name, subjectId);
-    return info.lastInsertRowid;
+    const stmt = this.#db.prepare('INSERT INTO dim_teachers (name, subject_id) VALUES (?, ?)')
+    const info = stmt.run(name, subjectId)
+    return info.lastInsertRowid
   }
 
   /**
-   * 
-   * @param {DateWrapper} date 
-   * @returns 
+   * Insert a date into the dim_dates table.
+   * @param {DateWrapper} date - The date to insert.
+   * @returns {number} The ID of the inserted date.
    */
   insertDate(date) {
     let date_time_formatted = null
@@ -363,152 +365,295 @@ export default class DataWarehouse {
     }
     const unixTimestamp = date.getUnixTimestamp() // Assuming DateWrapper has a method getUnixTimestamp
     const stmt = this.#db.prepare(`INSERT INTO dim_dates(
-        date, year, month, 
+        date, year, month,
         week, weekday, day,
         hour, minute, second, millisecond, unix_timestamp
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     try {
       const data = [
-        date_time_formatted, date.getYear(), date.getMonth(), 
-        date.getWeekOfTheYear(), date.getWeekDay(), date.getDayOfTheMonth(), 
-        date.getHour(), date.getMinute(), date.getSecond(), date.getMilliSecond(), unixTimestamp
+        date_time_formatted,
+        date.getYear(),
+        date.getMonth(),
+        date.getWeekOfTheYear(),
+        date.getWeekDay(),
+        date.getDayOfTheMonth(),
+        date.getHour(),
+        date.getMinute(),
+        date.getSecond(),
+        date.getMilliSecond(),
+        unixTimestamp,
       ]
       const info = stmt.run(...data)
       return info.lastInsertRowid
-    } catch(e) {
+    } catch (e) {
       console.log('Error inserting date', date_time_formatted, e)
       throw e
     }
   }
 
   getFactCourse(fact_key) {
-    const stmt = this.#db.prepare('SELECT * FROM fact_courses WHERE fact_key = ?');
-    return stmt.get(fact_key);
+    const stmt = this.#db.prepare('SELECT * FROM fact_courses WHERE fact_key = ?')
+    return stmt.get(fact_key)
   }
 
   insertFactCourse({
-    fact_key, subject_id, student_id, school_id, grade_id,
-    teacher_id, start_date_id, end_date_id, homework_date_id,
-    content_list, checksum, locked,
-    update_first_date_id, update_last_date_id, update_count, update_files
+    fact_key,
+    subject_id,
+    student_id,
+    school_id,
+    grade_id,
+    teacher_id,
+    start_date_id,
+    end_date_id,
+    homework_date_id,
+    content_list,
+    checksum,
+    locked,
+    update_first_date_id,
+    update_last_date_id,
+    update_count,
+    update_files,
   }) {
     const stmt = this.#db.prepare(`
       INSERT INTO fact_courses (
-        fact_key, subject_id, student_id, school_id, grade_id, 
-        teacher_id, start_date_id, end_date_id, homework_date_id, 
+        fact_key, subject_id, student_id, school_id, grade_id,
+        teacher_id, start_date_id, end_date_id, homework_date_id,
         content_list, checksum, locked,
         update_first_date_id, update_last_date_id, update_count, update_files
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+    `)
     const info = stmt.run(
-      fact_key, 
-      subject_id, student_id, school_id, grade_id, 
-      teacher_id, start_date_id, end_date_id, homework_date_id, 
-      content_list, checksum, locked ? 1 : 0,
-      update_first_date_id, update_last_date_id, update_count, update_files
-    );
-    return info.lastInsertRowid;
+      fact_key,
+      subject_id,
+      student_id,
+      school_id,
+      grade_id,
+      teacher_id,
+      start_date_id,
+      end_date_id,
+      homework_date_id,
+      content_list,
+      checksum,
+      locked ? 1 : 0,
+      update_first_date_id,
+      update_last_date_id,
+      update_count,
+      update_files
+    )
+    return info.lastInsertRowid
   }
 
   updateFactCourse({
-    fact_key, subject_id, student_id, school_id, grade_id,
-    teacher_id, start_date_id, end_date_id, homework_date_id,
-    content_list, checksum, locked,
-    update_first_date_id, update_last_date_id, update_count, update_files
+    fact_key,
+    subject_id,
+    student_id,
+    school_id,
+    grade_id,
+    teacher_id,
+    start_date_id,
+    end_date_id,
+    homework_date_id,
+    content_list,
+    checksum,
+    locked,
+    update_first_date_id,
+    update_last_date_id,
+    update_count,
+    update_files,
   }) {
     const stmt = this.#db.prepare(`
-      UPDATE fact_courses SET 
-        subject_id = ?, student_id = ?, school_id = ?, grade_id = ?, 
-        teacher_id = ?, start_date_id = ?, end_date_id = ?, homework_date_id = ?, 
+      UPDATE fact_courses SET
+        subject_id = ?, student_id = ?, school_id = ?, grade_id = ?,
+        teacher_id = ?, start_date_id = ?, end_date_id = ?, homework_date_id = ?,
         content_list = ?, checksum = ?, locked = ?,
         update_first_date_id = ?, update_last_date_id = ?, update_count = ?, update_files = ?
       WHERE fact_key = ?
-    `);
+    `)
     const info = stmt.run(
-      subject_id, student_id, school_id, grade_id, 
-      teacher_id, start_date_id, end_date_id, homework_date_id, 
-      content_list, checksum, locked ? 1 : 0,
-      update_first_date_id, update_last_date_id, update_count, update_files,
+      subject_id,
+      student_id,
+      school_id,
+      grade_id,
+      teacher_id,
+      start_date_id,
+      end_date_id,
+      homework_date_id,
+      content_list,
+      checksum,
+      locked ? 1 : 0,
+      update_first_date_id,
+      update_last_date_id,
+      update_count,
+      update_files,
       fact_key
-    );
-    return info.lastInsertRowid;
+    )
+    return info.lastInsertRowid
   }
 
   getFactHomework(fact_key) {
-    const stmt = this.#db.prepare('SELECT * FROM fact_homework WHERE fact_key = ?');
-    return stmt.get(fact_key);
+    const stmt = this.#db.prepare('SELECT * FROM fact_homework WHERE fact_key = ?')
+    return stmt.get(fact_key)
   }
 
   insertFactHomework(data) {
     const {
-      fact_key, fact_course_id, student_id, school_id, grade_id,
-      subject_id, due_date_id, assigned_date_id, description, formatted, requires_submission, 
-      completed, completed_date_id, submission_type, difficulty_level, completion_duration, max_completion_duration,
-      background_color, public_name, themes, attachments, 
-      checksum, update_count, update_first_date_id, update_last_date_id, update_files, completion_state,
-      temporary = 1, json
+      fact_key,
+      fact_course_id,
+      student_id,
+      school_id,
+      grade_id,
+      subject_id,
+      due_date_id,
+      assigned_date_id,
+      description,
+      formatted,
+      requires_submission,
+      completed,
+      completed_date_id,
+      submission_type,
+      difficulty_level,
+      completion_duration,
+      max_completion_duration,
+      background_color,
+      public_name,
+      themes,
+      attachments,
+      checksum,
+      update_count,
+      update_first_date_id,
+      update_last_date_id,
+      update_files,
+      completion_state,
+      temporary = 1,
+      json,
     } = data
     const stmt = this.#db.prepare(`
       INSERT INTO fact_homework (
         fact_key, fact_course_id, student_id, school_id, grade_id,
-        subject_id, due_date_id, assigned_date_id, description, formatted, requires_submission, 
+        subject_id, due_date_id, assigned_date_id, description, formatted, requires_submission,
         completed, completed_date_id, completion_duration, completion_state, max_completion_duration,
-        submission_type, difficulty_level, background_color, public_name, themes, attachments, 
+        submission_type, difficulty_level, background_color, public_name, themes, attachments,
         checksum, update_count, update_first_date_id, update_last_date_id, update_files, temporary,
         json
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+    `)
     try {
       const info = stmt.run(
-        fact_key, fact_course_id, student_id, school_id, grade_id,
-        subject_id, due_date_id, assigned_date_id, description, formatted ? 1 : 0, requires_submission ? 1 : 0, 
-        completed ? 1 : 0, completed_date_id, completion_duration, completion_state, max_completion_duration,
-        submission_type, difficulty_level, background_color, public_name, themes, attachments, 
-        checksum, update_count, update_first_date_id, update_last_date_id, update_files, 
-        temporary ? 1 : 0, json
-      );
-      return info.lastInsertRowid;
+        fact_key,
+        fact_course_id,
+        student_id,
+        school_id,
+        grade_id,
+        subject_id,
+        due_date_id,
+        assigned_date_id,
+        description,
+        formatted ? 1 : 0,
+        requires_submission ? 1 : 0,
+        completed ? 1 : 0,
+        completed_date_id,
+        completion_duration,
+        completion_state,
+        max_completion_duration,
+        submission_type,
+        difficulty_level,
+        background_color,
+        public_name,
+        themes,
+        attachments,
+        checksum,
+        update_count,
+        update_first_date_id,
+        update_last_date_id,
+        update_files,
+        temporary ? 1 : 0,
+        json
+      )
+      return info.lastInsertRowid
     } catch (e) {
-      console.log(e, data);
-      throw e;
+      console.log(e, data)
+      throw e
     }
-    
   }
 
   updateFactHomework(data) {
     const {
-      fact_key, fact_course_id, student_id, school_id, grade_id,
-      subject_id, due_date_id, assigned_date_id, description, formatted, requires_submission, 
-      completed, completed_date_id, completion_duration, completion_state, max_completion_duration,
-      submission_type, difficulty_level, background_color, public_name, themes, attachments, 
-      checksum, update_count, update_first_date_id, update_last_date_id, update_files,
-      temporary = 0, json
-
+      fact_key,
+      fact_course_id,
+      student_id,
+      school_id,
+      grade_id,
+      subject_id,
+      due_date_id,
+      assigned_date_id,
+      description,
+      formatted,
+      requires_submission,
+      completed,
+      completed_date_id,
+      completion_duration,
+      completion_state,
+      max_completion_duration,
+      submission_type,
+      difficulty_level,
+      background_color,
+      public_name,
+      themes,
+      attachments,
+      checksum,
+      update_count,
+      update_first_date_id,
+      update_last_date_id,
+      update_files,
+      temporary = 0,
+      json,
     } = data
     const stmt = this.#db.prepare(`
       UPDATE fact_homework SET
         fact_course_id = ?, student_id = ?, school_id = ?, grade_id = ?,
-        subject_id = ?, due_date_id = ?, assigned_date_id = ?, description = ?, formatted = ?, requires_submission = ?, 
+        subject_id = ?, due_date_id = ?, assigned_date_id = ?, description = ?, formatted = ?, requires_submission = ?,
         completed = ?, completed_date_id = ?, completion_duration = ?, completion_state = ?, max_completion_duration = ?,
-        submission_type = ?, difficulty_level = ?, background_color = ?, public_name = ?, themes = ?, attachments = ?, 
-        checksum = ?, update_count = ?, update_first_date_id = ?, update_last_date_id = ?, update_files = ?, 
+        submission_type = ?, difficulty_level = ?, background_color = ?, public_name = ?, themes = ?, attachments = ?,
+        checksum = ?, update_count = ?, update_first_date_id = ?, update_last_date_id = ?, update_files = ?,
         temporary = ?, json = ?
       WHERE fact_key = ?
-    `);
+    `)
     try {
       const info = stmt.run(
-        fact_course_id, student_id, school_id, grade_id,
-        subject_id, due_date_id, assigned_date_id, description, formatted ? 1 : 0, requires_submission ? 1 : 0, 
-        completed ? 1 : 0, completed_date_id, completion_duration, completion_state, max_completion_duration,
-        submission_type, difficulty_level, background_color, public_name, themes, attachments, 
-        checksum, update_count, update_first_date_id, update_last_date_id, update_files, 
-        temporary ? 1 : 0, json,
+        fact_course_id,
+        student_id,
+        school_id,
+        grade_id,
+        subject_id,
+        due_date_id,
+        assigned_date_id,
+        description,
+        formatted ? 1 : 0,
+        requires_submission ? 1 : 0,
+        completed ? 1 : 0,
+        completed_date_id,
+        completion_duration,
+        completion_state,
+        max_completion_duration,
+        submission_type,
+        difficulty_level,
+        background_color,
+        public_name,
+        themes,
+        attachments,
+        checksum,
+        update_count,
+        update_first_date_id,
+        update_last_date_id,
+        update_files,
+        temporary ? 1 : 0,
+        json,
         fact_key
-      );
-      return info.changes;
+      )
+      return info.changes
     } catch (e) {
-      console.log(e, data);
-      throw e;
+      console.log(e, data)
+      throw e
     }
   }
 
@@ -517,22 +662,19 @@ export default class DataWarehouse {
       UPDATE fact_homework SET
         temporary = ?
       WHERE fact_key = ?
-    `);
+    `)
     try {
-      const info = stmt.run(
-        temporary ? 1 : 0,
-        fact_key
-      );
-      return info.changes;
+      const info = stmt.run(temporary ? 1 : 0, fact_key)
+      return info.changes
     } catch (e) {
-      console.log(e, data);
-      throw e;
+      console.error(e)
+      throw e
     }
   }
 
   updatePastFactHomeworkNotifications(notification_sent = true) {
     const stmt = this.#db.prepare(`
-      UPDATE fact_homework 
+      UPDATE fact_homework
       SET notification_sent = ?
       WHERE fact_key IN (
         SELECT fact_key
@@ -542,9 +684,7 @@ export default class DataWarehouse {
       )
     `)
     try {
-      const info = stmt.run(
-        notification_sent ? 1 : 0
-      )
+      const info = stmt.run(notification_sent ? 1 : 0)
       return info.changes
     } catch (e) {
       console.log(e)
@@ -559,10 +699,7 @@ export default class DataWarehouse {
       WHERE fact_key = ?
     `)
     try {
-      const info = stmt.run(
-        notification_sent ? 1 : 0,
-        fact_key
-      )
+      const info = stmt.run(notification_sent ? 1 : 0, fact_key)
       return info.changes
     } catch (e) {
       console.log(e)
@@ -572,10 +709,10 @@ export default class DataWarehouse {
 
   getHomeworksWithNotification(notification_sent = false) {
     const stmt = this.#db.prepare(`
-      SELECT 
-        fact_homework.fact_key as factKey, 
+      SELECT
+        fact_homework.fact_key as factKey,
         fact_homework.description,
-        due_date.date as dueDate, 
+        due_date.date as dueDate,
         assigned_date.date as assignedDate,
         dim_teachers.name as teacherName,
         dim_subjects.subject as subject
@@ -589,56 +726,53 @@ export default class DataWarehouse {
       ORDER BY assigned_date.date DESC
       LIMIT ?
     `)
-    return stmt.all(
-      notification_sent ? 1 : 0,
-      3
-    )
+    return stmt.all(notification_sent ? 1 : 0, 3)
   }
 
   insertContent(content) {
     const stmt = this.#db.prepare(`
       INSERT INTO content (id, courseItemId, description, date, endDate)
       VALUES (?, ?, ?, ?, ?)
-    `);
-    stmt.run(content.id, content.courseItemId, content.description, content.date, content.endDate);
-    return info.lastInsertRowid;
+    `)
+    const info = stmt.run(content.id, content.courseItemId, content.description, content.date, content.endDate)
+    return info.lastInsertRowid
   }
 
   insertAttachment(attachment) {
     const stmt = this.#db.prepare(`
       INSERT INTO attachments (id, contentId, name, type, isInternal)
       VALUES (?, ?, ?, ?, ?)
-    `);
-    stmt.run(attachment.id, attachment.contentId, attachment.name, attachment.type, attachment.isInternal);
-    return info.lastInsertRowid;
+    `)
+    const info = stmt.run(attachment.id, attachment.contentId, attachment.name, attachment.type, attachment.isInternal)
+    return info.lastInsertRowid
   }
-    
+
   /**
    * Insert a file into the processed_files table.
    * @param {string} fileId - The ID of the file to insert.
-   * * @param {string} status - The processing status of the file to insert.
+   * @param {string} status - The processing status of the file to insert.
    */
   insertProcessedFile(fileId, status) {
-    const stmt = this.#db.prepare('INSERT OR REPLACE INTO processed_files (file_id, processing_status) VALUES (?, ?)');
-    stmt.run(fileId, status);
+    const stmt = this.#db.prepare('INSERT OR REPLACE INTO processed_files (file_id, processing_status) VALUES (?, ?)')
+    stmt.run(fileId, status)
   }
 
   isFileProcessed(fileId) {
-    const selectStmt = this.#db.prepare('SELECT processing_status FROM processed_files WHERE file_id = ?');
-    const result = selectStmt.get(fileId);
-    return result?.processing_status == DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED;
+    const selectStmt = this.#db.prepare('SELECT processing_status FROM processed_files WHERE file_id = ?')
+    const result = selectStmt.get(fileId)
+    return result?.processing_status == DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED
   }
 
   getPushSubscriptions() {
     const stmt = this.#db.prepare('SELECT * FROM push_subscriptions')
-    return stmt.all().map(row => {
+    return stmt.all().map((row) => {
       return {
         endpoint: row.endpoint,
         keys: {
           auth: row.auth,
           p256dh: row.p256dh,
         },
-        expirationTime: row.expiration_time
+        expirationTime: row.expiration_time,
       }
     })
   }
@@ -663,8 +797,8 @@ export default class DataWarehouse {
       expirationTime: row.expiration_time,
       keys: {
         auth: row.auth,
-        p256dh: row.p256dh
-      }
+        p256dh: row.p256dh,
+      },
     }
   }
 
@@ -688,11 +822,13 @@ export default class DataWarehouse {
   }
 
   /**
-   * @param {DateWrapper} dateTime 
+   * List all the temporary homeworks that have not been updated since the given date.
+   * @param {DateWrapper} dateTime - The date to compare the last update date with.
+   * @returns {Array} - The list of temporary homeworks that have not been updated since the given date.
    */
   reportTemporaryHomeworks(dateTime) {
     const query = `
-      SELECT json 
+      SELECT json
       FROM fact_homework
       WHERE temporary = 1
       AND update_first_date_id IN (
@@ -701,12 +837,14 @@ export default class DataWarehouse {
         WHERE date < ?
       )
     `
-    const result = this.#db.all(query, dateTime.toISOString());
-    return result;
+    const result = this.#db.all(query, dateTime.toISOString())
+    return result
   }
 
   /**
-   * @param {DateWrapper} dateTime 
+   * Remove all the temporary homeworks that have not been updated since the given date.
+   * @param {DateWrapper} dateTime - The date to compare the last update date with.
+   * @returns {number} - The number of rows deleted
    */
   removeTemporaryHomeworks(dateTime) {
     const stmt = this.#db.prepare(`
@@ -726,13 +864,13 @@ export default class DataWarehouse {
     const notification = {
       title: 'Homework Reminder',
       body: `You have homework due for ${homework.subject_name} on ${homework.due_date}`,
-      icon: '/path/to/icon.png'
+      icon: '/path/to/icon.png',
     }
 
     if (Notification.permission === 'granted') {
       new Notification(notification.title, notification)
     } else if (Notification.permission !== 'denied') {
-      Notification.requestPermission().then(permission => {
+      Notification.requestPermission().then((permission) => {
         if (permission === 'granted') {
           new Notification(notification.title, notification)
         }

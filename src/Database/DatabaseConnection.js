@@ -1,4 +1,4 @@
-import { default as SqliteDatabase} from 'better-sqlite3'
+import { default as SqliteDatabase } from 'better-sqlite3'
 
 export default class DatabaseConnection {
   #db
@@ -41,6 +41,4 @@ export default class DatabaseConnection {
   exec(query) {
     return this.#db.exec(query)
   }
-
-
 }

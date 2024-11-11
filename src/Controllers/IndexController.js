@@ -1,5 +1,5 @@
-import path from 'path';
-import fs from 'fs';
+import path from 'path'
+import fs from 'fs'
 
 export default class IndexController {
   #staticPath
@@ -9,7 +9,7 @@ export default class IndexController {
     this.#staticPath = staticPath
     this.#timestamp = Date.now()
   }
- 
+
   // Serve index.html with timestamp replacement
   async index(req, res) {
     const indexPath = path.join(this.#staticPath, 'index.html')

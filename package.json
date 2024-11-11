@@ -23,5 +23,19 @@
   },
   "scripts": {
     "start": "node ./src/index.js"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.1.0",
+    "@stylistic/eslint-plugin": "^2.10.1",
+    "@stylistic/eslint-plugin-js": "^2.10.1",
+    "eslint": "^8.52.0",
+    "eslint-plugin-html": "^8.1.2",
+    "eslint-plugin-jsdoc": "^50.4.3",
+    "prettier": "^3.1.0",
+    "prettier-eslint": "^16.1.2"
+  },
+  "[markdown]": {
+    "editor.wordWrap": "bounded",
+    "editor.wordWrapColumn": 120
   }
 }

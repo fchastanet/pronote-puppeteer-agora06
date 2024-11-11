@@ -18,16 +18,33 @@
   },
   "files.exclude": {
     "**/.git": true,
-    "**/node_modules": true,
+    "**/node_modules": true
   },
   "github.copilot.chat.codeGeneration.useInstructionFiles": true,
   "github.copilot.chat.codeGeneration.instructions": [
     {
-      "file": ".github/copilot-instructions.md",
+      "file": ".github/copilot-instructions.md"
     }
   ],
   "markdown.preview.openMarkdownLinks": "inEditor",
   "workbench.editorAssociations": {
     "*.md": "default"
-  }
+  },
+  "editor.formatOnSave": true,
+  "editor.formatOnType": false,
+  "editor.formatOnPaste": true,
+  "editor.formatOnSaveMode": "file",
+  "files.insertFinalNewline": true,
+  "files.autoSave": "off",
+  "eslint.format.enable": true,
+  "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+  "[javascript]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features",
+  },
+  "[markdown]": {
+    "editor.formatOnSave": false,
+    "editor.wordWrap": "wordWrapColumn",
+    "editor.wrappingIndent": "same",
+    "editor.wordWrapColumn": 120,
+  },
 }

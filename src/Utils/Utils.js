@@ -1,40 +1,40 @@
-import crypto from 'crypto';
+import crypto from 'crypto'
 
 export default class Utils {
   static delay(time) {
-    return new Promise(function(resolve) { 
-        setTimeout(resolve, time)
-    });
+    return new Promise(function (resolve) {
+      setTimeout(resolve, time)
+    })
   }
-  
+
   static base64encode(str) {
-    return Buffer.from(str).toString('base64');
+    return Buffer.from(str).toString('base64')
   }
 
   static md5sum(data) {
-    const hash = crypto.createHash("md5");
-    hash.update(JSON.stringify(data));
-    return hash.digest("hex");
+    const hash = crypto.createHash('md5')
+    hash.update(JSON.stringify(data))
+    return hash.digest('hex')
   }
 
   /**
    * Recursively remove all keys named "keyName" from an object.
-   * @param {Object} obj - The object from which to remove the keys.
+   * @param {object} obj - The object from which to remove the keys.
    * @param {string} keyName - The name of the key to remove.
-   * @returns {Object} The object with the keys removed.
+   * @returns {object} The object with the keys removed.
    */
   static removeKey(obj, keyName) {
     if (Array.isArray(obj)) {
-      return obj.map(item => Utils.removeKey(item, keyName));
+      return obj.map((item) => Utils.removeKey(item, keyName))
     } else if (obj !== null && typeof obj === 'object') {
       return Object.keys(obj).reduce((acc, key) => {
         if (key !== keyName) {
-          acc[key] = Utils.removeKey(obj[key], keyName);
+          acc[key] = Utils.removeKey(obj[key], keyName)
         }
-        return acc;
-      }, {});
+        return acc
+      }, {})
     }
-    return obj;
+    return obj
   }
 
   static convertToJsonString(javascriptString) {
@@ -44,7 +44,6 @@ export default class Utils {
   }
 
   static stripTags(html) {
-    return html.replace(/<[^>]*>?/gm, '');
+    return html.replace(/<[^>]*>?/gm, '')
   }
-
 }

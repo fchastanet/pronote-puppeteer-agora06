@@ -1,7 +1,7 @@
 import webpush from 'web-push'
-import path from 'path';
-import fs from 'fs';
-import DataWarehouse from '#pronote/Database/DataWarehouse.js';
+import path from 'path'
+import fs from 'fs'
+import DataWarehouse from '#pronote/Database/DataWarehouse.js'
 
 export default class PushSubscriptionService {
   /** @type {DataWarehouse} */
@@ -11,7 +11,7 @@ export default class PushSubscriptionService {
   #publicKeyTargetFile
   #privateKeysTargetFile
   #debug = false
-  
+
   constructor(dataWarehouse, pushNotificationsPath, privatePath, debug) {
     this.#dataWarehouse = dataWarehouse
     this.#pushNotificationsPath = pushNotificationsPath
@@ -22,12 +22,8 @@ export default class PushSubscriptionService {
   }
 
   async init() {
-    const { publicVapidKey, privateVapidKey } = await this.#generateVapidKeys()
-    webpush.setVapidDetails(
-      'mailto:fchastanet@gmail.com', 
-      publicVapidKey, 
-      privateVapidKey
-    )
+    const {publicVapidKey, privateVapidKey} = await this.#generateVapidKeys()
+    webpush.setVapidDetails('mailto:fchastanet@gmail.com', publicVapidKey, privateVapidKey)
   }
 
   async #generateVapidKeys() {
@@ -44,32 +40,25 @@ export default class PushSubscriptionService {
     console.log('Private VAPID Key:', vapidKeys.privateKey)
 
     console.log('Writing VAPID keys to files')
+    this.#writeFile(this.#publicKeyTargetFile, `const publicVapidKey = '${vapidKeys.publicKey}';`)
     this.#writeFile(
-      this.#publicKeyTargetFile, 
-      `const publicVapidKey = '${vapidKeys.publicKey}';`, 
-    )
-    this.#writeFile(
-      this.#privateKeysTargetFile, 
+      this.#privateKeysTargetFile,
       `const publicVapidKey = '${vapidKeys.publicKey}';\nconst privateVapidKey = '${vapidKeys.privateKey}';\nexport { publicVapidKey, privateVapidKey };`
     )
 
-    return { publicVapidKey, privateVapidKey }
+    // eslint-disable-next-line no-undef
+    return {publicVapidKey, privateVapidKey}
   }
 
   #writeFile(targetFile, content) {
-    fs.writeFileSync(
-      this.#privateKeysTargetFile, 
-      content, 
-      'utf8', 
-      err => {
-        if (err) {
-          console.error(err);
-          process.exit(1);
-        } else {
-          console.log(`Result written into '${targetFile}'`);
-        }
+    fs.writeFileSync(this.#privateKeysTargetFile, content, 'utf8', (err) => {
+      if (err) {
+        console.error(err)
+        process.exit(1)
+      } else {
+        console.log(`Result written into '${targetFile}'`)
       }
-    )
+    })
   }
 
   getPublicVapidKeyFile() {
@@ -86,9 +75,9 @@ export default class PushSubscriptionService {
 
   async pushSubscription(subscription) {
     this.#dataWarehouse.insertSubscription(
-      subscription.endpoint, 
-      subscription.keys.auth, 
-      subscription.keys.p256dh, 
+      subscription.endpoint,
+      subscription.keys.auth,
+      subscription.keys.p256dh,
       subscription.expirationTime
     )
   }
@@ -100,27 +89,30 @@ export default class PushSubscriptionService {
   async sendNotification(notification, notificationKey) {
     const payloadStr = JSON.stringify(notification)
     const subscriptions = await this.getSubscriptions()
-    console.log(`Send Notification ${notificationKey} to ${subscriptions.length} subscribers`);
-    subscriptions.forEach(subscription => {
-      webpush.sendNotification(subscription, payloadStr).then(response => {
-        if (this.#debug) {
-          console.log('Notification sent successfully:', response)
-        } else {
-          console.log('Notification sent successfully')
-        }
-      }).catch(error => {
-        if (error.statusCode === 410) {
-          console.error('Error endpoint has gone, removing endpoint:', subscription.endpoint)
-          this.#dataWarehouse.deletePushSubscriptionByEndpoint(subscription.endpoint)
-        } else {
-          console.error('Error sending notification:', error)
-        }
-      })
+    console.log(`Send Notification ${notificationKey} to ${subscriptions.length} subscribers`)
+    subscriptions.forEach((subscription) => {
+      webpush
+        .sendNotification(subscription, payloadStr)
+        .then((response) => {
+          if (this.#debug) {
+            console.log('Notification sent successfully:', response)
+          } else {
+            console.log('Notification sent successfully')
+          }
+        })
+        .catch((error) => {
+          if (error.statusCode === 410) {
+            console.error('Error endpoint has gone, removing endpoint:', subscription.endpoint)
+            this.#dataWarehouse.deletePushSubscriptionByEndpoint(subscription.endpoint)
+          } else {
+            console.error('Error sending notification:', error)
+          }
+        })
     })
   }
 
   async sendNotificationToSubscriber(subscriber, payload) {
     const payloadStr = JSON.stringify(payload)
-    webpush.sendNotification(subscriber, payloadStr).catch(error => console.error(error))
+    webpush.sendNotification(subscriber, payloadStr).catch((error) => console.error(error))
   }
 }

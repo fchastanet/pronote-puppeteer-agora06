@@ -1,6 +1,6 @@
 import 'dayjs/locale/fr.js'
 import weekday from 'dayjs/plugin/weekday.js'
-import weekOfYear from 'dayjs/plugin/weekOfYear.js' 
+import weekOfYear from 'dayjs/plugin/weekOfYear.js'
 import customParseFormat from 'dayjs/plugin/customParseFormat.js'
 import dayjs from 'dayjs'
 
@@ -10,13 +10,14 @@ dayjs.extend(customParseFormat)
 dayjs.locale('fr')
 
 export default class DateWrapper {
-  /** 
-   * @type {dayjs} 
+  /**
+   * @type {dayjs}
    */
   #date
 
   /**
-   * @param {Date|dayjs|string} date 
+   * Create a new DateWrapper instance.
+   * @param {Date|dayjs|string} date - The date to wrap.
    */
   constructor(date = null) {
     if (date === null) {
