@@ -6,7 +6,7 @@ const subscribeToPushNotifications = () => {
   }
   console.log('Service Worker and Notification are supported')
   navigator.serviceWorker
-    .register('/service-worker.js', {
+    .register(`/service-worker.js?webService=${window.webServiceUrl}`, {
       scope: '/',
     })
     .then((registration) => {
@@ -40,7 +40,7 @@ const unsubscribeFromPushNotifications = async () => {
             return
           }
           const {endpoint} = subscription
-          const response = await fetch(`/subscription?endpoint=${endpoint}`, {
+          const response = await fetch(`${window.webServiceUrl}/subscription?endpoint=${endpoint}`, {
             method: 'DELETE',
             headers: {
               'content-type': 'application/json',
@@ -100,7 +100,7 @@ const subscribeUser = async () => {
     console.error('Service Worker is not supported by this browser')
     return
   }
-  const response = await fetch(`publicVapidKey.json?${Date.now()}`)
+  const response = await fetch(`${window.webServiceUrl}/publicVapidKey.json?${Date.now()}`)
   const keys = await response.json()
   const registration = await navigator.serviceWorker.ready
   const subscription = await registration.pushManager
@@ -113,7 +113,7 @@ const subscribeUser = async () => {
       console.error('Error subscribing:', error)
     })
 
-  await fetch('/subscription', {
+  await fetch(`${window.webServiceUrl}/subscription`, {
     method: 'POST',
     body: JSON.stringify({new: subscription}),
     headers: {

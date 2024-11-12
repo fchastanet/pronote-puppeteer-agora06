@@ -97,7 +97,6 @@ async function main() {
   const databaseFile = process.env.SQLITE_DATABASE_FILE
 
   const resultsDir = path.join(process.cwd(), process.env.RESULTS_DIR)
-  const publicDir = path.join(process.cwd(), process.env.PUBLIC_DIR)
 
   const commandOptions = parseCommandOptions(process.argv)
   databaseConnection = new DatabaseConnection(databaseFile, commandOptions.debug)
@@ -129,7 +128,7 @@ async function main() {
   const dataMetrics = new DataMetrics(databaseConnection)
   const processorMetricsService = new ProcessorMetricsService(
     dataMetrics,
-    publicDir,
+    resultsDir,
     commandOptions.debug,
     commandOptions.verbose
   )
@@ -150,9 +149,10 @@ async function main() {
 
   if (commandOptions.server) {
     const server = new HttpServer(
-      publicDir,
       pushSubscriptionController,
-      process.env?.SERVER_PORT ?? 3000
+      resultsDir,
+      process.env?.SERVER_PORT ?? 3001,
+      process.env?.ASSETS_URL ?? 'http://localhost:3000'
     )
 
     server.start()

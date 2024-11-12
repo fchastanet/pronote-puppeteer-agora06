@@ -1,3 +1,11 @@
+let webServiceUrl = null
+
+self.addEventListener('install', function () {
+  console.log('Service worker installed', location)
+  webServiceUrl = new URL(location).searchParams.get('webService')
+  console.log('webServiceUrl', webServiceUrl)
+})
+
 self.addEventListener('push', (event) => {
   try {
     const data = event.data.json()
@@ -25,7 +33,7 @@ self.addEventListener(
       },
     })
     const subscription = self.registration.pushManager.subscribe(event.oldSubscription.options).then((subscription) =>
-      fetch('/subscription', {
+      fetch(`${webServiceUrl}/subscription`, {
         method: 'post',
         headers: {
           'Content-type': 'application/json',

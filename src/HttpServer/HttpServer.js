@@ -1,18 +1,20 @@
 import express from 'express'
+import cors from 'cors'
 import bodyParser from 'body-parser'
-import ViteExpress from 'vite-express'
 import PushSubscriptionController from '#pronote/Controllers/PushSubscriptionController.js'
 
 export default class HttpServer {
-  #port
-  #staticPath
   /** @type {PushSubscriptionController} */
   #pushSubscriptionController
+  #resultsDir
+  #port
+  #origin
 
-  constructor(staticPath, pushSubscriptionController, port = 3000) {
+  constructor(pushSubscriptionController, resultsDir, port = 3001, origin) {
     this.#port = port
-    this.#staticPath = staticPath
+    this.#resultsDir = resultsDir
     this.#pushSubscriptionController = pushSubscriptionController
+    this.#origin = origin
   }
 
   start() {
@@ -20,20 +22,44 @@ export default class HttpServer {
 
     // dependency needed by pushNotification system for parsing JSON bodies
     app.use(bodyParser.json())
+    app.use(cors())
 
-    app.get('/publicVapidKey.json', this.#pushSubscriptionController.getPublicVapidKey.bind(this.#pushSubscriptionController))
-    app.post('/subscription', this.#pushSubscriptionController.postSubscription.bind(this.#pushSubscriptionController))
+    const corsOptions = {
+      origin: this.#origin,
+      optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+    }
+
+    app.options('*', cors(corsOptions)) // enable pre-flight request for all routes
+    app.get(
+      '/publicVapidKey.json',
+      cors(corsOptions),
+      this.#pushSubscriptionController.getPublicVapidKey.bind(this.#pushSubscriptionController)
+    )
+    app.post(
+      '/subscription',
+      cors(corsOptions),
+      this.#pushSubscriptionController.postSubscription.bind(this.#pushSubscriptionController)
+    )
     app.delete(
       '/subscription',
+      cors(corsOptions),
       this.#pushSubscriptionController.deleteSubscription.bind(this.#pushSubscriptionController)
     )
-    app.get('/notifyTest', this.#pushSubscriptionController.getNotificationTest.bind(this.#pushSubscriptionController))
+    app.get(
+      '/notifyTest',
+      cors(corsOptions),
+      this.#pushSubscriptionController.getNotificationTest.bind(this.#pushSubscriptionController)
+    )
+    app.get(
+      '/metrics.json',
+      cors(corsOptions),
+      (req, res) => {
+        res.sendFile(`${this.#resultsDir}/metrics.json`)
+      }
+    )
 
-    // Finally serve static files from the current directory
-    app.use(express.static(this.#staticPath))
-
-    ViteExpress.listen(app, this.#port, () => {
-      console.log(`Server running at http://127.0.0.1:${this.#port}/`)
+    app.listen(this.#port, '0.0.0.0', () => {
+      console.log(`CORS-enabled WebServer running at http://127.0.0.1:${this.#port}/`)
     })
   }
 }

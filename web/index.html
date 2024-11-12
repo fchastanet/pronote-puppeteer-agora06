@@ -8,7 +8,7 @@
 </head>
 
 <body>
-  <div id="app"></div>
+  <div id="app" data-web-service-url="%VITE_WEBSERVICE_URL%"></div>
   <script type="module" src="/main.js"></script>
   <div class="navbar">
     <a href="#">Home</a>
@@ -22,7 +22,7 @@
     <button id="unsubscribeButton">Unsubscribe</button>
   </div>
 
-  <h1>Homework Metrics Dashboard</h1>
+  <h1>Homework Metrics Dashboard (%MODE%)</h1>
   <div class="dashboard">
     <div class="chart-container" id="completionRateChart"></div>
     <div class="chart-container" id="onTimeCompletionRateChart"></div>

@@ -9,10 +9,13 @@ import initSubjectMetricsChart from './js/charts/subjectMetricsChart'
 import initHomeworksDurationChart from './js/charts/homeworksDurationChart'
 import dayjs from 'dayjs'
 
+window.webServiceUrl = ''
 window.addEventListener('load', () => {
+  const appDiv = document.getElementById('app')
+  window.webServiceUrl = appDiv.getAttribute('data-web-service-url')
   initDayjs(dayjs)
   initSubscription()
-  fetch('/metrics.json')
+  fetch(`${window.webServiceUrl}/metrics.json`)
     .then((response) => response.json())
     .then((data) => {
       initCompletionRateChart(data)
