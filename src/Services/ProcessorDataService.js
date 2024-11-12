@@ -69,10 +69,21 @@ export default class ProcessorDataService {
         console.error(`Missing one or more file in directory '${subDir}'`)
         return
       }
+
+      if (
+        this.#db.isFileProcessed(studentInfoPath) &&
+        this.#db.isFileProcessed(coursesPath) &&
+        this.#db.isFileProcessed(homeworksPath)
+      ) {
+        console.info(`Files in directory '${subDir}' are already processed`)
+        return
+      }
+
       console.info(`Processing files in directory '${subDir}' ...`)
       this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
       this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
       this.#db.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
+
       try {
         console.info(`Processing '${studentInfoPath}' ...`)
         const studentInfoContent = JSON.parse(fs.readFileSync(studentInfoPath, 'utf8'))
@@ -84,36 +95,28 @@ export default class ProcessorDataService {
         return
       }
 
-      if (this.#db.isFileProcessed(coursesPath)) {
-        console.info(`File '${coursesPath}' already processed`)
-      } else {
-        try {
-          console.info(`Processing '${coursesPath}' ...`)
-          const coursesContent = JSON.parse(fs.readFileSync(coursesPath, 'utf8'))
-          this.processCourses(coursesPath, coursesContent)
-        } catch (error) {
-          console.error(`Unable to process file '${coursesPath}' :`, error)
-          this.#db.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
-          return
-        }
+      try {
+        console.info(`Processing '${coursesPath}' ...`)
+        const coursesContent = JSON.parse(fs.readFileSync(coursesPath, 'utf8'))
+        this.processCourses(coursesPath, coursesContent)
+      } catch (error) {
+        console.error(`Unable to process file '${coursesPath}' :`, error)
+        this.#db.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
+        return
       }
 
-      if (this.#db.isFileProcessed(homeworksPath)) {
-        console.info(`File '${homeworksPath}' already processed`)
-      } else {
-        try {
-          console.info(`Processing '${homeworksPath}' ...`)
+      try {
+        console.info(`Processing '${homeworksPath}' ...`)
 
-          const homeworksContent = JSON.parse(fs.readFileSync(homeworksPath, 'utf8'))
-          this.processHomeworks(homeworksPath, homeworksContent)
-          const homeworkIdsPath = path.join(resultsDir, subDir, 'homeworkIds.json')
-          console.info(`Writing ${homeworkIdsPath} ...`)
-          fs.writeFileSync(homeworkIdsPath, JSON.stringify(this.#homeworkIds, null, 2), 'utf8')
-        } catch (error) {
-          console.error(`Unable to process file '${homeworksPath}' :`, error)
-          this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
-          return
-        }
+        const homeworksContent = JSON.parse(fs.readFileSync(homeworksPath, 'utf8'))
+        this.processHomeworks(homeworksPath, homeworksContent)
+        const homeworkIdsPath = path.join(resultsDir, subDir, 'homeworkIds.json')
+        console.info(`Writing ${homeworkIdsPath} ...`)
+        fs.writeFileSync(homeworkIdsPath, JSON.stringify(this.#homeworkIds, null, 2), 'utf8')
+      } catch (error) {
+        console.error(`Unable to process file '${homeworksPath}' :`, error)
+        this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
+        return
       }
 
       if (this.#duplicatedIds.length > 0) {
