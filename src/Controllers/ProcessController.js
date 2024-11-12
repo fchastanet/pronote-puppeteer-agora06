@@ -1,10 +1,9 @@
 import ProcessorDataService from '#pronote/Services/ProcessorDataService.js'
 import ProcessorMetricsService from '#pronote/Services/ProcessorMetricsService.js'
 import ProcessorNotificationsService from '#pronote/Services/ProcessorNotificationsService.js'
-import {CronJob} from 'cron'
 import PronoteRetrievalService from '../Services/PronoteRetrievalService.js'
 
-export default class CronController {
+export default class ProcessController {
   /** @type {PronoteRetrievalService} */
   #pronoteRetrievalService
   /** @type {ProcessorDataService} */
@@ -13,13 +12,10 @@ export default class CronController {
   #processorMetricsService
   /** @type {ProcessorNotificationsService} */
   #processorNotificationsService
-  #runOnInit
-  #skipCron
   #skipPronoteDataRetrieval
   #skipDataProcess
   #skipDataMetrics
   #skipNotifications
-  #debug
   #verbose
 
   constructor({
@@ -27,68 +23,33 @@ export default class CronController {
     processorDataService,
     processorMetricsService,
     processorNotificationsService,
-    runOnInit,
-    skipCron,
     skipPronoteDataRetrieval,
     skipDataProcess,
     skipDataMetrics,
     skipNotifications,
-    debug,
     verbose,
   }) {
     this.#pronoteRetrievalService = pronoteRetrievalService
     this.#processorDataService = processorDataService
     this.#processorMetricsService = processorMetricsService
     this.#processorNotificationsService = processorNotificationsService
-    this.#runOnInit = runOnInit
-    this.#skipCron = skipCron
     this.#skipPronoteDataRetrieval = skipPronoteDataRetrieval
     this.#skipDataProcess = skipDataProcess
     this.#skipDataMetrics = skipDataMetrics
     this.#skipNotifications = skipNotifications
-    this.#debug = debug
     this.#verbose = verbose
   }
 
-  setupCronJobs() {
-    if (this.#skipCron) {
-      if (this.#verbose) {
-        console.debug('Cron jobs skipped, run programmed jobs immediately.')
-      }
-      this.mainCronTask()
-    } else {
-      // every hour between 9am and 6pm
-      let cronTime = '0 9-18 * * *'
-      if (this.#debug) {
-        // every minute
-        cronTime = '* * * * *'
-      }
-      console.log('Setting up cron job with cronTime: ', cronTime)
-      CronJob.from({
-        cronTime,
-        onTick: this.mainCronTask.bind(this),
-        start: true,
-        timeZone: 'Europe/Paris',
-      })
-
-      if (this.#runOnInit) {
-        setTimeout(() => {
-          this.mainCronTask()
-        }, 1000)
-      }
-    }
-  }
-
-  async mainCronTask() {
+  async process() {
     if (this.#verbose) {
-      console.debug('Start mainCronTask ...')
+      console.debug('Start process ...')
     }
     await this.#retrievePronoteData()
     await this.#processPronoteData()
     await this.#processDataMetrics()
     await this.#generateNotifications()
     if (this.#verbose) {
-      console.debug('End mainCronTask ...')
+      console.debug('End process ...')
     }
   }
 

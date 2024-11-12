@@ -2,93 +2,59 @@ import path from 'path'
 import dotenv from 'dotenv'
 import PronoteCrawler from '#pronote/Crawler/PronoteCrawler.js'
 import DatabaseConnection from '#pronote/Database/DatabaseConnection.js'
-import HttpServer from '#pronote/HttpServer/HttpServer.js'
 import {Command} from 'commander'
 import PushSubscriptionService from '#pronote/Services/PushSubscriptionService.js'
-import PushSubscriptionController from '#pronote/Controllers/PushSubscriptionController.js'
 import PronoteRetrievalService from '#pronote/Services/PronoteRetrievalService.js'
-import CronController from '#pronote/Controllers/CronController.js'
+import ProcessController from '#pronote/Controllers/ProcessController.js'
 import DataMetrics from '#pronote/Database/DataMetrics.js'
 import DataWarehouse from '#pronote/Database/DataWarehouse.js'
 import ProcessorDataService from '#pronote/Services/ProcessorDataService.js'
 import ProcessorMetricsService from '#pronote/Services/ProcessorMetricsService.js'
 import Crawler from '#pronote/Crawler/Crawler.js'
 import ProcessorNotificationsService from '#pronote/Services/ProcessorNotificationsService.js'
+import processManagement from '#pronote/Utils/ProcessManagement.js'
 
 let crawler = null
 let databaseConnection = null
-
-// -----------------------------------------------------------------------------
-// Handle process exit
-// -----------------------------------------------------------------------------
-/**
- * handle process exit
- * @param {object} options - options
- * @param {number} exitCode - exit code
- */
-function exitHandler(options, exitCode) {
-  if (options.cleanup) {
-    if (crawler !== null) {
-      console.log('Closing browser')
-      crawler.close()
-    }
-    if (databaseConnection !== null) {
-      console.log('Closing database connection')
-      databaseConnection.close()
-    }
+processManagement((options) => {
+  if (!options.cleanup) {
+    return
   }
-  if (exitCode === null) {
-    exitCode = 1
+  if (crawler !== null) {
+    console.log('Closing browser')
+    crawler.close()
   }
-  if (typeof exitCode === 'object' || typeof exitCode === 'string' || exitCode instanceof Error) {
-    console.error(exitCode)
-    exitCode = 2
+  if (databaseConnection !== null) {
+    console.log('Closing database connection')
+    databaseConnection.close()
   }
-  if (options.exit) process.exit(exitCode)
-}
+})
 
-// do something when app is closing
-process.on('exit', exitHandler.bind(null, {cleanup: true}))
-
-// catches ctrl+c event
-process.on('SIGINT', exitHandler.bind(null, {exit: true}))
-
-// catches "kill pid" (for example: nodemon restart)
-process.on('SIGUSR1', exitHandler.bind(null, {exit: true}))
-process.on('SIGUSR2', exitHandler.bind(null, {exit: true}))
-
-// catches uncaught exceptions
-process.on('uncaughtException', exitHandler.bind(null, {exit: true}))
 
 /**
  * Parse command arguments
  * @param {Array} argv - arguments
  * @returns {object} options selected
  */
-function parseCommandOptions(argv) {
+const parseCommandOptions = (argv) => {
   const command = new Command()
   command
-    .name('pronote-analyser')
+    .name('pronote-data-processor')
     .description('Allows pronote information retrieval and analysis')
     .version('1.0.0', '--version')
     .usage('[OPTIONS]...')
     .option('-d, --debug', 'Activates debug mode.', false)
     .option('-v, --verbose', 'Activates verbose mode (details loaded pages, ...).', false)
-    .option('--skip-cron', 'Skips automatic processes.', false)
     .option('--skip-pronote', 'Skips pronote data retrieval.', false)
     .option('--skip-data-process', 'Skips data process.', false)
     .option('--skip-data-metrics', 'Skips data metrics.', false)
     .option('--skip-notifications', 'Skips notifications generation.', false)
-    .option('--server', 'Launch internal http server to serve html files.', false)
     .parse(argv)
 
   return command.opts()
 }
 
-/**
- * Main function
- */
-async function main() {
+const main = async () => {
   dotenv.config()
 
   const casUrl = process.env.CAS_URL
@@ -139,7 +105,6 @@ async function main() {
     commandOptions.debug
   )
   await pushSubscriptionService.init()
-  const pushSubscriptionController = new PushSubscriptionController(pushSubscriptionService)
 
   const processorNotificationsService = new ProcessorNotificationsService({
     dataWarehouse,
@@ -147,32 +112,18 @@ async function main() {
     verbose: commandOptions.verbose,
   })
 
-  if (commandOptions.server) {
-    const server = new HttpServer(
-      pushSubscriptionController,
-      resultsDir,
-      process.env?.SERVER_PORT ?? 3001,
-      process.env?.ASSETS_URL ?? 'http://localhost:3000'
-    )
-
-    server.start()
-  }
-
-  const cronController = new CronController({
+  const processController = new ProcessController({
     pronoteRetrievalService,
     processorDataService,
     processorMetricsService,
     processorNotificationsService,
-    runOnInit: true || !dataWarehouse.isSchemaInitialized(),
-    skipCron: commandOptions.skipCron,
     skipPronoteDataRetrieval: commandOptions.skipPronote,
     skipDataProcess: commandOptions.skipDataProcess,
     skipDataMetrics: commandOptions.skipDataMetrics,
     skipNotifications: commandOptions.skipNotifications,
-    debug: commandOptions.debug,
     verbose: commandOptions.verbose,
   })
-  cronController.setupCronJobs()
+  await processController.process()
 }
 
 await main()

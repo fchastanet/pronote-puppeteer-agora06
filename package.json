@@ -14,7 +14,6 @@
     "better-sqlite3": "^11.5.0",
     "commander": "^12.1.0",
     "cors": "^2.8.5",
-    "cron": "^3.1.9",
     "dayjs": "^1.11.13",
     "dotenv": "^16.4.5",
     "echarts": "^5.5.1",
@@ -28,7 +27,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "serveProduction": "node ./src/prodFront.js"
+    "serveProduction": "node ./src/prodFrontServer.js"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",
