@@ -11,7 +11,7 @@ import DataWarehouse from '#pronote/Database/DataWarehouse.js'
 import ProcessorDataService from '#pronote/Services/ProcessorDataService.js'
 import ProcessorMetricsService from '#pronote/Services/ProcessorMetricsService.js'
 import Crawler from '#pronote/Crawler/Crawler.js'
-import ProcessorNotificationsService from '#pronote/Services/ProcessorNotificationsService.js'
+import NotificationsService from '#pronote/Services/NotificationsService.js'
 import processManagement from '#pronote/Utils/ProcessManagement.js'
 
 let crawler = null
@@ -84,8 +84,25 @@ const main = async () => {
   })
 
   const dataWarehouse = new DataWarehouse(databaseConnection)
+
+  const pushSubscriptionService = new PushSubscriptionService(
+    dataWarehouse,
+    path.join(process.cwd(), 'src', 'HttpServer'),
+    commandOptions.debug
+  )
+  await pushSubscriptionService.init()
+
+  const notificationsService = new NotificationsService({
+    dataWarehouse,
+    pushSubscriptionService,
+    verbose: commandOptions.verbose,
+    skipNotifications: commandOptions.skipNotifications,
+    rateLimit: process.env.NOTIFICATIONS_RATE_LIMIT,
+  })
+
   const processorDataService = new ProcessorDataService(
     dataWarehouse,
+    notificationsService,
     resultsDir,
     commandOptions.debug,
     commandOptions.verbose
@@ -99,28 +116,13 @@ const main = async () => {
     commandOptions.verbose
   )
 
-  const pushSubscriptionService = new PushSubscriptionService(
-    dataWarehouse,
-    path.join(process.cwd(), 'src', 'HttpServer'),
-    commandOptions.debug
-  )
-  await pushSubscriptionService.init()
-
-  const processorNotificationsService = new ProcessorNotificationsService({
-    dataWarehouse,
-    pushSubscriptionService,
-    verbose: commandOptions.verbose,
-  })
-
   const processController = new ProcessController({
     pronoteRetrievalService,
     processorDataService,
     processorMetricsService,
-    processorNotificationsService,
     skipPronoteDataRetrieval: commandOptions.skipPronote,
     skipDataProcess: commandOptions.skipDataProcess,
     skipDataMetrics: commandOptions.skipDataMetrics,
-    skipNotifications: commandOptions.skipNotifications,
     verbose: commandOptions.verbose,
   })
   await processController.process()

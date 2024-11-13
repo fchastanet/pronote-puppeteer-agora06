@@ -11,6 +11,11 @@ export default class DataWarehouse {
   static COMPLETION_STATE_OVER_DUE = 2
   static COMPLETION_STATE_UNKNOWN = 3
 
+  static NOTIFICATION_STATE_WAITING = 0
+  static NOTIFICATION_STATE_SENT = 1
+  static NOTIFICATION_STATE_RATE_LIMIT = 2
+  static NOTIFICATION_STATE_ERROR = 3
+
   /**
    * @type {DatabaseConnection}
    */
@@ -148,13 +153,15 @@ export default class DataWarehouse {
         attachments TEXT,               -- Storing as JSON string or comma-separated values
         -- update fields
         checksum TEXT,
+        notification_checksum TEXT,
         update_count INTEGER DEFAULT 1,
         update_first_date_id INTEGER,   -- FK dim_dates
         update_last_date_id INTEGER,    -- FK dim_dates
         update_files TEXT,
         temporary INTEGER DEFAULT 1,    -- boolean
         json TEXT,
-        notification_sent INTEGER DEFAULT 0,  -- boolean
+        notification_state INTEGER DEFAULT 0,  -- boolean
+        notification_state_date_id INTEGER,    -- FK dim_dates
         FOREIGN KEY (student_id) REFERENCES dim_students(student_id),
         FOREIGN KEY (school_id) REFERENCES dim_schools(school_id),
         FOREIGN KEY (grade_id) REFERENCES dim_grades(grade_id),
@@ -164,7 +171,8 @@ export default class DataWarehouse {
         FOREIGN KEY (assigned_date_id) REFERENCES dim_dates(date_id),
         FOREIGN KEY (completed_date_id) REFERENCES dim_dates(date_id),
         FOREIGN KEY (update_first_date_id) REFERENCES dim_dates(date_id),
-        FOREIGN KEY (update_last_date_id) REFERENCES dim_dates(date_id)
+        FOREIGN KEY (update_last_date_id) REFERENCES dim_dates(date_id),
+        FOREIGN KEY (notification_state_date_id) REFERENCES dim_dates(date_id)
       );
 
       CREATE INDEX IF NOT EXISTS idx_fact_homework_fact_key ON fact_homework(fact_key);
@@ -391,6 +399,20 @@ export default class DataWarehouse {
     }
   }
 
+  getOrInsertDate(date) {
+    if (date === null) {
+      return null
+    }
+    if (!(date instanceof DateWrapper)) {
+      date = DateWrapper.parseDate(date)
+    }
+    let dateId = this.getDateId(date)
+    if (!dateId) {
+      dateId = this.insertDate(date)
+    }
+    return dateId
+  }
+
   getFactCourse(fact_key) {
     const stmt = this.#db.prepare('SELECT * FROM fact_courses WHERE fact_key = ?')
     return stmt.get(fact_key)
@@ -519,6 +541,7 @@ export default class DataWarehouse {
       themes,
       attachments,
       checksum,
+      notification_checksum,
       update_count,
       update_first_date_id,
       update_last_date_id,
@@ -526,6 +549,8 @@ export default class DataWarehouse {
       completion_state,
       temporary = 1,
       json,
+      notification_state = this.NOTIFICATION_STATE_WAITING,
+      notification_state_date_id = null,
     } = data
     const stmt = this.#db.prepare(`
       INSERT INTO fact_homework (
@@ -533,9 +558,9 @@ export default class DataWarehouse {
         subject_id, due_date_id, assigned_date_id, description, formatted, requires_submission,
         completed, completed_date_id, completion_duration, completion_state, max_completion_duration,
         submission_type, difficulty_level, background_color, public_name, themes, attachments,
-        checksum, update_count, update_first_date_id, update_last_date_id, update_files, temporary,
-        json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        checksum, notification_checksum, update_count, update_first_date_id, update_last_date_id, update_files, temporary,
+        json, notification_state, notification_state_date_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     try {
       const info = stmt.run(
@@ -562,12 +587,15 @@ export default class DataWarehouse {
         themes,
         attachments,
         checksum,
+        notification_checksum,
         update_count,
         update_first_date_id,
         update_last_date_id,
         update_files,
         temporary ? 1 : 0,
-        json
+        json,
+        notification_state,
+        notification_state_date_id
       )
       return info.lastInsertRowid
     } catch (e) {
@@ -601,6 +629,7 @@ export default class DataWarehouse {
       themes,
       attachments,
       checksum,
+      notification_checksum,
       update_count,
       update_first_date_id,
       update_last_date_id,
@@ -614,7 +643,7 @@ export default class DataWarehouse {
         subject_id = ?, due_date_id = ?, assigned_date_id = ?, description = ?, formatted = ?, requires_submission = ?,
         completed = ?, completed_date_id = ?, completion_duration = ?, completion_state = ?, max_completion_duration = ?,
         submission_type = ?, difficulty_level = ?, background_color = ?, public_name = ?, themes = ?, attachments = ?,
-        checksum = ?, update_count = ?, update_first_date_id = ?, update_last_date_id = ?, update_files = ?,
+        checksum = ?, notification_checksum = ?, update_count = ?, update_first_date_id = ?, update_last_date_id = ?, update_files = ?,
         temporary = ?, json = ?
       WHERE fact_key = ?
     `)
@@ -642,6 +671,7 @@ export default class DataWarehouse {
         themes,
         attachments,
         checksum,
+        notification_checksum,
         update_count,
         update_first_date_id,
         update_last_date_id,
@@ -670,63 +700,6 @@ export default class DataWarehouse {
       console.error(e)
       throw e
     }
-  }
-
-  updatePastFactHomeworkNotifications(notification_sent = true) {
-    const stmt = this.#db.prepare(`
-      UPDATE fact_homework
-      SET notification_sent = ?
-      WHERE fact_key IN (
-        SELECT fact_key
-        FROM fact_homework
-        JOIN dim_dates as assigned_date ON fact_homework.assigned_date_id = assigned_date.date_id
-        WHERE assigned_date.date < DATE('now','-1 day')
-      )
-    `)
-    try {
-      const info = stmt.run(notification_sent ? 1 : 0)
-      return info.changes
-    } catch (e) {
-      console.log(e)
-      throw e
-    }
-  }
-
-  updateFactHomeworkNotification(fact_key, notification_sent = true) {
-    const stmt = this.#db.prepare(`
-      UPDATE fact_homework SET
-        notification_sent = ?
-      WHERE fact_key = ?
-    `)
-    try {
-      const info = stmt.run(notification_sent ? 1 : 0, fact_key)
-      return info.changes
-    } catch (e) {
-      console.log(e)
-      throw e
-    }
-  }
-
-  getHomeworksWithNotification(notification_sent = false) {
-    const stmt = this.#db.prepare(`
-      SELECT
-        fact_homework.fact_key as factKey,
-        fact_homework.description,
-        due_date.date as dueDate,
-        assigned_date.date as assignedDate,
-        dim_teachers.name as teacherName,
-        dim_subjects.subject as subject
-      FROM fact_homework
-      JOIN dim_dates as assigned_date ON fact_homework.assigned_date_id = assigned_date.date_id
-      JOIN dim_dates as due_date ON fact_homework.due_date_id = due_date.date_id
-      JOIN fact_courses ON fact_homework.fact_course_id = fact_courses.fact_id
-      JOIN dim_teachers ON fact_courses.teacher_id = dim_teachers.teacher_id
-      LEFT JOIN dim_subjects ON fact_homework.subject_id = dim_subjects.subject_id
-      WHERE notification_sent = ? AND completed = 0 AND dueDate > datetime('now')
-      ORDER BY assigned_date.date DESC
-      LIMIT ?
-    `)
-    return stmt.all(notification_sent ? 1 : 0, 3)
   }
 
   insertContent(content) {
@@ -767,6 +740,7 @@ export default class DataWarehouse {
     const stmt = this.#db.prepare('SELECT * FROM push_subscriptions')
     return stmt.all().map((row) => {
       return {
+        id: row.subscription_id,
         endpoint: row.endpoint,
         keys: {
           auth: row.auth,
@@ -811,13 +785,17 @@ export default class DataWarehouse {
     return info.lastInsertRowid
   }
 
-  updateHomeworkNotificationSent(fact_key, notification_sent = true) {
+  updateHomeworkNotificationSent(
+    fact_key,
+    notification_state = this.NOTIFICATION_STATE_SENT,
+    notification_state_date_id = null
+  ) {
     const stmt = this.#db.prepare(`
       UPDATE fact_homework SET
-        notification_sent = ?
+        notification_state = ?, notification_state_date_id = ?
       WHERE fact_key = ?
     `)
-    const info = stmt.run(notification_sent ? 1 : 0, fact_key)
+    const info = stmt.run(notification_state, notification_state_date_id, fact_key)
     return info.changes
   }
 

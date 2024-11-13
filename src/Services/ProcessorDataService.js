@@ -5,13 +5,13 @@ import CourseConverter from '#pronote/Converter/CourseConverter.js'
 import DataWarehouse from '#pronote/Database/DataWarehouse.js'
 import DateWrapper from '#pronote/Utils/DateWrapper.js'
 import Utils from '#pronote/Utils/Utils.js'
+import NotificationsService from '#pronote/Services/NotificationsService.js'
 
 export default class ProcessorDataService {
-  /**
-   * @type {DataWarehouse}
-   * @private
-   */
+  /** @type {DataWarehouse} */
   #db
+  /** @type {NotificationsService} */
+  #notificationsService
   #verbose = false
   #debug = false
   #homeworkConverter
@@ -35,8 +35,9 @@ export default class ProcessorDataService {
   #newHomeworkKeys = []
   #deletedHomeworkKeys = []
 
-  constructor(db, resultsDir, debug, verbose) {
+  constructor(db, notificationsService, resultsDir, debug, verbose) {
     this.#db = db
+    this.#notificationsService = notificationsService
     this.#resultsDir = resultsDir
     this.#homeworkConverter = new HomeworkConverter()
     this.#courseConverter = new CourseConverter(debug, verbose)
@@ -52,10 +53,17 @@ export default class ProcessorDataService {
     } catch (error) {
       console.error('Unable to connect to the database:', error)
     }
+    try {
+      this.#notificationsService.sendNotifications()
+    } catch (error) {
+      console.error('Some notifications failed to be sent:', error)
+    }
   }
 
   processDirectories(resultsDir) {
-    const subDirs = fs.readdirSync(resultsDir)
+    const subDirs = fs.readdirSync(resultsDir, {withFileTypes: true})
+      .filter((dirent) => dirent.isDirectory())
+      .map((dirent) => dirent.name)
 
     subDirs.forEach((subDir) => {
       const studentInfoPath = path.join(resultsDir, subDir, 'studentInfo.json')
@@ -229,20 +237,6 @@ export default class ProcessorDataService {
     })
   }
 
-  getOrInsertDate(date) {
-    if (date === null) {
-      return null
-    }
-    if (!(date instanceof DateWrapper)) {
-      date = DateWrapper.parseDate(date)
-    }
-    let dateId = this.#db.getDateId(date)
-    if (!dateId) {
-      dateId = this.#db.insertDate(date)
-    }
-    return dateId
-  }
-
   insertCourse(course, schoolId, gradeId, studentId, filePath) {
     // Insert course
     let subjectId = this.#db.getSubjectId(course.subject)
@@ -264,10 +258,10 @@ export default class ProcessorDataService {
     })
 
     // Insert dates
-    const startDateId = this.getOrInsertDate(course?.startDate)
-    const endDateId = this.getOrInsertDate(course?.endDate)
-    const homeworkDateId = this.getOrInsertDate(course?.homeworkDate)
-    const updateLastDateId = this.getOrInsertDate(this.#crawlDate)
+    const startDateId = this.#db.getOrInsertDate(course?.startDate)
+    const endDateId = this.#db.getOrInsertDate(course?.endDate)
+    const homeworkDateId = this.#db.getOrInsertDate(course?.homeworkDate)
+    const updateLastDateId = this.#db.getOrInsertDate(this.#crawlDate)
 
     // Insert fact course
     const factCourse = this.#db.getFactCourse(course.key)
@@ -342,15 +336,15 @@ export default class ProcessorDataService {
       dueDate.setHour(8)
     }
     const dueDateTolerance = dueDate ? dueDate.clone().add(1, 'days') : null
-    const dueDateId = this.getOrInsertDate(dueDate)
+    const dueDateId = this.#db.getOrInsertDate(dueDate)
     const threeDaysAfterDueDate = dueDate.clone().add(3, 'days')
     const assignedDate = homework?.dueDate ? DateWrapper.parseDate(homework.assignedDate) : null
     if (assignedDate !== null) {
       assignedDate.setHour(8)
     }
-    const assignedDateId = this.getOrInsertDate(assignedDate)
+    const assignedDateId = this.#db.getOrInsertDate(assignedDate)
     const maxCompletionDuration = dueDate !== null && assignedDate !== null ? dueDate.diff(assignedDate, 'second') : null
-    const updateLastDateId = this.getOrInsertDate(this.#crawlDate)
+    const updateLastDateId = this.#db.getOrInsertDate(this.#crawlDate)
 
     const factCourseKey = this.#courseIdFactMapping?.[homework.plannedCourseId]?.fact_key
     let factCourse = null
@@ -362,6 +356,7 @@ export default class ProcessorDataService {
 
     // Insert fact homework
     const homeworkKey = this.computeHomeworkUniqueId(homework, factCourse, filePath)
+    homework.factKey = homeworkKey
     this.#knownHomeworkUniqueId[homeworkKey] = homework.id
     const factHomework = this.#db.getFactHomework(homeworkKey)
     let updateFiles = []
@@ -392,7 +387,7 @@ export default class ProcessorDataService {
 
           completionState = DataWarehouse.COMPLETION_STATE_UNKNOWN
         } else {
-          completedDateId = this.getOrInsertDate(this.#crawlDate)
+          completedDateId = this.#db.getOrInsertDate(this.#crawlDate)
           completionDuration = this.#crawlDate.diff(assignedDate, 'second')
           if (this.#crawlDate.isAfter(dueDateTolerance)) {
             completionState = DataWarehouse.COMPLETION_STATE_OVER_DUE
@@ -402,7 +397,7 @@ export default class ProcessorDataService {
         }
       } else if (this.#crawlDate.isAfter(threeDaysAfterDueDate)) {
         completionState = DataWarehouse.COMPLETION_STATE_OVER_DUE
-        completedDateId = this.getOrInsertDate(this.#crawlDate)
+        completedDateId = this.#db.getOrInsertDate(this.#crawlDate)
         completionDuration = this.#crawlDate.diff(assignedDate, 'second')
       }
     }
@@ -437,12 +432,14 @@ export default class ProcessorDataService {
         themes: JSON.stringify(homework.themes, null, 2)?.replace(/\00/g, ''),
         attachments: JSON.stringify(homework.attachments, null, 2)?.replace(/\00/g, ''),
         checksum: homework.checksum,
+        notification_checksum: homework.notificationChecksum,
         update_count: 1,
         update_first_date_id: updateLastDateId,
         update_last_date_id: updateLastDateId,
         update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g, ''),
         json: JSON.stringify(homework.json, null, 2)?.replace(/\00/g, ''),
       })
+      this.#notificationsService.stackHomeworkNotification(homework, 'new')
     } else if (homework.checksum != factHomework.checksum) {
       updateFiles = JSON.parse(factHomework.update_files)
       updateFiles.push({
@@ -474,6 +471,7 @@ export default class ProcessorDataService {
         themes: JSON.stringify(homework.themes, null, 2)?.replace(/\00/g, ''),
         attachments: JSON.stringify(homework.attachments, null, 2)?.replace(/\00/g, ''),
         checksum: homework.checksum,
+        notification_checksum: homework.notificationChecksum,
         temporary: 0,
         update_first_date_id: factHomework.update_first_date_id,
         update_last_date_id: updateLastDateId,
@@ -481,6 +479,8 @@ export default class ProcessorDataService {
         update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g, ''),
         json: JSON.stringify(homework.json, null, 2)?.replace(/\00/g, ''),
       })
+      // TODO do not send notification if only change is homework completed state
+      this.#notificationsService.stackHomeworkNotification(homework, 'updated')
     } else {
       this.#db.updateFactHomeworkTemporary(homeworkKey, 0)
     }

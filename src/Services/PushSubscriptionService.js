@@ -56,10 +56,6 @@ export default class PushSubscriptionService {
     })
   }
 
-  async getSubscriptions() {
-    return this.#dataWarehouse.getPushSubscriptions()
-  }
-
   async getSubscriptionByEndpoint(endpoint) {
     return this.#dataWarehouse.getSubscriptionByEndpoint(endpoint)
   }
@@ -77,18 +73,18 @@ export default class PushSubscriptionService {
     this.#dataWarehouse.deletePushSubscriptionByEndpoint(endpoint)
   }
 
-  async sendNotification(notification, notificationKey) {
+  async sendNotification(notification, notificationKey, subscriptions) {
     const payloadStr = JSON.stringify(notification)
-    const subscriptions = await this.getSubscriptions()
     console.log(`Send Notification ${notificationKey} to ${subscriptions.length} subscribers`)
     subscriptions.forEach((subscription) => {
       webpush
         .sendNotification(subscription, payloadStr)
         .then((response) => {
+          const msg = `Notification ${notificationKey} sent successfully to subscriber ${subscription.id}`
           if (this.#debug) {
-            console.log('Notification sent successfully:', response)
+            console.log(msg, response)
           } else {
-            console.log('Notification sent successfully')
+            console.log(msg)
           }
         })
         .catch((error) => {

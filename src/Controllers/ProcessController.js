@@ -1,6 +1,5 @@
 import ProcessorDataService from '#pronote/Services/ProcessorDataService.js'
 import ProcessorMetricsService from '#pronote/Services/ProcessorMetricsService.js'
-import ProcessorNotificationsService from '#pronote/Services/ProcessorNotificationsService.js'
 import PronoteRetrievalService from '../Services/PronoteRetrievalService.js'
 
 export default class ProcessController {
@@ -10,33 +9,26 @@ export default class ProcessController {
   #processorDataService
   /** @type {ProcessorMetricsService} */
   #processorMetricsService
-  /** @type {ProcessorNotificationsService} */
-  #processorNotificationsService
   #skipPronoteDataRetrieval
   #skipDataProcess
   #skipDataMetrics
-  #skipNotifications
   #verbose
 
   constructor({
     pronoteRetrievalService,
     processorDataService,
     processorMetricsService,
-    processorNotificationsService,
     skipPronoteDataRetrieval,
     skipDataProcess,
     skipDataMetrics,
-    skipNotifications,
     verbose,
   }) {
     this.#pronoteRetrievalService = pronoteRetrievalService
     this.#processorDataService = processorDataService
     this.#processorMetricsService = processorMetricsService
-    this.#processorNotificationsService = processorNotificationsService
     this.#skipPronoteDataRetrieval = skipPronoteDataRetrieval
     this.#skipDataProcess = skipDataProcess
     this.#skipDataMetrics = skipDataMetrics
-    this.#skipNotifications = skipNotifications
     this.#verbose = verbose
   }
 
@@ -47,7 +39,6 @@ export default class ProcessController {
     await this.#retrievePronoteData()
     await this.#processPronoteData()
     await this.#processDataMetrics()
-    await this.#generateNotifications()
     if (this.#verbose) {
       console.debug('End process ...')
     }
@@ -99,22 +90,6 @@ export default class ProcessController {
     await this.#processorMetricsService.process()
     if (this.#verbose) {
       console.debug('Pronote data metrics processed.')
-    }
-  }
-
-  async #generateNotifications() {
-    if (this.#skipNotifications) {
-      if (this.#verbose) {
-        console.debug('Notifications generation skipped.')
-      }
-      return
-    }
-    if (this.#verbose) {
-      console.debug('Notifications generation ...')
-    }
-    await this.#processorNotificationsService.process()
-    if (this.#verbose) {
-      console.debug('Notifications generated.')
     }
   }
 }

@@ -37,6 +37,8 @@ export default class HomeworkConverter {
       json: item,
     }
     resultItem.checksum = this.computeHomeworkItemChecksum(resultItem)
+    // checksum for notification (without completed state): dueDate, subject, description, attachments
+    resultItem.notificationChecksum = this.computeHomeworkItemNotificationChecksum(resultItem)
 
     return resultItem
   }
@@ -49,6 +51,16 @@ export default class HomeworkConverter {
       submissionType: homeworkItem.submissionType,
       description: homeworkItem.description,
       requiresSubmission: homeworkItem.requiresSubmission,
+      attachments: Utils.removeKey(homeworkItem.attachments, 'id'),
+    }
+    return Utils.md5sum(data)
+  }
+
+  computeHomeworkItemNotificationChecksum(homeworkItem) {
+    const data = {
+      subject: homeworkItem.subject,
+      dueDate: homeworkItem.dueDate,
+      description: homeworkItem.description,
       attachments: Utils.removeKey(homeworkItem.attachments, 'id'),
     }
     return Utils.md5sum(data)
