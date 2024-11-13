@@ -23,7 +23,8 @@
     "web-push": "^3.6.7"
   },
   "scripts": {
-    "start": "node ./src/index.js",
+    "dataProcessor": "node ./src/dataProcessor.js",
+    "backendServer": "node ./src/backendServer.js",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
