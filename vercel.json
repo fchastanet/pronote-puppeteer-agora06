@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/src/dataProcessor.js",
-      "schedule": "0 7-17 * * *"
+      "schedule": "*/5 7-17 * * *"
     }
   ]
 }
