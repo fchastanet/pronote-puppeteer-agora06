@@ -1,8 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/src/dataProcessor.js",
-      "schedule": "20 9 * * *"
-    }
-  ]
-}
