@@ -16,6 +16,9 @@ export default class DataWarehouse {
   static NOTIFICATION_STATE_RATE_LIMIT = 2
   static NOTIFICATION_STATE_ERROR = 3
 
+  static USER_ROLE_ADMIN = 'admin'
+  static USER_ROLE_USER = 'user'
+
   /**
    * @type {DatabaseConnection}
    */
@@ -201,6 +204,48 @@ export default class DataWarehouse {
       )
     `
 
+    const createUsersTable = `
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        firstName TEXT,
+        lastName TEXT,
+        role TEXT DEFAULT 'user',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+      INSERT OR IGNORE INTO users (
+        email, password, firstName, lastName, role
+      ) VALUES (
+        'admin', 'admin', 'admin', '', 'admin'
+      );
+    `
+
+    const createPronoteAccountsTable = `
+      CREATE TABLE IF NOT EXISTS user_pronote_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cas_url TEXT,
+        pronote_login TEXT NOT NULL,
+        pronote_password TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `
+
+    const createUserAccountsTable = `
+      CREATE TABLE IF NOT EXISTS user_accounts_link (
+        user_id INTEGER,
+        account_id INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, account_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (account_id) REFERENCES user_pronote_accounts(id) ON DELETE CASCADE
+      );
+    `
+
     const createViewQuery = `
       DROP VIEW IF EXISTS view_homework;
       CREATE VIEW view_homework AS
@@ -264,6 +309,9 @@ export default class DataWarehouse {
     this.#db.exec(createFactHomeworkTable)
     this.#db.exec(createProcessedFilesTable)
     this.#db.exec(createPushSubscriptionsTable)
+    this.#db.exec(createUsersTable)
+    this.#db.exec(createPronoteAccountsTable)
+    this.#db.exec(createUserAccountsTable)
     this.#db.exec(createViewQuery)
   }
 
@@ -854,5 +902,179 @@ export default class DataWarehouse {
         }
       })
     }
+  }
+
+  getUserByEmail(email) {
+    const stmt = this.#db.prepare('SELECT * FROM users WHERE email = ?')
+    return stmt.get(email)
+  }
+
+  getUserById(userId) {
+    const stmt = this.#db.prepare('SELECT * FROM users WHERE id = ?')
+    return stmt.get(userId)
+  }
+
+  createUser({
+    email,
+    password,
+    firstName,
+    lastName,
+    role = DataWarehouse.USER_ROLE_USER
+  }) {
+    const stmt = this.#db.prepare(`
+      INSERT INTO users (
+        email, password, firstName, lastName, role
+      ) VALUES (?, ?, ?, ?, ?)
+    `)
+    const info = stmt.run(
+      email,
+      password,
+      firstName,
+      lastName,
+      role
+    )
+    return info.lastInsertRowid
+  }
+
+  createPronoteAccount({
+    cas_url,
+    pronote_login,
+    pronote_password
+  }) {
+    const stmt = this.#db.prepare(`
+      INSERT INTO user_pronote_accounts (
+        cas_url, pronote_login, pronote_password
+      ) VALUES (?, ?, ?)
+    `)
+    const info = stmt.run(
+      cas_url,
+      pronote_login,
+      pronote_password
+    )
+    return info.lastInsertRowid
+  }
+
+  linkUserAccount(userId, accountId) {
+    const stmt = this.#db.prepare(`
+      INSERT INTO user_accounts_link (
+        user_id, account_id
+      ) VALUES (?, ?)
+    `)
+    const info = stmt.run(userId, accountId)
+    return info.changes > 0
+  }
+
+  getPronoteAccountsForUser(userId) {
+    const stmt = this.#db.prepare(`
+      SELECT pa.*
+      FROM user_pronote_accounts pa
+      JOIN user_accounts_link ua ON ua.account_id = pa.id
+      WHERE ua.user_id = ?
+    `)
+    return stmt.all(userId)
+  }
+
+  updateUser(userId, {
+    email,
+    password,
+    firstName,
+    lastName,
+    role
+  }) {
+    const updates = []
+    const params = []
+
+    if (email) {
+      updates.push('email = ?')
+      params.push(email)
+    }
+    if (password) {
+      updates.push('password = ?')
+      params.push(password)
+    }
+    if (firstName) {
+      updates.push('firstName = ?')
+      params.push(firstName)
+    }
+    if (lastName) {
+      updates.push('lastName = ?')
+      params.push(lastName)
+    }
+    if (role) {
+      updates.push('role = ?')
+      params.push(role)
+    }
+
+    if (updates.length === 0) {
+      return 0
+    }
+
+    updates.push('updated_at = CURRENT_TIMESTAMP')
+    params.push(userId)
+
+    const stmt = this.#db.prepare(`
+      UPDATE users
+      SET ${updates.join(', ')}
+      WHERE id = ?
+    `)
+
+    const info = stmt.run(...params)
+    return info.changes
+  }
+
+  updatePronoteAccount(accountId, {
+    cas_url,
+    pronote_login,
+    pronote_password
+  }) {
+    const updates = []
+    const params = []
+
+    if (cas_url !== undefined) {
+      updates.push('cas_url = ?')
+      params.push(cas_url)
+    }
+    if (pronote_login) {
+      updates.push('pronote_login = ?')
+      params.push(pronote_login)
+    }
+    if (pronote_password) {
+      updates.push('pronote_password = ?')
+      params.push(pronote_password)
+    }
+
+    if (updates.length === 0) {
+      return 0
+    }
+
+    updates.push('updated_at = CURRENT_TIMESTAMP')
+    params.push(accountId)
+
+    const stmt = this.#db.prepare(`
+      UPDATE user_pronote_accounts
+      SET ${updates.join(', ')}
+      WHERE id = ?
+    `)
+
+    const info = stmt.run(...params)
+    return info.changes
+  }
+
+  listUsers() {
+    const stmt = this.#db.prepare(`
+      SELECT
+        u.id, u.email, u.firstName, u.lastName,
+        u.role, u.created_at, u.updated_at,
+        json_group_array(json_object(
+          'id', pa.id,
+          'cas_url', pa.cas_url,
+          'pronote_login', pa.pronote_login
+        )) as accounts
+      FROM users u
+      LEFT JOIN user_accounts_link ua ON ua.user_id = u.id
+      LEFT JOIN user_pronote_accounts pa ON pa.id = ua.account_id
+      GROUP BY u.id
+    `)
+    return stmt.all()
   }
 }
