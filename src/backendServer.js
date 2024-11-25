@@ -44,7 +44,6 @@ const main = async () => {
   databaseConnection = new DatabaseConnection(databaseFile, commandOptions.debug)
   const dataWarehouse = new DataWarehouse(databaseConnection)
 
-
   const pushSubscriptionService = new PushSubscriptionService(
     dataWarehouse,
     path.join(process.cwd(), 'src', 'HttpServer'),

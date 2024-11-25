@@ -1,0 +1,50 @@
+@startuml
+
+!pragma teoz true
+
+actor Browser
+box         "Internal Service" #LightBlue
+  Boundary    "Frontend\nServer" as frontendServer
+  participant "Backend\nAPI" as backendAPI
+  Database    "Database" as db
+  participant "Backend\nCron" as backendCron
+end box
+queue "Pronote\nSystem" as pronoteSystem
+
+Browser -> frontendServer: Load web interface
+note right of frontendServer
+  Frontend Server only serves static files
+end note
+group authenticate user
+  Browser -> backendAPI: authenticate user
+  backendAPI -> db: retrieve user data
+  backendAPI <-- db: return user data
+  Browser <-- backendAPI : return authentication data
+  Browser -> Browser: Display dashboard as logged in
+end
+group display metrics
+  Browser -> backendAPI: request metrics.json related to user
+  backendAPI -> db: retrieve metrics
+  backendAPI <-- db: Return metrics
+  Browser <-- backendAPI: Return metrics.json
+  Browser -> Browser: Display metrics
+end
+group Subscribe to push notifications
+  Browser -> backendAPI: Subscribe to push notifications
+  backendAPI -> db: store subscription
+  backendAPI <-- db: Return data
+  backendAPI --> Browser: Return response
+  Browser -> Browser: Set user as registered
+end
+
+== Cron Job ==
+backendCron -> pronoteSystem: retrieve data from pronote
+backendCron <-- pronoteSystem : return data
+backendCron -> backendCron: save data as files
+loop each file
+  backendCron -> db: mark file as in progress
+  backendCron -> db: process file and update database
+  backendCron -> db: mark file as processed
+end
+
+@enduml

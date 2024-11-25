@@ -5,27 +5,30 @@
   - [2.1. Data Processor](#21-data-processor)
   - [2.2. Backend Server](#22-backend-server)
   - [2.3. Client](#23-client)
-- [3. Results directory](#3-results-directory)
-  - [3.1. cahierDeTexte-courses.json](#31-cahierdetexte-coursesjson)
-  - [3.2. cahierDeTexte-travailAFaire.json](#32-cahierdetexte-travailafairejson)
-  - [3.3. studentInfo.json](#33-studentinfojson)
-  - [3.4. id](#34-id)
-  - [3.5. md5](#35-md5)
-- [4. Files Processing](#4-files-processing)
-  - [4.1. Reading Files](#41-reading-files)
-  - [4.2. Parsing and Converting Data](#42-parsing-and-converting-data)
-  - [4.3. Inserting Data into Database](#43-inserting-data-into-database)
-  - [4.4. Generating Unique IDs](#44-generating-unique-ids)
-  - [4.5. Computing Checksums](#45-computing-checksums)
-  - [4.6. Tracking Processed Files](#46-tracking-processed-files)
-- [5. data analytics choice](#5-data-analytics-choice)
-  - [5.1. Measures](#51-measures)
-    - [5.1.1. Homework Completion Rate](#511-homework-completion-rate)
-    - [5.1.2. Homework Completion Timeliness](#512-homework-completion-timeliness)
-    - [5.1.3. Average Homework Duration](#513-average-homework-duration)
-    - [5.1.4. Homework Load Per Week](#514-homework-load-per-week)
-    - [5.1.5. Homework Load Per Subject](#515-homework-load-per-subject)
-    - [5.1.6. Homework Completion Per Subject](#516-homework-completion-per-subject)
+- [3. Serve the project](#3-serve-the-project)
+  - [3.1. Alternative to pinggy](#31-alternative-to-pinggy)
+  - [3.2. NodeJs hosting](#32-nodejs-hosting)
+- [4. Results directory](#4-results-directory)
+  - [4.1. cahierDeTexte-courses.json](#41-cahierdetexte-coursesjson)
+  - [4.2. cahierDeTexte-travailAFaire.json](#42-cahierdetexte-travailafairejson)
+  - [4.3. studentInfo.json](#43-studentinfojson)
+  - [4.4. id](#44-id)
+  - [4.5. md5](#45-md5)
+- [5. Files Processing](#5-files-processing)
+  - [5.1. Reading Files](#51-reading-files)
+  - [5.2. Parsing and Converting Data](#52-parsing-and-converting-data)
+  - [5.3. Inserting Data into Database](#53-inserting-data-into-database)
+  - [5.4. Generating Unique IDs](#54-generating-unique-ids)
+  - [5.5. Computing Checksums](#55-computing-checksums)
+  - [5.6. Tracking Processed Files](#56-tracking-processed-files)
+- [6. data analytics choice](#6-data-analytics-choice)
+  - [6.1. Measures](#61-measures)
+    - [6.1.1. Homework Completion Rate](#611-homework-completion-rate)
+    - [6.1.2. Homework Completion Timeliness](#612-homework-completion-timeliness)
+    - [6.1.3. Average Homework Duration](#613-average-homework-duration)
+    - [6.1.4. Homework Load Per Week](#614-homework-load-per-week)
+    - [6.1.5. Homework Load Per Subject](#615-homework-load-per-subject)
+    - [6.1.6. Homework Completion Per Subject](#616-homework-completion-per-subject)
 
 ## 1. What this tool does ?
 
@@ -34,6 +37,7 @@ little node js tool to get pronote data as json files
 - grab data to results folder from pronote into 3 json files
 - process these files and insert data in an sqlite database
 - generate measures based on these data
+- provide a web interface to see measures and subscribe to notifications
 
 ## 2. Architecture
 
@@ -47,6 +51,9 @@ The architecture is decomposed in 4 parts:
 - Frontend server that serves the UI as an HTML file
 - The UI that is an HTML file using vanilla javascript
   compiled using [vitejs](https://vitejs.fr/).
+
+![Pronote project architecture diagram](README-sequenceDiagram.png)
+[Pronote project architecture plantuml diagram](README-sequenceDiagram.puml)
 
 ### 2.1. Data Processor
 
@@ -65,7 +72,7 @@ This process does the following tasks:
 ### 2.2. Backend Server
 
 The server can be launched using the command:
-`node src/backendServer.js`
+`yarn run backendServer`
 
 It internally runs an Express server that serves different web
 services.
@@ -76,6 +83,7 @@ It is served by default on <http://localhost:3001>.
 The client side can be launched in 2 different ways:
 
 - development: using HMR by launching `yarn run dev`
+
   - served by default on <http://localhost:3000>
   - will contact server url provided by `VITE_WEBSERVICE_URL` env
     variable (defaults to <http://localhost:3001>)
@@ -83,12 +91,46 @@ The client side can be launched in 2 different ways:
     using the file `web/.env.development`
 
 - production:
+
   - generates the dist folder using `yarn run prod`
   - serve the dist folder using `yarn run serveProduction`
   - served by default on <http://localhost:3000>
   - the web service url is provided by the file `web/.env.production`
 
-## 3. Results directory
+## 3. Serve the project
+
+Launch data process (retrieve pronote data + process data):
+`yarn run dataProcessor`
+
+Launch web server:
+`yarn run frontendServer-dev`
+or
+`yarn run frontendServer-prod`
+
+Launch backend server (api):
+`yarn run backendServer`
+
+Launch ssh tunnel to get a https url in order to be able to subscribe to notification service:
+<https://pinggy.io/blog/best_ngrok_alternatives/>
+
+```bash
+ssh -p 443 \
+  -L4300:localhost:3000 \
+  -o StrictHostKeyChecking=no \
+  -o ServerAliveInterval=30 \
+  -t -R0:localhost:3000 eu.a.pinggy.io x:https
+```
+
+### 3.1. Alternative to pinggy
+
+[Cloudflare](https://www.cloudflare.com/en-gb/plans/developer-platform/)
+[awesome-tunneling](https://github.com/anderspitman/awesome-tunneling)
+
+### 3.2. NodeJs hosting
+
+[Vercel](https://vercel.com/) free but limited in number of cron
+
+## 4. Results directory
 
 The results folder contains JSON files generated by the Pronote data retrieval process.
 These files are organized by timestamped directories, each representing a specific data
@@ -101,7 +143,7 @@ and analysis.
 
 Here are the key files and their contents:
 
-### 3.1. cahierDeTexte-courses.json
+### 4.1. cahierDeTexte-courses.json
 
 This file contains information about the resources related to the "Cahier de Texte"
 (Notebook) feature in Pronote. It includes details about the educational content and
@@ -124,7 +166,7 @@ The structure typically includes:
 }
 ```
 
-### 3.2. cahierDeTexte-travailAFaire.json
+### 4.2. cahierDeTexte-travailAFaire.json
 
 This file contains information about the homework assignments ("Travail à Faire")
 listed in the "Cahier de Texte". It includes details about the assignments, deadlines,
@@ -147,7 +189,7 @@ The structure typically includes:
 }
 ```
 
-### 3.3. studentInfo.json
+### 4.3. studentInfo.json
 
 This file contains general information about the student, such as their full name,
 grade, school, and session number.
@@ -165,7 +207,7 @@ The structure typically includes:
 }
 ```
 
-### 3.4. id
+### 4.4. id
 
 The ids are using the form `18#v9hvwyhDOSmz5nbOx-Gs_-w5dw13lavpZZ_N6Oq1dI4`
 These ids are probably encoded using sha with private key based on the session id.
@@ -203,47 +245,47 @@ For HomeworkId I could use the fields:
 could I use <https://github.com/bain3/pronotepy/blob/master/pronotepy/pronoteAPI.py> to
 decode ids ?
 
-### 3.5. md5
+### 4.5. md5
 
 checksum can be computed on the each object by first removing the fields:
 
 - Id
 - session
 
-## 4. Files Processing
+## 5. Files Processing
 
-### 4.1. Reading Files
+### 5.1. Reading Files
 
 The system reads JSON files containing course data, such as cahierDeTexte-courses.json.
 
-### 4.2. Parsing and Converting Data
+### 5.2. Parsing and Converting Data
 
 The JSON data is parsed and converted into structured objects. For example, course items
 are converted into course
 objects with properties like courseId, startDate, endDate, etc.
 
-### 4.3. Inserting Data into Database
+### 5.3. Inserting Data into Database
 
 The converted objects are inserted into the database. Tables like courses, content,
 attachments, and teachers are used
 to store the data.
 
-### 4.4. Generating Unique IDs
+### 5.4. Generating Unique IDs
 
 Unique IDs for courses are generated using a combination of courseId, startDate, and
 endDate.
 
-### 4.5. Computing Checksums
+### 5.5. Computing Checksums
 
 Checksums are computed for each object by removing specific fields like Id and session
 and then generating an MD5 hash.
 
-### 4.6. Tracking Processed Files
+### 5.6. Tracking Processed Files
 
 A separate table, processed_files, is used to track the processing status of each file.
 Files are marked as processed once they are successfully inserted into the database.
 
-## 5. data analytics choice
+## 6. data analytics choice
 
 For data analytics, two main approaches are considered:
 
@@ -261,33 +303,33 @@ Data analytics tool similar to powerBI requires a higher learning curve and need
 server side application.
 Let's start simple with static site generation for the moment.
 
-### 5.1. Measures
+### 6.1. Measures
 
 Generate notifications when new homework.
 
-#### 5.1.1. Homework Completion Rate
+#### 6.1.1. Homework Completion Rate
 
 This metric helps you understand the overall completion rate of homework assignments.
 
-#### 5.1.2. Homework Completion Timeliness
+#### 6.1.2. Homework Completion Timeliness
 
 This metric shows how often homework is completed on or before the due date.
 
-#### 5.1.3. Average Homework Duration
+#### 6.1.3. Average Homework Duration
 
 This metric provides insight into the average time required to complete homework
 assignments.
 
-#### 5.1.4. Homework Load Per Week
+#### 6.1.4. Homework Load Per Week
 
 This metric helps you track the number of homework assignments given each week,
 allowing you to identify weeks with a high workload.
 
-#### 5.1.5. Homework Load Per Subject
+#### 6.1.5. Homework Load Per Subject
 
 This metric shows the distribution of homework assignments across different subjects.
 
-#### 5.1.6. Homework Completion Per Subject
+#### 6.1.6. Homework Completion Per Subject
 
 This metric provides the completion rate of homework assignments for each subject,
 helping you identify subjects where homework is consistently completed or not.

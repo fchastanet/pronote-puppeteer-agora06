@@ -25,10 +25,10 @@
   "scripts": {
     "dataProcessor": "node ./src/dataProcessor.js",
     "backendServer": "node ./src/backendServer.js",
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "serveProduction": "node ./src/prodFrontServer.js"
+    "frontendServer-prod": "node ./src/frontendServer.js",
+    "frontendServer-dev": "vite",
+    "frontendServer-build": "vite build",
+    "frontendServer-preview": "vite preview"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",

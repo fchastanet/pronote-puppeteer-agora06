@@ -38,3 +38,10 @@ repos:
         language: node
         types: [javascript]
         files: \.(js|jsx|ts|tsx)$
+
+  - repo: https://github.com/fchastanet/bash-tools-framework
+    rev: 6.0.0
+    hooks:
+      - id: plantuml
+        args: [--same-dir, -f, png]
+        stages: [pre-commit]
