@@ -22,15 +22,24 @@
     <button id="unsubscribeButton">Unsubscribe</button>
   </div>
 
-  <h1>Homework Metrics Dashboard (%MODE%)</h1>
-  <div class="dashboard">
-    <div class="chart-container" id="completionRateChart"></div>
-    <div class="chart-container" id="onTimeCompletionRateChart"></div>
-    <div class="chart-container" id="homeworkLoadChart"></div>
-    <div class="chart-container" id="homeworkLoadPerWeekDayChart"></div>
-    <div class="chart-container" id="subjectMetricsChart"></div>
-    <div class="chart-container" id="homeworksDurationChart"></div>
+  <div id="loginForm">
+    <h2>Login</h2>
+    <input type="text" id="login" placeholder="Login" />
+    <input type="password" id="password" placeholder="Password" />
+    <button id="loginButton">Login</button>
   </div>
+  <div id="dashboard" class="hidden">
+    <h1>Homework Metrics Dashboard (%MODE%)</h1>
+    <div class="dashboardGrid">
+      <div class="chart-container" id="completionRateChart"></div>
+      <div class="chart-container" id="onTimeCompletionRateChart"></div>
+      <div class="chart-container" id="homeworkLoadChart"></div>
+      <div class="chart-container" id="homeworkLoadPerWeekDayChart"></div>
+      <div class="chart-container" id="subjectMetricsChart"></div>
+      <div class="chart-container" id="homeworksDurationChart"></div>
+    </div>
+  </div>
+  <script type="module" src="/main.js"></script>
 </body>
 
 </html>

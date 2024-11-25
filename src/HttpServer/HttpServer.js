@@ -2,18 +2,25 @@ import express from 'express'
 import cors from 'cors'
 import bodyParser from 'body-parser'
 import PushSubscriptionController from '#pronote/Controllers/PushSubscriptionController.js'
+import LoginController from '#pronote/Controllers/LoginController.js'
 
 export default class HttpServer {
   /** @type {PushSubscriptionController} */
   #pushSubscriptionController
+  /** @type {LoginController} */
+  #loginController
   #resultsDir
   #port
   #origin
+  #dataWarehouse
 
-  constructor(pushSubscriptionController, resultsDir, port = 3001, origin) {
+  constructor(
+    pushSubscriptionController, LoginController,
+    resultsDir, port = 3001, origin) {
     this.#port = port
     this.#resultsDir = resultsDir
     this.#pushSubscriptionController = pushSubscriptionController
+    this.#loginController = LoginController
     this.#origin = origin
   }
 
@@ -56,6 +63,11 @@ export default class HttpServer {
       (req, res) => {
         res.sendFile(`${this.#resultsDir}/metrics.json`)
       }
+    )
+    app.post(
+      '/login',
+      cors(corsOptions),
+      this.#loginController.loginAction.bind(this.#loginController)
     )
 
     app.listen(this.#port, '0.0.0.0', () => {

@@ -207,7 +207,7 @@ export default class DataWarehouse {
     const createUsersTable = `
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT UNIQUE NOT NULL,
+        login TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         firstName TEXT,
         lastName TEXT,
@@ -215,10 +215,10 @@ export default class DataWarehouse {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
-      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+      CREATE INDEX IF NOT EXISTS idx_users_login ON users(login);
 
       INSERT OR IGNORE INTO users (
-        email, password, firstName, lastName, role
+        login, password, firstName, lastName, role
       ) VALUES (
         'admin', 'admin', 'admin', '', 'admin'
       );
@@ -904,9 +904,14 @@ export default class DataWarehouse {
     }
   }
 
-  getUserByEmail(email) {
-    const stmt = this.#db.prepare('SELECT * FROM users WHERE email = ?')
-    return stmt.get(email)
+  getUserByLogin(login) {
+    const stmt = this.#db.prepare('SELECT * FROM users WHERE login = ?')
+    return stmt.get(login)
+  }
+
+  getUserByLoginAndPassword(login, password) {
+    const stmt = this.#db.prepare('SELECT 1 as authenticated, * FROM users WHERE login = ? AND password = ?')
+    return stmt.get(login, password)
   }
 
   getUserById(userId) {
@@ -915,7 +920,7 @@ export default class DataWarehouse {
   }
 
   createUser({
-    email,
+    login,
     password,
     firstName,
     lastName,
@@ -923,11 +928,11 @@ export default class DataWarehouse {
   }) {
     const stmt = this.#db.prepare(`
       INSERT INTO users (
-        email, password, firstName, lastName, role
+        login, password, firstName, lastName, role
       ) VALUES (?, ?, ?, ?, ?)
     `)
     const info = stmt.run(
-      email,
+      login,
       password,
       firstName,
       lastName,
@@ -975,7 +980,7 @@ export default class DataWarehouse {
   }
 
   updateUser(userId, {
-    email,
+    login,
     password,
     firstName,
     lastName,
@@ -984,9 +989,9 @@ export default class DataWarehouse {
     const updates = []
     const params = []
 
-    if (email) {
-      updates.push('email = ?')
-      params.push(email)
+    if (login) {
+      updates.push('login = ?')
+      params.push(login)
     }
     if (password) {
       updates.push('password = ?')
@@ -1063,12 +1068,12 @@ export default class DataWarehouse {
   listUsers() {
     const stmt = this.#db.prepare(`
       SELECT
-        u.id, u.email, u.firstName, u.lastName,
+        u.id, u.login, u.firstName, u.lastName,
         u.role, u.created_at, u.updated_at,
         json_group_array(json_object(
           'id', pa.id,
           'cas_url', pa.cas_url,
-          'pronote_login', pa.pronote_login
+          'login', pa.pronote_login
         )) as accounts
       FROM users u
       LEFT JOIN user_accounts_link ua ON ua.user_id = u.id
