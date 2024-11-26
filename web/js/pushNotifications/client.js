@@ -42,6 +42,7 @@ const unsubscribeFromPushNotifications = async () => {
           const {endpoint} = subscription
           const response = await fetch(`${window.webServiceUrl}/subscription?endpoint=${endpoint}`, {
             method: 'DELETE',
+            credentials: 'include', // important for sending cookies
             headers: {
               'content-type': 'application/json',
             },
@@ -100,7 +101,13 @@ const subscribeUser = async () => {
     console.error('Service Worker is not supported by this browser')
     return
   }
-  const response = await fetch(`${window.webServiceUrl}/publicVapidKey.json?${Date.now()}`)
+  const response = await fetch(
+    `${window.webServiceUrl}/publicVapidKey.json?${Date.now()}`,
+    {
+      credentials: 'include', // important for sending cookies
+      headers: {'Content-Type': 'application/json'}
+    }
+  )
   const keys = await response.json()
   const registration = await navigator.serviceWorker.ready
   const subscription = await registration.pushManager
@@ -113,13 +120,17 @@ const subscribeUser = async () => {
       console.error('Error subscribing:', error)
     })
 
-  await fetch(`${window.webServiceUrl}/subscription`, {
-    method: 'POST',
-    body: JSON.stringify({new: subscription}),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  })
+  await fetch(
+    `${window.webServiceUrl}/subscription`,
+    {
+      method: 'POST',
+      credentials: 'include', // important for sending cookies
+      body: JSON.stringify({new: subscription}),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  )
     .then((response) => {
       if (!response.ok) {
         console.error('Error sending subscription:', response)

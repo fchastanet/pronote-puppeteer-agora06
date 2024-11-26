@@ -103,6 +103,13 @@ export default class HttpServer {
       cookie: this.#cookieOptions,
     }))
 
+    const checkSessionCookie = (req, res, next) => {
+      if (!req.session || !req.session.user) {
+        return res.status(401).json({message: 'Unauthorized: No session cookie'})
+      }
+      next()
+    }
+
     app.options('*', cors(corsOptions)) // enable pre-flight request for all routes
     app.get(
       '/publicVapidKey.json',
@@ -112,21 +119,19 @@ export default class HttpServer {
     app.post(
       '/subscription',
       cors(corsOptions),
+      checkSessionCookie,
       this.#pushSubscriptionController.postSubscription.bind(this.#pushSubscriptionController)
     )
     app.delete(
       '/subscription',
       cors(corsOptions),
+      checkSessionCookie,
       this.#pushSubscriptionController.deleteSubscription.bind(this.#pushSubscriptionController)
-    )
-    app.get(
-      '/notifyTest',
-      cors(corsOptions),
-      this.#pushSubscriptionController.getNotificationTest.bind(this.#pushSubscriptionController)
     )
     app.get(
       '/metrics.json',
       cors(corsOptions),
+      checkSessionCookie,
       (req, res) => {
         res.sendFile(`${this.#resultsDir}/metrics.json`)
       }
@@ -140,6 +145,7 @@ export default class HttpServer {
     app.post(
       '/logout',
       cors(corsOptions),
+      checkSessionCookie,
       this.#loginController.logoutAction.bind(this.#loginController)
     )
 

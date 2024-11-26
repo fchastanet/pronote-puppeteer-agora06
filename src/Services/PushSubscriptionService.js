@@ -60,8 +60,9 @@ export default class PushSubscriptionService {
     return this.#dataWarehouse.getSubscriptionByEndpoint(endpoint)
   }
 
-  async pushSubscription(subscription) {
-    this.#dataWarehouse.insertSubscription(
+  async pushSubscription(userId, subscription) {
+    this.#dataWarehouse.insertUserSubscription(
+      userId,
       subscription.endpoint,
       subscription.keys.auth,
       subscription.keys.p256dh,

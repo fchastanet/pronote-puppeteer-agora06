@@ -15,7 +15,7 @@ export default class PushSubscriptionController {
         console.log('old subscription added : ', body.old)
         this.#pushSubscriptionService.removeSubscriptionByEndpoint(body.old.endpoint)
       }
-      this.#pushSubscriptionService.pushSubscription(body.new)
+      this.#pushSubscriptionService.pushSubscription(req.session.user.id, body.new)
       console.log('Subscription added : ', body.new)
       this.#pushSubscriptionService.sendNotificationToSubscriber(body.new, {
         title: 'Notification System',
@@ -54,15 +54,6 @@ export default class PushSubscriptionController {
       console.error('Error removing subscription', e)
       next(e)
     }
-  }
-
-  getNotificationTest(req, res) {
-    const homework = {
-      title: 'New Homework',
-      body: 'A new homework has been added',
-    }
-    this.#pushSubscriptionService.sendNotification(homework)
-    res.status(200).json({message: 'Notification sent'})
   }
 
   async getPublicVapidKey(req, res) {

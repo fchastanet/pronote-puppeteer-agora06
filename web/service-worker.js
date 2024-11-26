@@ -35,6 +35,7 @@ self.addEventListener(
     const subscription = self.registration.pushManager.subscribe(event.oldSubscription.options).then((subscription) =>
       fetch(`${webServiceUrl}/subscription`, {
         method: 'post',
+        credentials: 'include', // important for sending cookies
         headers: {
           'Content-type': 'application/json',
         },

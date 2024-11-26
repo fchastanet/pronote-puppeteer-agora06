@@ -194,16 +194,6 @@ export default class DataWarehouse {
       );
     `
 
-    const createPushSubscriptionsTable = `
-      CREATE TABLE IF NOT EXISTS push_subscriptions (
-        subscription_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        endpoint TEXT,
-        auth TEXT,
-        p256dh TEXT,
-        expiration_time DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `
-
     const createUsersTable = `
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -212,10 +202,15 @@ export default class DataWarehouse {
         firstName TEXT,
         lastName TEXT,
         role TEXT DEFAULT 'user',
+        push_endpoint TEXT,
+        push_auth TEXT,
+        push_p256dh TEXT,
+        push_expiration_time DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
       CREATE INDEX IF NOT EXISTS idx_users_login ON users(login);
+      CREATE INDEX IF NOT EXISTS idx_users_push_endpoint ON users(push_endpoint);
 
       INSERT OR IGNORE INTO users (
         login, password, firstName, lastName, role
@@ -308,7 +303,6 @@ export default class DataWarehouse {
     this.#db.exec(createFactCoursesTable)
     this.#db.exec(createFactHomeworkTable)
     this.#db.exec(createProcessedFilesTable)
-    this.#db.exec(createPushSubscriptionsTable)
     this.#db.exec(createUsersTable)
     this.#db.exec(createPronoteAccountsTable)
     this.#db.exec(createUserAccountsTable)
@@ -785,52 +779,66 @@ export default class DataWarehouse {
   }
 
   getPushSubscriptions() {
-    const stmt = this.#db.prepare('SELECT * FROM push_subscriptions')
+    const stmt = this.#db.prepare('SELECT id, push_endpoint, push_auth, push_p256dh, push_expiration_time FROM users WHERE push_endpoint IS NOT NULL')
     return stmt.all().map((row) => {
       return {
-        id: row.subscription_id,
-        endpoint: row.endpoint,
+        id: row.id,
+        endpoint: row.push_endpoint,
         keys: {
-          auth: row.auth,
-          p256dh: row.p256dh,
+          auth: row.push_auth,
+          p256dh: row.push_p256dh,
         },
-        expirationTime: row.expiration_time,
+        expirationTime: row.push_expiration_time,
       }
     })
   }
 
   deletePushSubscriptionByEndpoint(endpoint) {
     const stmt = this.#db.prepare(`
-      DELETE FROM push_subscriptions
-      WHERE endpoint = ?
+      UPDATE users
+      SET push_endpoint = NULL,
+          push_auth = NULL,
+          push_p256dh = NULL,
+          push_expiration_time = NULL
+      WHERE push_endpoint = ?
     `)
     const info = stmt.run(endpoint)
     return info.changes
   }
 
   getSubscriptionByEndpoint(endpoint) {
-    const stmt = this.#db.prepare('SELECT * FROM push_subscriptions WHERE endpoint = ?')
+    const stmt = this.#db.prepare(`
+      SELECT push_endpoint, push_auth, push_p256dh, push_expiration_time
+      FROM users
+      WHERE push_endpoint = ?
+    `)
     const row = stmt.get(endpoint)
     if (!row) {
       return null
     }
     return {
-      endpoint: row.endpoint,
-      expirationTime: row.expiration_time,
+      endpoint: row.push_endpoint,
+      expirationTime: row.push_expiration_time,
       keys: {
-        auth: row.auth,
-        p256dh: row.p256dh,
+        auth: row.push_auth,
+        p256dh: row.push_p256dh,
       },
     }
   }
 
-  insertSubscription(endpoint, auth, p256dh, expirationTime) {
+  insertUserSubscription(userId, endpoint, auth, p256dh, expirationTime) {
     const stmt = this.#db.prepare(`
-      INSERT INTO push_subscriptions (endpoint, auth, p256dh, expiration_time)
-      VALUES (?, ?, ?, ?)
+      UPDATE users
+      SET push_endpoint = ?,
+          push_auth = ?,
+          push_p256dh = ?,
+          push_expiration_time = ?
+      WHERE id = ?
     `)
-    const info = stmt.run(endpoint, auth, p256dh, expirationTime)
-    return info.lastInsertRowid
+    // Note: You'll need to pass the user's ID. This is a simplified version
+    // that updates the first user. In practice, you should pass the correct user ID
+    const info = stmt.run(endpoint, auth, p256dh, expirationTime, userId)
+    return info.changes
   }
 
   updateHomeworkNotificationSent(

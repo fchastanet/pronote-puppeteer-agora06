@@ -12,7 +12,10 @@ import showToast from './js/components/toastMessage/toastMessage'
 
 const showMetrics = () => {
   initDayjs(dayjs)
-  fetch(`${window.webServiceUrl}/metrics.json`)
+  fetch(`${window.webServiceUrl}/metrics.json`, {
+    credentials: 'include', // important for sending cookies
+    headers: {'Content-Type': 'application/json'}
+  })
     .then((response) => response.json())
     .then((data) => {
       document.getElementById('dashboard').classList.remove('hidden')
