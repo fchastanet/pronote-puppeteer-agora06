@@ -41,12 +41,34 @@ const login = async () => {
     if (response.ok) {
       showToast('Login successful', true)
       document.getElementById('loginForm').classList.add('hidden')
+      document.getElementById('logoutButton').classList.remove('hidden')
       showMetrics()
     } else {
       showToast(result.message || 'Login failed', false)
     }
   } catch (error) {
     showToast('An error occurred', false)
+  }
+}
+
+const logout = async () => {
+  try {
+    const response = await fetch(`${window.webServiceUrl}/logout`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {'Content-Type': 'application/json'}
+    })
+
+    if (response.ok) {
+      showToast('Logout successful', true)
+      document.getElementById('loginForm').classList.remove('hidden')
+      document.getElementById('dashboard').classList.add('hidden')
+      document.getElementById('logoutButton').classList.add('hidden')
+    } else {
+      showToast('Logout failed', false)
+    }
+  } catch (error) {
+    showToast('An error occurred during logout', false)
   }
 }
 
@@ -64,6 +86,7 @@ const checkLoggedIn = async () => {
 
     if (response.ok && result.isLoggedIn) {
       document.getElementById('loginForm').classList.add('hidden')
+      document.getElementById('logoutButton').classList.remove('hidden')
       showMetrics()
     }
   } catch (error) {
@@ -77,5 +100,6 @@ window.addEventListener('load', async () => {
   window.webServiceUrl = appDiv.getAttribute('data-web-service-url')
   initSubscription()
   document.getElementById('loginButton').addEventListener('click', login)
+  document.getElementById('logoutButton').addEventListener('click', logout)
   await checkLoggedIn()
 })

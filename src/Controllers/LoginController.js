@@ -24,10 +24,8 @@ export default class LoginController {
     const authData = await this.#authService.login(login, password)
 
     if (authData.authenticated) {
-      const sessionData = {userId: authData.id, role: authData.role}
+      const sessionData = {id: authData.id, login: login, role: authData.role}
       req.session.user = sessionData
-      res.cookie('pronoteUser', login, this.#cookieOptions)
-      res.cookie('pronoteLogged', true, this.#cookieOptions)
       res.json({message: 'Login successful'})
     } else {
       res.status(401).json({message: 'Invalid login or password'})
@@ -44,8 +42,7 @@ export default class LoginController {
       if (err) {
         return res.status(500).json({message: 'Logout failed'})
       }
-      res.clearCookie('pronoteUser')
-      res.clearCookie('pronoteLogged')
+      res.clearCookie('connect.sid')
       res.json({
         status: 'success',
         message: 'Logged out successfully'
@@ -54,16 +51,10 @@ export default class LoginController {
   }
 
   checkLoggedInAction = async (req, res) => {
-    const pronoteUserCookie = req.cookies?.pronoteUser
-    const pronoteLoggedCookie = req.cookies?.pronoteLogged
-
-    if (!pronoteUserCookie || !pronoteLoggedCookie || !req.session?.user) {
+    const sessionUser = req?.session.user
+    if (!sessionUser) {
       if (this.#verbose) {
-        console.debug('Login check failed:', {
-          pronoteUserCookie: !!pronoteUserCookie,
-          pronoteLoggedCookie: !!pronoteLoggedCookie,
-          sessionUser: !!req.session?.user
-        })
+        console.debug('Login check failed:', {sessionUser: !!sessionUser})
       }
       return res.status(401).json({
         isLoggedIn: false,
@@ -72,18 +63,15 @@ export default class LoginController {
     }
 
     try {
-      // Verify the cookie matches the session user
-      if (req.session.user.userId !== (await this.#authService.validateSession(pronoteUserCookie)).id) {
+      // Verify session user matches the user in the database
+      const user = await this.#authService.validateSession(sessionUser.login)
+      if (sessionUser.id !== user.id) {
         throw new Error('Session mismatch')
       }
 
       return res.json({
         isLoggedIn: true,
-        user: {
-          id: req.session.user.userId,
-          role: req.session.user.role,
-          login: pronoteUserCookie
-        }
+        user: sessionUser
       })
     } catch (error) {
       if (this.#verbose) {

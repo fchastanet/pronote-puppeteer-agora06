@@ -14,6 +14,13 @@
     <a href="#">Home</a>
     <a href="#">Metrics</a>
     <a href="#">Settings</a>
+    <div id="loginForm" class="login">
+      <span>Login</span>
+      <input type="text" id="login" placeholder="Login" />
+      <input type="password" id="password" placeholder="Password" />
+      <button id="loginButton">Login</button>
+    </div>
+    <button id="logoutButton" class="logoutButton hidden">Logout</button>
   </div>
   <div class="notification-container">
     <div class="notification"></div>
@@ -22,12 +29,6 @@
     <button id="unsubscribeButton">Unsubscribe</button>
   </div>
 
-  <div id="loginForm">
-    <h2>Login</h2>
-    <input type="text" id="login" placeholder="Login" />
-    <input type="password" id="password" placeholder="Password" />
-    <button id="loginButton">Login</button>
-  </div>
   <div id="dashboard" class="hidden">
     <h1>Homework Metrics Dashboard (%MODE%)</h1>
     <div class="dashboardGrid">
