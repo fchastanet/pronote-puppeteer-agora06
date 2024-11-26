@@ -46,8 +46,16 @@ const main = async () => {
   databaseConnection = new DatabaseConnection(databaseFile, commandOptions.debug)
   const dataWarehouse = new DataWarehouse(databaseConnection)
 
+  const cookieOptions = {
+    secure: process.env?.SESSION_COOKIE_SECURE === 1 ?? false,
+  }
+  console.log('cookieOptions', cookieOptions)
   const authService = new AuthService({dataWarehouse})
-  const loginController = new LoginController({authService, verbose: commandOptions.verbose})
+  const loginController = new LoginController({
+    authService,
+    cookieOptions,
+    verbose: commandOptions.verbose,
+  })
 
   const pushSubscriptionService = new PushSubscriptionService(
     dataWarehouse,
@@ -56,13 +64,18 @@ const main = async () => {
   )
   await pushSubscriptionService.init()
   const pushSubscriptionController = new PushSubscriptionController(pushSubscriptionService)
-
-  const server = new HttpServer(
-    pushSubscriptionController, loginController,
+  const server = new HttpServer({
+    pushSubscriptionController,
+    loginController,
     resultsDir,
-    process.env?.SERVER_PORT ?? 3001,
-    process.env?.ASSETS_URL ?? 'http://localhost:3000'
-  )
+    port: process.env?.SERVER_PORT ?? 3001,
+    origin: process.env?.ASSETS_URL ?? 'http://localhost:3000',
+    sessionDatabaseFile: process.env?.SESSION_DATABASE_FILE,
+    sessionExpiration: process.env?.SESSION_EXPIRATION_IN_MS ?? 900000,
+    sessionSecret: process.env?.SESSION_SECRET ?? 'your-secret-key',
+    cookieOptions,
+    debug: commandOptions.debug
+  })
 
   server.start()
 }

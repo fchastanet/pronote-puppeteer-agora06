@@ -32,6 +32,7 @@ const login = async () => {
   try {
     const response = await fetch(`${window.webServiceUrl}/login`, {
       method: 'POST',
+      credentials: 'include', // important for receiving cookies
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({login, password})
     })
@@ -49,10 +50,32 @@ const login = async () => {
   }
 }
 
+const checkLoggedIn = async () => {
+  try {
+    const response = await fetch(
+      `${window.webServiceUrl}/checkLoggedIn`,
+      {
+        method: 'GET',
+        credentials: 'include', // important for sending cookies
+        headers: {'Content-Type': 'application/json'},
+      }
+    )
+    const result = await response.json()
+
+    if (response.ok && result.isLoggedIn) {
+      document.getElementById('loginForm').classList.add('hidden')
+      showMetrics()
+    }
+  } catch (error) {
+    console.error('Error checking login status:', error)
+  }
+}
+
 window.webServiceUrl = ''
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
   const appDiv = document.getElementById('app')
   window.webServiceUrl = appDiv.getAttribute('data-web-service-url')
   initSubscription()
   document.getElementById('loginButton').addEventListener('click', login)
+  await checkLoggedIn()
 })

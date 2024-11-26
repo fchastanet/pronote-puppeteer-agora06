@@ -1,8 +1,13 @@
 import express from 'express'
+import session from 'express-session'
 import cors from 'cors'
 import bodyParser from 'body-parser'
 import PushSubscriptionController from '#pronote/Controllers/PushSubscriptionController.js'
 import LoginController from '#pronote/Controllers/LoginController.js'
+import SqliteStoreFactory from 'better-sqlite3-session-store'
+import cookieParser from 'cookie-parser'
+
+import {default as SqliteDatabase} from 'better-sqlite3'
 
 export default class HttpServer {
   /** @type {PushSubscriptionController} */
@@ -12,29 +17,91 @@ export default class HttpServer {
   #resultsDir
   #port
   #origin
-  #dataWarehouse
+  #sessionExpirationInMs
+  #sessionDb
+  #sessionSecret
+  #cookieOptions
+  #sessionDatabaseFile
+  #debug
 
-  constructor(
-    pushSubscriptionController, LoginController,
-    resultsDir, port = 3001, origin) {
+  constructor({
+    pushSubscriptionController, loginController,
+    resultsDir, port = 3001, origin,
+    sessionDatabaseFile,
+    sessionExpirationInMs = 900000,
+    sessionSecret,
+    cookieOptions = false,
+    debug = false
+  }) {
     this.#port = port
     this.#resultsDir = resultsDir
     this.#pushSubscriptionController = pushSubscriptionController
-    this.#loginController = LoginController
+    this.#loginController = loginController
     this.#origin = origin
+    this.#sessionExpirationInMs = sessionExpirationInMs
+    this.#sessionSecret = sessionSecret
+    this.#cookieOptions = {
+      ...{
+        secure: process.env.NODE_ENV === 'production',
+        // lax needed for cross-site cookies
+        sameSite:
+          process.env.NODE_ENV === 'production' ? 'Strict' : 'lax',
+        maxAge: this.#sessionExpirationInMs,
+        httpOnly: true
+      },
+      ...cookieOptions
+    }
+    this.#sessionDatabaseFile = sessionDatabaseFile
+    this.#debug = debug
+  }
+
+  #getSessionDb() {
+    if (!this.#sessionDb) {
+      const opts = {}
+      if (this.#debug) {
+        opts.verbose = console.log
+      }
+      this.#sessionDb = new SqliteDatabase(
+        this.#sessionDatabaseFile,
+        opts
+      )
+      this.#sessionDb.pragma('journal_mode = WAL') // it is generally important to set the WAL pragma for performance reasons.
+    }
+    return this.#sessionDb
   }
 
   start() {
     const app = express()
 
-    // dependency needed by pushNotification system for parsing JSON bodies
-    app.use(bodyParser.json())
-    app.use(cors())
+    // Configure cookie parser middleware
+    app.use(cookieParser())
 
+    const SqliteStore = SqliteStoreFactory(session)
+
+    // Configure CORS to accept credentials
     const corsOptions = {
-      origin: this.#origin,
+      origin: this.#origin, // frontend URL
+      credentials: true, // important for cookies
+      methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
       optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
     }
+    // dependency needed by pushNotification system for parsing JSON bodies
+    app.use(bodyParser.json())
+    app.use(cors(corsOptions))
+    app.use(session({
+      store: new SqliteStore({
+        client: this.#getSessionDb(),
+        expired: {
+          clear: true,
+          intervalMs: this.#sessionExpirationInMs //ms = 15min
+        }
+      }),
+      secret: this.#sessionSecret,
+      resave: false,
+      saveUninitialized: false,
+      cookie: this.#cookieOptions,
+    }))
 
     app.options('*', cors(corsOptions)) // enable pre-flight request for all routes
     app.get(
@@ -68,6 +135,18 @@ export default class HttpServer {
       '/login',
       cors(corsOptions),
       this.#loginController.loginAction.bind(this.#loginController)
+    )
+
+    app.post(
+      '/logout',
+      cors(corsOptions),
+      this.#loginController.logoutAction.bind(this.#loginController)
+    )
+
+    app.get(
+      '/checkLoggedIn',
+      cors(corsOptions),
+      this.#loginController.checkLoggedInAction.bind(this.#loginController)
     )
 
     app.listen(this.#port, '0.0.0.0', () => {
