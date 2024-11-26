@@ -1,5 +1,7 @@
 # pronote-puppeteer-agora06
 
+![Pronote project dashboard screenshot](doc/pronote-dashboard.png)
+
 - [1. What this tool does ?](#1-what-this-tool-does-)
 - [2. Architecture](#2-architecture)
   - [2.1. Data Processor](#21-data-processor)
@@ -52,8 +54,8 @@ The architecture is decomposed in 4 parts:
 - The UI that is an HTML file using vanilla javascript
   compiled using [vitejs](https://vitejs.fr/).
 
-![Pronote project architecture diagram](README-sequenceDiagram.png)
-[Pronote project architecture plantuml diagram](README-sequenceDiagram.puml)
+![Pronote project architecture diagram](doc/sequenceDiagram.png)
+[Pronote project architecture plantuml diagram](doc/sequenceDiagram.puml)
 
 ### 2.1. Data Processor
 
