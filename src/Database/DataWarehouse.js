@@ -220,7 +220,7 @@ export default class DataWarehouse {
     `
 
     const createPronoteAccountsTable = `
-      CREATE TABLE IF NOT EXISTS user_pronote_accounts (
+      CREATE TABLE IF NOT EXISTS accounts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         cas_url TEXT,
         pronote_login TEXT NOT NULL,
@@ -237,7 +237,7 @@ export default class DataWarehouse {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (user_id, account_id),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (account_id) REFERENCES user_pronote_accounts(id) ON DELETE CASCADE
+        FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
       );
     `
 
@@ -955,7 +955,7 @@ export default class DataWarehouse {
     pronote_password
   }) {
     const stmt = this.#db.prepare(`
-      INSERT INTO user_pronote_accounts (
+      INSERT INTO accounts (
         cas_url, pronote_login, pronote_password
       ) VALUES (?, ?, ?)
     `)
@@ -980,7 +980,7 @@ export default class DataWarehouse {
   getPronoteAccountsForUser(userId) {
     const stmt = this.#db.prepare(`
       SELECT pa.*
-      FROM user_pronote_accounts pa
+      FROM accounts pa
       JOIN user_accounts_link ua ON ua.account_id = pa.id
       WHERE ua.user_id = ?
     `)
@@ -1064,7 +1064,7 @@ export default class DataWarehouse {
     params.push(accountId)
 
     const stmt = this.#db.prepare(`
-      UPDATE user_pronote_accounts
+      UPDATE accounts
       SET ${updates.join(', ')}
       WHERE id = ?
     `)
@@ -1085,7 +1085,7 @@ export default class DataWarehouse {
         )) as accounts
       FROM users u
       LEFT JOIN user_accounts_link ua ON ua.user_id = u.id
-      LEFT JOIN user_pronote_accounts pa ON pa.id = ua.account_id
+      LEFT JOIN accounts pa ON pa.id = ua.account_id
       GROUP BY u.id
     `)
     return stmt.all()
