@@ -38,6 +38,10 @@ export default class LoginController {
   }
 
   logoutAction(req, res) {
+    if (!req.session || !req.session.user) {
+      console.info('Logout failed: Not logged in')
+      return res.status(200).json({message: 'Not logged in'})
+    }
     req.session.destroy((err) => {
       if (err) {
         return res.status(500).json({message: 'Logout failed'})

@@ -150,7 +150,6 @@ export default class HttpServer {
     app.post(
       '/logout',
       cors(corsOptions),
-      checkSessionCookie,
       this.#loginController.logoutAction.bind(this.#loginController)
     )
 
