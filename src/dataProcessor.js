@@ -124,6 +124,7 @@ const main = async () => {
     skipDataProcess: commandOptions.skipDataProcess,
     skipDataMetrics: commandOptions.skipDataMetrics,
     verbose: commandOptions.verbose,
+    accountsInitializationFile: path.join(process.cwd(), '.accounts.js'),
   })
   await processController.process()
 }

@@ -222,7 +222,8 @@ export default class DataWarehouse {
     const createPronoteAccountsTable = `
       CREATE TABLE IF NOT EXISTS accounts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        cas_url TEXT,
+        name TEXT NOT NULL,
+        cas_url TEXT NOT NULL,
         pronote_login TEXT NOT NULL,
         pronote_password TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -950,16 +951,18 @@ export default class DataWarehouse {
   }
 
   createPronoteAccount({
+    name,
     cas_url,
     pronote_login,
     pronote_password
   }) {
     const stmt = this.#db.prepare(`
       INSERT INTO accounts (
-        cas_url, pronote_login, pronote_password
-      ) VALUES (?, ?, ?)
+        name, cas_url, pronote_login, pronote_password
+      ) VALUES (?, ?, ?, ?)
     `)
     const info = stmt.run(
+      name,
       cas_url,
       pronote_login,
       pronote_password
@@ -969,7 +972,7 @@ export default class DataWarehouse {
 
   linkUserAccount(userId, accountId) {
     const stmt = this.#db.prepare(`
-      INSERT INTO user_accounts_link (
+      INSERT OR IGNORE INTO user_accounts_link (
         user_id, account_id
       ) VALUES (?, ?)
     `)
@@ -1036,6 +1039,7 @@ export default class DataWarehouse {
   }
 
   updatePronoteAccount(accountId, {
+    name,
     cas_url,
     pronote_login,
     pronote_password
@@ -1043,6 +1047,10 @@ export default class DataWarehouse {
     const updates = []
     const params = []
 
+    if (name !== undefined) {
+      updates.push('name = ?')
+      params.push(name)
+    }
     if (cas_url !== undefined) {
       updates.push('cas_url = ?')
       params.push(cas_url)
@@ -1089,5 +1097,10 @@ export default class DataWarehouse {
       GROUP BY u.id
     `)
     return stmt.all()
+  }
+
+  getPronoteAccountByName(name) {
+    const stmt = this.#db.prepare('SELECT * FROM accounts WHERE name = ?')
+    return stmt.get(name)
   }
 }

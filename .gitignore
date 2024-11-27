@@ -8,3 +8,4 @@ TODO.md
 src/HttpServer/privateVapidKey.js
 stat.html
 dist/
+.accounts.js

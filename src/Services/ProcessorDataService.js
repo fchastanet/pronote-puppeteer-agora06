@@ -46,9 +46,80 @@ export default class ProcessorDataService {
     this.#verbose = verbose
   }
 
+  createDatabase() {
+    this.#db.createSchema()
+  }
+
+  async initAccounts(accountsInitializationFile) {
+    const config = await import(accountsInitializationFile)
+    // Process accounts first
+    const accountIds = {}
+    for (const [, accountData] of Object.entries(config.default.accounts)) {
+      const existingAccount = this.#db.getPronoteAccountByName(accountData.name)
+      if (existingAccount) {
+        if (this.#verbose) {
+          console.log(`Updating account '${accountData.name}'`)
+        }
+        this.#db.updatePronoteAccount(existingAccount.id, {
+          name: accountData.name,
+          cas_url: accountData.casUrl,
+          pronote_login: accountData.login,
+          pronote_password: accountData.password
+        })
+        accountIds[accountData.name] = existingAccount.id
+      } else {
+        if (this.#verbose) {
+          console.log(`Creating account '${accountData.name}'`)
+        }
+        const accountId = this.#db.createPronoteAccount({
+          name: accountData.name,
+          cas_url: accountData.casUrl,
+          pronote_login: accountData.login,
+          pronote_password: accountData.password
+        })
+        accountIds[accountData.name] = accountId
+      }
+    }
+
+    // Process users and link them to accounts
+    for (const [, userData] of Object.entries(config.default.users)) {
+      const existingUser = this.#db.getUserByLogin(userData.login)
+      let userId
+      const newUserData = {
+        login: userData.login,
+        password: userData.password,
+        firstName: userData.firstName ?? userData.login,
+        lastName: userData.lastName ?? userData.login,
+        role: userData.role ?? 'user'
+      }
+      if (existingUser) {
+        if (this.#verbose) {
+          console.log(`Updating user '${userData.login}'`)
+        }
+        this.#db.updateUser(existingUser.id, newUserData)
+        userId = existingUser.id
+      } else {
+        if (this.#verbose) {
+          console.log(`Creating user '${userData.login}'`)
+        }
+        userId = this.#db.createUser(newUserData)
+      }
+
+      // Link user to accounts
+      for (const accountKey of userData.accounts) {
+        const accountId = accountIds[accountKey]
+        if (accountId) {
+          if (this.#verbose) {
+            console.log(`Linking user '${userData.login}' to account '${accountKey}'`)
+          }
+          this.#db.linkUserAccount(userId, accountId)
+        }
+      }
+    }
+  }
+
   process() {
     try {
-      this.#db.createSchema()
       this.processDirectories(this.#resultsDir)
     } catch (error) {
       console.error('Unable to connect to the database:', error)
