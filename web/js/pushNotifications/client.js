@@ -72,14 +72,23 @@ const unsubscribeFromPushNotifications = async () => {
 }
 
 const setSubscribeMessage = async () => {
+  const subscribeButton = document.getElementById('subscribeButton')
+  const unsubscribeButton = document.getElementById('unsubscribeButton')
+  setButtonDisabledState(subscribeButton, false)
   const registration = await navigator.serviceWorker.ready.catch((error) => {
     console.error('Error getting service worker registration:', error)
-    document.getElementById('subscribeButton').setAttribute('style', 'display: none')
-    document.getElementById('unsubscribeButton').setAttribute('style', 'display: none')
+    setButtonDisabledState(subscribeButton, true)
+    subscribeButton.classList.toggle('hidden', false)
+    unsubscribeButton.classList.toggle('hidden', true)
   })
   const subscription = await registration.pushManager.getSubscription()
-  document.getElementById('subscribeButton').setAttribute('style', `display: ${subscription ? 'none' : 'block'};`)
-  document.getElementById('unsubscribeButton').setAttribute('style', `display: ${subscription ? 'block' : 'none'};`)
+  subscribeButton.classList.toggle('hidden', subscription)
+  unsubscribeButton.classList.toggle('hidden', !subscription)
+}
+
+const setButtonDisabledState = (button, disabled) => {
+  button.classList.toggle('disabled', disabled)
+  button.disabled = disabled
 }
 
 const urlBase64ToUint8Array = (base64String) => {
@@ -145,9 +154,18 @@ const subscribeUser = async () => {
 }
 
 const initSubscription = async () => {
-  setSubscribeMessage()
-  document.getElementById('subscribeButton').addEventListener('click', subscribeToPushNotifications)
-  document.getElementById('unsubscribeButton').addEventListener('click', unsubscribeFromPushNotifications)
+  const subscribeButton = document.getElementById('subscribeButton')
+  const unsubscribeButton = document.getElementById('unsubscribeButton')
+  window.addEventListener('userLoggedIn', (event) => {
+    console.log('User logged in:', event.detail)
+    setSubscribeMessage()
+  })
+  window.addEventListener('userLoggedOut', () => {
+    subscribeButton.classList.toggle('hidden', true)
+    unsubscribeButton.classList.toggle('hidden', true)
+  })
+  subscribeButton.addEventListener('click', subscribeToPushNotifications)
+  unsubscribeButton.addEventListener('click', unsubscribeFromPushNotifications)
 }
 
 export {initSubscription}

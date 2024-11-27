@@ -24,15 +24,53 @@ h1 {
 .navbar .login {
   float: right;
   color: #f2f2f2;
-  padding: 14px 16px;
 }
-.navbar .logoutButton {
+.navbar .loginFields {
+  float: left;
+  padding: 16px;
+}
+.navbar .button {
   float: right;
-  background-color: #4CAF50;
   color: white;
   padding: 14px 20px;
   border: none;
   cursor: pointer;
+  line-height: 28px;
+}
+.navbar .material-symbols-outlined {
+  float: left;
+}
+.navbar .loginButton {
+  background-color: #000;
+}
+
+.navbar .logoutButton {
+  background-color: #4CAF50;
+}
+
+.navbar .notificationsButton {
+  margin-right: 10px;
+}
+.navbar .subscribeNotificationsButton {
+  background-color: #f44336;
+}
+
+.navbar .unsubscribeNotificationsButton {
+  background-color: #4CAF50;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;  /* Preferred icon size */
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
 }
 
 .navbar a:hover {

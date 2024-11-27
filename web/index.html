@@ -5,6 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Homework Metrics Dashboard</title>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0&icon_names=login,logout,notifications,notifications_off" />
 </head>
 
 <body>
@@ -15,18 +17,38 @@
     <a href="#">Metrics</a>
     <a href="#">Settings</a>
     <div id="loginForm" class="login">
-      <span>Login</span>
-      <input type="text" id="login" placeholder="Login" />
-      <input type="password" id="password" placeholder="Password" />
-      <button id="loginButton">Login</button>
+      <div class="loginFields">
+        <span>Login</span>
+        <input type="text" id="login" placeholder="Login" />
+        <input type="password" id="password" placeholder="Password" />
+      </div>
+      <button id="loginButton" class="button loginButton">
+        <span class="material-symbols-outlined">
+          login
+        </span>
+        Login
+      </button>
     </div>
-    <button id="logoutButton" class="logoutButton hidden">Logout</button>
-  </div>
-  <div class="notification-container">
-    <div class="notification"></div>
-    Push Notifications:
-    <button id="subscribeButton">Subscribe</button>
-    <button id="unsubscribeButton">Unsubscribe</button>
+    <button id="logoutButton" class="button logoutButton hidden">
+      <span class="material-symbols-outlined">
+        logout
+      </span>
+      Logout
+    </button>
+    <button id="subscribeButton" class="button notificationsButton subscribeNotificationsButton hidden"
+      title="you will not receive notifications until you click on that button">
+      <span class="material-symbols-outlined">
+        notifications_off
+      </span>
+      Subscribe
+    </button>
+    <button id="unsubscribeButton" class="button notificationsButton unsubscribeNotificationsButton hidden"
+      title="you are currently subscribed, you will receive notifications, unless you click on that button">
+      <span class="material-symbols-outlined">
+        notifications
+      </span>
+      Subscribed
+    </button>
   </div>
 
   <div id="dashboard" class="hidden">

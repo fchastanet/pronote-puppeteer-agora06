@@ -18,7 +18,7 @@ const showMetrics = () => {
   })
     .then((response) => response.json())
     .then((data) => {
-      document.getElementById('dashboard').classList.remove('hidden')
+      document.getElementById('dashboard').classList.toggle('hidden', false)
       initCompletionRateChart(data)
       initOnTimeCompletionRateChart(data)
       initHomeworkLoadChart(data)
@@ -43,9 +43,11 @@ const login = async () => {
 
     if (response.ok) {
       showToast('Login successful', true)
-      document.getElementById('loginForm').classList.add('hidden')
-      document.getElementById('logoutButton').classList.remove('hidden')
+      document.getElementById('loginForm').classList.toggle('hidden', true)
+      document.getElementById('logoutButton').classList.toggle('hidden', false)
       showMetrics()
+      const event = new CustomEvent('userLoggedIn', {detail: response})
+      window.dispatchEvent(event)
     } else {
       showToast(result.message || 'Login failed', false)
     }
@@ -64,9 +66,11 @@ const logout = async () => {
 
     if (response.ok) {
       showToast('Logout successful', true)
-      document.getElementById('loginForm').classList.remove('hidden')
-      document.getElementById('dashboard').classList.add('hidden')
-      document.getElementById('logoutButton').classList.add('hidden')
+      document.getElementById('loginForm').classList.toggle('hidden', false)
+      document.getElementById('dashboard').classList.toggle('hidden', true)
+      document.getElementById('logoutButton').classList.toggle('hidden', true)
+      const event = new CustomEvent('userLoggedOut', {detail: response})
+      window.dispatchEvent(event)
     } else {
       showToast('Logout failed', false)
     }
@@ -88,8 +92,11 @@ const checkLoggedIn = async () => {
     const result = await response.json()
 
     if (response.ok && result.isLoggedIn) {
-      document.getElementById('loginForm').classList.add('hidden')
-      document.getElementById('logoutButton').classList.remove('hidden')
+      document.getElementById('loginForm').classList.toggle('hidden', true)
+      document.getElementById('logoutButton').classList.toggle('hidden', false)
+
+      const event = new CustomEvent('userLoggedIn', {detail: result.user})
+      window.dispatchEvent(event)
       showMetrics()
     }
   } catch (error) {
