@@ -27,6 +27,9 @@ export default class AuthService {
       authenticated: data?.id > 0 ?? false,
       id: data?.id ?? 0,
       login: data?.login ?? '',
+      firstName: data?.firstName ?? '',
+      lastName: data?.lastName ?? '',
+      welcomeMessage: data?.role === 'admin' ? 'Administrator' : `${data.firstName} ${data.lastName} (Role User)`,
       role: data?.role ?? 'unauthenticated'
     }
     console.log(authData)

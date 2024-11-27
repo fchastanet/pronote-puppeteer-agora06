@@ -26,7 +26,7 @@ export default class LoginController {
     if (authData.authenticated) {
       const sessionData = {id: authData.id, login: login, role: authData.role}
       req.session.user = sessionData
-      res.json({message: 'Login successful'})
+      res.json(authData)
     } else {
       res.status(401).json({message: 'Invalid login or password'})
     }
@@ -68,15 +68,12 @@ export default class LoginController {
 
     try {
       // Verify session user matches the user in the database
-      const user = await this.#authService.validateSession(sessionUser.login)
-      if (sessionUser.id !== user.id) {
+      const authData = await this.#authService.validateSession(sessionUser.login)
+      if (sessionUser.id !== authData.id) {
         throw new Error('Session mismatch')
       }
 
-      return res.json({
-        isLoggedIn: true,
-        user: sessionUser
-      })
+      return res.json(authData)
     } catch (error) {
       if (this.#verbose) {
         console.debug('Session validation failed:', error.message)

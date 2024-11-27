@@ -45,7 +45,7 @@ const login = async () => {
 
     if (response.ok) {
       showToast('Login successful', true)
-      const event = new CustomEvent('userLoggedIn', {detail: response})
+      const event = new CustomEvent('userLoggedIn', {detail: result})
       window.dispatchEvent(event)
     } else {
       showToast(result.message || 'Login failed', false)
@@ -91,8 +91,8 @@ const checkLoggedIn = async () => {
     )
     const result = await response.json()
 
-    if (response.ok && result.isLoggedIn) {
-      const event = new CustomEvent('userLoggedIn', {detail: result.user})
+    if (response.ok && result?.authenticated) {
+      const event = new CustomEvent('userLoggedIn', {detail: result})
       window.dispatchEvent(event)
     }
   } catch (error) {
@@ -100,9 +100,12 @@ const checkLoggedIn = async () => {
   }
 }
 
-window.addEventListener('userLoggedIn', () => {
+window.addEventListener('userLoggedIn', (event) => {
   document.getElementById('loginForm').classList.toggle('hidden', true)
   document.getElementById('logoutButton').classList.toggle('hidden', false)
+  const welcomeMessage = document.getElementById('welcomeMessage')
+  welcomeMessage.classList.toggle('hidden', false)
+  welcomeMessage.textContent = `Welcome, ${event.detail.welcomeMessage}`
   showAccountSelector()
   showMetrics()
 })

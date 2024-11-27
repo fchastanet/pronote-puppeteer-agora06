@@ -16,6 +16,12 @@
     <a href="#" data-translate="home"></a>
     <a href="#" data-translate="metrics"></a>
     <a href="#" data-translate="settings"></a>
+    <span id="welcomeMessage" class="welcomeMessage hidden"></span>
+    <select id="languageSelector" class="languageSelector">
+      <option value="en">English</option>
+      <option value="fr">Français</option>
+    </select>
+    <select id="accountSelector" class="accountSelector hidden"></select>
     <div id="loginForm" class="login">
       <div class="loginFields">
         <span data-translate="login"></span>
@@ -29,12 +35,6 @@
         <span data-translate="login"></span>
       </button>
     </div>
-    <button id="logoutButton" class="button logoutButton hidden">
-      <span class="material-symbols-outlined">
-        logout
-      </span>
-      <span data-translate="logout"></span>
-    </button>
     <button id="subscribeButton" class="button notificationsButton subscribeNotificationsButton hidden"
       title="you will not receive notifications until you click on that button">
       <span class="material-symbols-outlined">
@@ -49,11 +49,12 @@
       </span>
       <span data-translate="subscribed"></span>
     </button>
-    <select id="languageSelector" class="languageSelector">
-      <option value="en">English</option>
-      <option value="fr">Français</option>
-    </select>
-    <select id="accountSelector" class="accountSelector hidden"></select>
+    <button id="logoutButton" class="button logoutButton hidden">
+      <span class="material-symbols-outlined">
+        logout
+      </span>
+      <span data-translate="logout"></span>
+    </button>
   </div>
 
   <div id="dashboard" class="hidden">
