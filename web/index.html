@@ -13,42 +13,46 @@
   <div id="app" data-web-service-url="%VITE_WEBSERVICE_URL%"></div>
   <script type="module" src="/main.js"></script>
   <div class="navbar">
-    <a href="#">Home</a>
-    <a href="#">Metrics</a>
-    <a href="#">Settings</a>
+    <a href="#" data-translate="home"></a>
+    <a href="#" data-translate="metrics"></a>
+    <a href="#" data-translate="settings"></a>
     <div id="loginForm" class="login">
       <div class="loginFields">
-        <span>Login</span>
-        <input type="text" id="login" placeholder="Login" />
-        <input type="password" id="password" placeholder="Password" />
+        <span data-translate="login"></span>
+        <input type="text" id="login" placeholder="" />
+        <input type="password" id="password" placeholder="" />
       </div>
       <button id="loginButton" class="button loginButton">
         <span class="material-symbols-outlined">
           login
         </span>
-        Login
+        <span data-translate="login"></span>
       </button>
     </div>
     <button id="logoutButton" class="button logoutButton hidden">
       <span class="material-symbols-outlined">
         logout
       </span>
-      Logout
+      <span data-translate="logout"></span>
     </button>
     <button id="subscribeButton" class="button notificationsButton subscribeNotificationsButton hidden"
       title="you will not receive notifications until you click on that button">
       <span class="material-symbols-outlined">
         notifications_off
       </span>
-      Subscribe
+      <span data-translate="subscribe"></span>
     </button>
     <button id="unsubscribeButton" class="button notificationsButton unsubscribeNotificationsButton hidden"
       title="you are currently subscribed, you will receive notifications, unless you click on that button">
       <span class="material-symbols-outlined">
         notifications
       </span>
-      Subscribed
+      <span data-translate="subscribed"></span>
     </button>
+    <select id="languageSelector" class="languageSelector">
+      <option value="en">English</option>
+      <option value="fr">Français</option>
+    </select>
   </div>
 
   <div id="dashboard" class="hidden">

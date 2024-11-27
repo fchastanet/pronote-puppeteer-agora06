@@ -9,6 +9,7 @@ import initSubjectMetricsChart from './js/charts/subjectMetricsChart'
 import initHomeworksDurationChart from './js/charts/homeworksDurationChart'
 import dayjs from 'dayjs'
 import showToast from './js/components/toastMessage/toastMessage'
+import initLanguageSelector from './js/components/languageSelector/languageSelector'
 
 const showMetrics = () => {
   initDayjs(dayjs)
@@ -109,6 +110,7 @@ window.addEventListener('load', async () => {
   const appDiv = document.getElementById('app')
   window.webServiceUrl = appDiv.getAttribute('data-web-service-url')
   initSubscription()
+  initLanguageSelector()
   document.getElementById('loginButton').addEventListener('click', login)
   document.getElementById('logoutButton').addEventListener('click', logout)
   await checkLoggedIn()
