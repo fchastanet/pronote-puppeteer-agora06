@@ -29,6 +29,27 @@ h1 {
   margin-top: 15px;
 }
 
+.navbar .languageSelector {
+  float: right;
+  margin-right: 20px;
+  height: 26px;
+  margin-top: 15px;
+}
+.navbar .languageSelector select {
+  height: 26px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background-color: #333;
+  color: #f2f2f2;
+}
+.navbar .accountSelector {
+  float: right;
+  margin-right: 20px;
+  height: 26px;
+  margin-top: 15px;
+}
+
 .navbar .login {
   float: right;
   color: #f2f2f2;

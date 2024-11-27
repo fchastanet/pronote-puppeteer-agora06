@@ -6,6 +6,7 @@ import PushSubscriptionController from '#pronote/Controllers/PushSubscriptionCon
 import LoginController from '#pronote/Controllers/LoginController.js'
 import SqliteStoreFactory from 'better-sqlite3-session-store'
 import cookieParser from 'cookie-parser'
+import UserController from '#pronote/Controllers/UserController.js'
 
 import {default as SqliteDatabase} from 'better-sqlite3'
 
@@ -14,6 +15,8 @@ export default class HttpServer {
   #pushSubscriptionController
   /** @type {LoginController} */
   #loginController
+  /** @type {UserController} */
+  #userController
   #resultsDir
   #port
   #origin
@@ -26,6 +29,7 @@ export default class HttpServer {
 
   constructor({
     pushSubscriptionController, loginController,
+    userController,
     resultsDir, port = 3001, origin,
     sessionDatabaseFile,
     sessionExpirationInMs = 900000,
@@ -37,6 +41,7 @@ export default class HttpServer {
     this.#resultsDir = resultsDir
     this.#pushSubscriptionController = pushSubscriptionController
     this.#loginController = loginController
+    this.#userController = userController
     this.#origin = origin
     this.#sessionExpirationInMs = sessionExpirationInMs
     this.#sessionSecret = sessionSecret
@@ -153,6 +158,13 @@ export default class HttpServer {
       '/checkLoggedIn',
       cors(corsOptions),
       this.#loginController.checkLoggedInAction.bind(this.#loginController)
+    )
+
+    app.get(
+      '/accounts',
+      cors(corsOptions),
+      checkSessionCookie,
+      this.#userController.getAccountsAction.bind(this.#userController)
     )
 
     app.listen(this.#port, '0.0.0.0', () => {

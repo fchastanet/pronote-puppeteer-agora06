@@ -29,6 +29,30 @@ const showMetrics = () => {
     })
 }
 
+const showAccountSelector = async () => {
+  try {
+    const response = await fetch(`${window.webServiceUrl}/accounts`, {
+      credentials: 'include',
+      headers: {'Content-Type': 'application/json'}
+    })
+    const data = await response.json()
+
+    if (response.ok) {
+      const accountSelector = document.getElementById('accountSelector')
+      accountSelector.innerHTML = ''
+      data.accounts.forEach((account) => {
+        const option = document.createElement('option')
+        option.value = account.id
+        option.textContent = account.name
+        accountSelector.appendChild(option)
+      })
+      accountSelector.classList.toggle('hidden', false)
+    }
+  } catch (error) {
+    console.error('Error fetching accounts:', error)
+  }
+}
+
 const login = async () => {
   const login = document.getElementById('login').value
   const password = document.getElementById('password').value
@@ -44,9 +68,6 @@ const login = async () => {
 
     if (response.ok) {
       showToast('Login successful', true)
-      document.getElementById('loginForm').classList.toggle('hidden', true)
-      document.getElementById('logoutButton').classList.toggle('hidden', false)
-      showMetrics()
       const event = new CustomEvent('userLoggedIn', {detail: response})
       window.dispatchEvent(event)
     } else {
@@ -70,6 +91,7 @@ const logout = async () => {
       document.getElementById('loginForm').classList.toggle('hidden', false)
       document.getElementById('dashboard').classList.toggle('hidden', true)
       document.getElementById('logoutButton').classList.toggle('hidden', true)
+      document.getElementById('accountSelector').classList.toggle('hidden', true)
       const event = new CustomEvent('userLoggedOut', {detail: response})
       window.dispatchEvent(event)
     } else {
@@ -93,17 +115,20 @@ const checkLoggedIn = async () => {
     const result = await response.json()
 
     if (response.ok && result.isLoggedIn) {
-      document.getElementById('loginForm').classList.toggle('hidden', true)
-      document.getElementById('logoutButton').classList.toggle('hidden', false)
-
       const event = new CustomEvent('userLoggedIn', {detail: result.user})
       window.dispatchEvent(event)
-      showMetrics()
     }
   } catch (error) {
     console.error('Error checking login status:', error)
   }
 }
+
+window.addEventListener('userLoggedIn', (event) => {
+  document.getElementById('loginForm').classList.toggle('hidden', true)
+  document.getElementById('logoutButton').classList.toggle('hidden', false)
+  showAccountSelector()
+  showMetrics()
+})
 
 window.webServiceUrl = ''
 window.addEventListener('load', async () => {
@@ -115,3 +140,4 @@ window.addEventListener('load', async () => {
   document.getElementById('logoutButton').addEventListener('click', logout)
   await checkLoggedIn()
 })
+
