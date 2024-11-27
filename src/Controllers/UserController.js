@@ -15,7 +15,9 @@ export default class UserController {
 
     try {
       const accounts = await this.#dataWarehouse.getPronoteAccountsForUser(req.session.user.id)
-      res.json({accounts})
+      // eslint-disable-next-line no-unused-vars
+      const filteredAccounts = accounts.map(({pronote_password, pronote_login, ...account}) => account)
+      res.json({accounts: filteredAccounts})
     } catch (error) {
       console.error('Error fetching accounts:', error)
       res.status(500).json({message: 'Internal server error'})

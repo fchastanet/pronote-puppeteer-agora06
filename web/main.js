@@ -10,6 +10,7 @@ import initHomeworksDurationChart from './js/charts/homeworksDurationChart'
 import dayjs from 'dayjs'
 import showToast from './js/components/toastMessage/toastMessage'
 import initLanguageSelector from './js/components/languageSelector/languageSelector'
+import showAccountSelector from './js/components/accountSelector/accountSelector'
 
 const showMetrics = () => {
   initDayjs(dayjs)
@@ -27,30 +28,6 @@ const showMetrics = () => {
       initSubjectMetricsChart(data)
       initHomeworksDurationChart(data)
     })
-}
-
-const showAccountSelector = async () => {
-  try {
-    const response = await fetch(`${window.webServiceUrl}/accounts`, {
-      credentials: 'include',
-      headers: {'Content-Type': 'application/json'}
-    })
-    const data = await response.json()
-
-    if (response.ok) {
-      const accountSelector = document.getElementById('accountSelector')
-      accountSelector.innerHTML = ''
-      data.accounts.forEach((account) => {
-        const option = document.createElement('option')
-        option.value = account.id
-        option.textContent = account.name
-        accountSelector.appendChild(option)
-      })
-      accountSelector.classList.toggle('hidden', false)
-    }
-  } catch (error) {
-    console.error('Error fetching accounts:', error)
-  }
 }
 
 const login = async () => {
@@ -123,7 +100,7 @@ const checkLoggedIn = async () => {
   }
 }
 
-window.addEventListener('userLoggedIn', (event) => {
+window.addEventListener('userLoggedIn', () => {
   document.getElementById('loginForm').classList.toggle('hidden', true)
   document.getElementById('logoutButton').classList.toggle('hidden', false)
   showAccountSelector()

@@ -226,6 +226,8 @@ export default class DataWarehouse {
         cas_url TEXT NOT NULL,
         pronote_login TEXT NOT NULL,
         pronote_password TEXT NOT NULL,
+        firstName TEXT,
+        lastName TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
@@ -954,18 +956,22 @@ export default class DataWarehouse {
     name,
     cas_url,
     pronote_login,
-    pronote_password
+    pronote_password,
+    firstName,
+    lastName
   }) {
     const stmt = this.#db.prepare(`
       INSERT INTO accounts (
-        name, cas_url, pronote_login, pronote_password
-      ) VALUES (?, ?, ?, ?)
+        name, cas_url, pronote_login, pronote_password, firstName, lastName
+      ) VALUES (?, ?, ?, ?, ?, ?)
     `)
     const info = stmt.run(
       name,
       cas_url,
       pronote_login,
-      pronote_password
+      pronote_password,
+      firstName,
+      lastName
     )
     return info.lastInsertRowid
   }
@@ -1042,7 +1048,9 @@ export default class DataWarehouse {
     name,
     cas_url,
     pronote_login,
-    pronote_password
+    pronote_password,
+    firstName,
+    lastName
   }) {
     const updates = []
     const params = []
@@ -1062,6 +1070,14 @@ export default class DataWarehouse {
     if (pronote_password) {
       updates.push('pronote_password = ?')
       params.push(pronote_password)
+    }
+    if (firstName !== undefined) {
+      updates.push('firstName = ?')
+      params.push(firstName)
+    }
+    if (lastName !== undefined) {
+      updates.push('lastName = ?')
+      params.push(lastName)
     }
 
     if (updates.length === 0) {

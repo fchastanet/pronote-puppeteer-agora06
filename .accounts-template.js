@@ -2,6 +2,8 @@ export default {
   accounts: {
     account1: {
       name: 'account1',
+      firstName: 'firstName1',
+      lastName: 'lastName1',
       casUrl: 'https://cas.agora06.fr/login?service=https%3A%2F%2Fl-eganaude.agora06.fr%2Fsg.do%3FPROC%3DIDENTIFICATION_FRONT',
       login: '',
       password: ''
@@ -9,6 +11,8 @@ export default {
     account2: {
       name: 'account2',
       casUrl: 'https://cas.agora06.fr/login?service=https%3A%2F%2Fl-eganaude.agora06.fr%2Fsg.do%3FPROC%3DIDENTIFICATION_FRONT',
+      firstName: 'firstName2',
+      lastName: 'lastName2',
       login: '',
       password: ''
     }

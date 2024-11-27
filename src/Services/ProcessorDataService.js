@@ -56,27 +56,25 @@ export default class ProcessorDataService {
     const accountIds = {}
     for (const [, accountData] of Object.entries(config.default.accounts)) {
       const existingAccount = this.#db.getPronoteAccountByName(accountData.name)
+      const newAccountData = {
+        name: accountData.name,
+        firstName: accountData.firstName,
+        lastName: accountData.lastName,
+        cas_url: accountData.casUrl,
+        pronote_login: accountData.login,
+        pronote_password: accountData.password
+      }
       if (existingAccount) {
         if (this.#verbose) {
           console.log(`Updating account '${accountData.name}'`)
         }
-        this.#db.updatePronoteAccount(existingAccount.id, {
-          name: accountData.name,
-          cas_url: accountData.casUrl,
-          pronote_login: accountData.login,
-          pronote_password: accountData.password
-        })
+        this.#db.updatePronoteAccount(existingAccount.id, newAccountData)
         accountIds[accountData.name] = existingAccount.id
       } else {
         if (this.#verbose) {
           console.log(`Creating account '${accountData.name}'`)
         }
-        const accountId = this.#db.createPronoteAccount({
-          name: accountData.name,
-          cas_url: accountData.casUrl,
-          pronote_login: accountData.login,
-          pronote_password: accountData.password
-        })
+        const accountId = this.#db.createPronoteAccount(newAccountData)
         accountIds[accountData.name] = accountId
       }
     }
