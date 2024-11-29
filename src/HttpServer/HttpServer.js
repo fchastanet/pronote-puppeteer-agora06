@@ -160,10 +160,10 @@ export default class HttpServer {
     )
 
     app.get(
-      '/accounts',
+      '/students',
       cors(corsOptions),
       checkSessionCookie,
-      this.#userController.getAccountsAction.bind(this.#userController)
+      this.#userController.getStudentsAction.bind(this.#userController)
     )
 
     app.listen(this.#port, '0.0.0.0', () => {

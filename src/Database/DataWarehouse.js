@@ -30,46 +30,52 @@ export default class DataWarehouse {
 
   createSchema() {
     const createDimStudentsTable = `
-      CREATE TABLE IF NOT EXISTS dim_students (
-        student_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name VARCHAR(50)
+      CREATE TABLE IF NOT EXISTS dimStudents (
+        studentId INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        fullName TEXT,
+        firstName TEXT,
+        lastName TEXT,
+        pronoteCasUrl TEXT,
+        pronoteLogin TEXT,
+        pronotePassword TEXT
       );
-      CREATE INDEX IF NOT EXISTS idx_students_name ON dim_students(name);
+      CREATE INDEX IF NOT EXISTS idxStudentsName ON dimStudents(name);
     `
     const createDimSchoolsTable = `
-      CREATE TABLE IF NOT EXISTS dim_schools (
-        school_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name VARCHAR(50)
+      CREATE TABLE IF NOT EXISTS dimSchools (
+        schoolId INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT
       );
-      CREATE INDEX IF NOT EXISTS idx_schools_name ON dim_schools(name);
+      CREATE INDEX IF NOT EXISTS idxSchoolsName ON dimSchools(name);
     `
     const createDimGradesTable = `
-      CREATE TABLE IF NOT EXISTS dim_grades (
-        grade_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name VARCHAR(50)
+      CREATE TABLE IF NOT EXISTS dimGrades (
+        gradeId INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT
       );
-      CREATE INDEX IF NOT EXISTS idx_grades_name ON dim_grades(name);
+      CREATE INDEX IF NOT EXISTS idxGradesName ON dimGrades(name);
     `
     const createDimSubjectsTable = `
-      CREATE TABLE IF NOT EXISTS dim_subjects (
-        subject_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      CREATE TABLE IF NOT EXISTS dimSubjects (
+        subjectId INTEGER PRIMARY KEY AUTOINCREMENT,
         subject TEXT,
         backgroundColor TEXT
       );
-      CREATE INDEX IF NOT EXISTS idx_courses_subject ON dim_subjects(subject);
+      CREATE INDEX IF NOT EXISTS idxCoursesSubject ON dimSubjects(subject);
     `
     const createDimTeachersTable = `
-      CREATE TABLE IF NOT EXISTS dim_teachers (
-        teacher_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        subject_id INTEGER,
-        name VARCHAR(50),
-        FOREIGN KEY (subject_id) REFERENCES dim_subjects(subject_id)
+      CREATE TABLE IF NOT EXISTS dimTeachers (
+        teacherId INTEGER PRIMARY KEY AUTOINCREMENT,
+        subjectId INTEGER,
+        name TEXT,
+        FOREIGN KEY (subjectId) REFERENCES dimSubjects(subjectId)
       );
-      CREATE INDEX IF NOT EXISTS idx_teachers_name ON dim_teachers(name);
+      CREATE INDEX IF NOT EXISTS idxTeachersName ON dimTeachers(name);
     `
     const createDimDatesTable = `
-      CREATE TABLE IF NOT EXISTS dim_dates (
-        date_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      CREATE TABLE IF NOT EXISTS dimDates (
+        dateId INTEGER PRIMARY KEY AUTOINCREMENT,
         date DATETIME,
         year INTEGER,
         month INTEGER,
@@ -80,117 +86,117 @@ export default class DataWarehouse {
         minute INTEGER,
         second INTEGER,
         millisecond INTEGER,
-        unix_timestamp INTEGER
+        unixTimestamp INTEGER
       );
-      CREATE INDEX IF NOT EXISTS idx_dates_date ON dim_dates(date);
-      CREATE INDEX IF NOT EXISTS idx_dates_year_month_week_day ON dim_dates(year, month, week, weekday, day);
+      CREATE INDEX IF NOT EXISTS idxDatesDate ON dimDates(date);
+      CREATE INDEX IF NOT EXISTS idxDatesYearMonthWeekDay ON dimDates(year, month, week, weekday, day);
     `
     const createFactCoursesTable = `
-      CREATE TABLE IF NOT EXISTS fact_courses (
-        fact_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        fact_key TEXT,
-        subject_id INTEGER,
-        student_id INTEGER,
-        school_id INTEGER,
-        grade_id INTEGER,
-        teacher_id INTEGER,
-        start_date_id INTEGER,
-        end_date_id INTEGER,
-        homework_date_id INTEGER,
-        content_list TEXT,
+      CREATE TABLE IF NOT EXISTS factCourses (
+        factId INTEGER PRIMARY KEY AUTOINCREMENT,
+        factKey TEXT,
+        subjectId INTEGER,
+        studentId INTEGER,
+        schoolId INTEGER,
+        gradeId INTEGER,
+        teacherId INTEGER,
+        startDateId INTEGER,
+        endDateId INTEGER,
+        homeworkDateId INTEGER,
+        contentList TEXT,
         locked INTEGER,
         -- update fields
         checksum TEXT,
-        update_count INTEGER DEFAULT 1,
-        update_first_date_id INTEGER,
-        update_last_date_id INTEGER,
-        update_files TEXT,
-        FOREIGN KEY (subject_id) REFERENCES dim_subjects(subject_id),
-        FOREIGN KEY (student_id) REFERENCES dim_students(student_id),
-        FOREIGN KEY (school_id) REFERENCES dim_schools(school_id),
-        FOREIGN KEY (grade_id) REFERENCES dim_grades(grade_id),
-        FOREIGN KEY (teacher_id) REFERENCES dim_teachers(teacher_id),
-        FOREIGN KEY (start_date_id) REFERENCES dim_dates(date_id),
-        FOREIGN KEY (end_date_id) REFERENCES dim_dates(date_id),
-        FOREIGN KEY (homework_date_id) REFERENCES dim_dates(date_id)
-        FOREIGN KEY (update_first_date_id) REFERENCES dim_dates(date_id),
-        FOREIGN KEY (update_last_date_id) REFERENCES dim_dates(date_id)
+        updateCount INTEGER DEFAULT 1,
+        updateFirstDateId INTEGER,
+        updateLastDateId INTEGER,
+        updateFiles TEXT,
+        FOREIGN KEY (subjectId) REFERENCES dimSubjects(subjectId),
+        FOREIGN KEY (studentId) REFERENCES dimStudents(studentId),
+        FOREIGN KEY (schoolId) REFERENCES dimSchools(schoolId),
+        FOREIGN KEY (gradeId) REFERENCES dimGrades(gradeId),
+        FOREIGN KEY (teacherId) REFERENCES dimTeachers(teacherId),
+        FOREIGN KEY (startDateId) REFERENCES dimDates(dateId),
+        FOREIGN KEY (endDateId) REFERENCES dimDates(dateId),
+        FOREIGN KEY (homeworkDateId) REFERENCES dimDates(dateId)
+        FOREIGN KEY (updateFirstDateId) REFERENCES dimDates(dateId),
+        FOREIGN KEY (updateLastDateId) REFERENCES dimDates(dateId)
       );
-      CREATE INDEX IF NOT EXISTS idx_fact_courses_id ON fact_courses(fact_key);
-      CREATE INDEX IF NOT EXISTS idx_fact_courses_subject_id ON fact_courses(subject_id);
-      CREATE INDEX IF NOT EXISTS idx_fact_courses_student_id ON fact_courses(student_id);
-      CREATE INDEX IF NOT EXISTS idx_fact_courses_school_id ON fact_courses(school_id);
-      CREATE INDEX IF NOT EXISTS idx_fact_courses_grade_id ON fact_courses(grade_id);
-      CREATE INDEX IF NOT EXISTS idx_fact_courses_teacher_id ON fact_courses(teacher_id);
-      CREATE INDEX IF NOT EXISTS idx_fact_courses_start_date_id ON fact_courses(start_date_id);
-      CREATE INDEX IF NOT EXISTS idx_fact_courses_end_date_id ON fact_courses(end_date_id);
-      CREATE INDEX IF NOT EXISTS idx_fact_courses_update_first_date_id ON fact_courses(update_first_date_id);
-      CREATE INDEX IF NOT EXISTS idx_fact_courses_update_last_date_id ON fact_courses(update_last_date_id);
-      CREATE INDEX IF NOT EXISTS idx_fact_courses_homework_date_id ON fact_courses(homework_date_id);
+      CREATE INDEX IF NOT EXISTS idxFactCoursesId ON factCourses(factKey);
+      CREATE INDEX IF NOT EXISTS idxFactCoursesSubjectId ON factCourses(subjectId);
+      CREATE INDEX IF NOT EXISTS idxFactCoursesStudentId ON factCourses(studentId);
+      CREATE INDEX IF NOT EXISTS idxFactCoursesSchoolId ON factCourses(schoolId);
+      CREATE INDEX IF NOT EXISTS idxFactCoursesGradeId ON factCourses(gradeId);
+      CREATE INDEX IF NOT EXISTS idxFactCoursesTeacherId ON factCourses(teacherId);
+      CREATE INDEX IF NOT EXISTS idxFactCoursesStartDateId ON factCourses(startDateId);
+      CREATE INDEX IF NOT EXISTS idxFactCoursesEndDateId ON factCourses(endDateId);
+      CREATE INDEX IF NOT EXISTS idxFactCoursesUpdateFirstDateId ON factCourses(updateFirstDateId);
+      CREATE INDEX IF NOT EXISTS idxFactCoursesUpdateLastDateId ON factCourses(updateLastDateId);
+      CREATE INDEX IF NOT EXISTS idxFactCoursesHomeworkDateId ON factCourses(homeworkDateId);
     `
 
     const createFactHomeworkTable = `
-      CREATE TABLE IF NOT EXISTS fact_homework (
-        fact_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        fact_key TEXT,
-        student_id INTEGER,             -- FK dim_students
-        school_id INTEGER,              -- FK dim_schools
-        grade_id INTEGER,               -- FK dim_grades
-        fact_course_id INTEGER,         -- FK fact_courses
-        subject_id INTEGER,             -- FK dim_subjects
-        due_date_id INTEGER,            -- FK dim_dates
-        assigned_date_id INTEGER,       -- FK dim_dates
-        completed INTEGER,              -- boolean
-        completed_date_id INTEGER,      -- FK dim_dates
-        completion_duration INTEGER,
-        completion_state INTEGER,       -- 3 possible states
-        max_completion_duration INTEGER,
+      CREATE TABLE IF NOT EXISTS factHomework (
+        factId INTEGER PRIMARY KEY AUTOINCREMENT,
+        factKey TEXT,
+        studentId INTEGER,                   -- FK dimStudents
+        schoolId INTEGER,                    -- FK dimSchools
+        gradeId INTEGER,                     -- FK dimGrades
+        factCourseId INTEGER,                -- FK factCourses
+        subjectId INTEGER,                   -- FK dimSubjects
+        dueDateId INTEGER,                   -- FK dimDates
+        assignedDateId INTEGER,              -- FK dimDates
+        completed INTEGER,                   -- boolean
+        completedDateId INTEGER,             -- FK dimDates
+        completionDuration INTEGER,
+        completionState INTEGER,             -- 3 possible states
+        maxCompletionDuration INTEGER,
         description TEXT,
-        formatted INTEGER,              -- boolean
-        requires_submission INTEGER,    -- boolean
-        submission_type TEXT,           -- enum
-        difficulty_level INTEGER,       -- enum
-        background_color TEXT,
-        public_name TEXT,
-        themes TEXT,                    -- Storing as JSON string or comma-separated values
-        attachments TEXT,               -- Storing as JSON string or comma-separated values
+        formatted INTEGER,                   -- boolean
+        requiresSubmission INTEGER,          -- boolean
+        submissionType TEXT,                 -- enum
+        difficultyLevel INTEGER,             -- enum
+        backgroundColor TEXT,
+        publicName TEXT,
+        themes TEXT,                         -- Storing as JSON string or comma-separated values
+        attachments TEXT,                    -- Storing as JSON string or comma-separated values
         -- update fields
         checksum TEXT,
-        notification_checksum TEXT,
-        update_count INTEGER DEFAULT 1,
-        update_first_date_id INTEGER,   -- FK dim_dates
-        update_last_date_id INTEGER,    -- FK dim_dates
-        update_files TEXT,
-        temporary INTEGER DEFAULT 1,    -- boolean
+        notificationChecksum TEXT,
+        updateCount INTEGER DEFAULT 1,
+        updateFirstDateId INTEGER,           -- FK dimDates
+        updateLastDateId INTEGER,            -- FK dimDates
+        updateFiles TEXT,
+        temporary INTEGER DEFAULT 1,         -- boolean
         json TEXT,
-        notification_state INTEGER DEFAULT 0,  -- boolean
-        notification_state_date_id INTEGER,    -- FK dim_dates
-        FOREIGN KEY (student_id) REFERENCES dim_students(student_id),
-        FOREIGN KEY (school_id) REFERENCES dim_schools(school_id),
-        FOREIGN KEY (grade_id) REFERENCES dim_grades(grade_id),
-        FOREIGN KEY (fact_course_id) REFERENCES fact_courses(fact_id),
-        FOREIGN KEY (subject_id) REFERENCES dim_subjects(subject_id),
-        FOREIGN KEY (due_date_id) REFERENCES dim_dates(date_id),
-        FOREIGN KEY (assigned_date_id) REFERENCES dim_dates(date_id),
-        FOREIGN KEY (completed_date_id) REFERENCES dim_dates(date_id),
-        FOREIGN KEY (update_first_date_id) REFERENCES dim_dates(date_id),
-        FOREIGN KEY (update_last_date_id) REFERENCES dim_dates(date_id),
-        FOREIGN KEY (notification_state_date_id) REFERENCES dim_dates(date_id)
+        notificationState INTEGER DEFAULT 0, -- boolean
+        notificationStateDateId INTEGER,     -- FK dimDates
+        FOREIGN KEY (studentId) REFERENCES dimStudents(studentId),
+        FOREIGN KEY (schoolId) REFERENCES dimSchools(schoolId),
+        FOREIGN KEY (gradeId) REFERENCES dimGrades(gradeId),
+        FOREIGN KEY (factCourseId) REFERENCES factCourses(factId),
+        FOREIGN KEY (subjectId) REFERENCES dimSubjects(subjectId),
+        FOREIGN KEY (dueDateId) REFERENCES dimDates(dateId),
+        FOREIGN KEY (assignedDateId) REFERENCES dimDates(dateId),
+        FOREIGN KEY (completedDateId) REFERENCES dimDates(dateId),
+        FOREIGN KEY (updateFirstDateId) REFERENCES dimDates(dateId),
+        FOREIGN KEY (updateLastDateId) REFERENCES dimDates(dateId),
+        FOREIGN KEY (notificationStateDateId) REFERENCES dimDates(dateId)
       );
 
-      CREATE INDEX IF NOT EXISTS idx_fact_homework_fact_key ON fact_homework(fact_key);
-      CREATE INDEX IF NOT EXISTS idx_fact_homework_subject_id ON fact_homework(subject_id);
-      CREATE INDEX IF NOT EXISTS idx_fact_homework_student_id ON fact_courses(student_id);
-      CREATE INDEX IF NOT EXISTS idx_fact_homework_school_id ON fact_courses(school_id);
-      CREATE INDEX IF NOT EXISTS idx_fact_homework_grade_id ON fact_courses(grade_id);
-      CREATE INDEX IF NOT EXISTS idx_fact_homework_due_date_id ON fact_homework(due_date_id);
-      CREATE INDEX IF NOT EXISTS idx_fact_homework_assigned_date_id ON fact_homework(assigned_date_id);
+      CREATE INDEX IF NOT EXISTS idxFactHomeworkFactKey ON factHomework(factKey);
+      CREATE INDEX IF NOT EXISTS idxFactHomeworkSubjectId ON factHomework(subjectId);
+      CREATE INDEX IF NOT EXISTS idxFactHomeworkStudentId ON factCourses(studentId);
+      CREATE INDEX IF NOT EXISTS idxFactHomeworkSchoolId ON factCourses(schoolId);
+      CREATE INDEX IF NOT EXISTS idxFactHomeworkGradeId ON factCourses(gradeId);
+      CREATE INDEX IF NOT EXISTS idxFactHomeworkDueDateId ON factHomework(dueDateId);
+      CREATE INDEX IF NOT EXISTS idxFactHomeworkAssignedDateId ON factHomework(assignedDateId);
     `
 
     const createProcessedFilesTable = `
-      CREATE TABLE IF NOT EXISTS processed_files (
-        file_id TEXT PRIMARY KEY,
-        processing_status INTEGER DEFAULT 0  -- enum (0: not processed, 1: processed, 2: error)
+      CREATE TABLE IF NOT EXISTS processedFiles (
+        fileId TEXT PRIMARY KEY,
+        processingStatus INTEGER DEFAULT 0  -- enum (0: not processed, 1: processed, 2: error)
       );
     `
 
@@ -202,98 +208,78 @@ export default class DataWarehouse {
         firstName TEXT,
         lastName TEXT,
         role TEXT DEFAULT 'user',
-        push_endpoint TEXT,
-        push_auth TEXT,
-        push_p256dh TEXT,
-        push_expiration_time DATETIME,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        pushEndpoint TEXT,
+        pushAuth TEXT,
+        pushP256dh TEXT,
+        pushExpirationTime DATETIME,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
       );
-      CREATE INDEX IF NOT EXISTS idx_users_login ON users(login);
-      CREATE INDEX IF NOT EXISTS idx_users_push_endpoint ON users(push_endpoint);
-
-      INSERT OR IGNORE INTO users (
-        login, password, firstName, lastName, role
-      ) VALUES (
-        'admin', 'admin', 'admin', '', 'admin'
-      );
+      CREATE INDEX IF NOT EXISTS idxUsersLogin ON users(login);
+      CREATE INDEX IF NOT EXISTS idxUsersPushEndpoint ON users(pushEndpoint);
     `
 
-    const createPronoteAccountsTable = `
-      CREATE TABLE IF NOT EXISTS accounts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        cas_url TEXT NOT NULL,
-        pronote_login TEXT NOT NULL,
-        pronote_password TEXT NOT NULL,
-        firstName TEXT,
-        lastName TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-    `
-
-    const createUserAccountsTable = `
-      CREATE TABLE IF NOT EXISTS user_accounts_link (
-        user_id INTEGER,
-        account_id INTEGER,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (user_id, account_id),
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+    const createUserStudentsLinkTable = `
+      CREATE TABLE IF NOT EXISTS userStudentsLink (
+        userId INTEGER, -- PK
+        studentId INTEGER, -- PK
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (userId, studentId),
+        FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (studentId) REFERENCES dimStudents(studentId) ON DELETE CASCADE
       );
     `
 
     const createViewQuery = `
-      DROP VIEW IF EXISTS view_homework;
-      CREATE VIEW view_homework AS
+      DROP VIEW IF EXISTS viewHomework;
+      CREATE VIEW viewHomework AS
       SELECT
-        hw.fact_id AS fact_id,
-        hw.fact_key AS fact_key,
+        hw.factId AS factId,
+        hw.factKey AS factKey,
         hw.description AS description,
-        dd.date AS due_date,
-        ad.date AS assigned_date,
+        dd.date AS dueDate,
+        ad.date AS assignedDate,
         hw.completed AS completed,
-        cd.date AS completed_date,
-        hw.completion_duration AS completion_duration,
-        hw.completion_state AS completion_state,
-        hw.max_completion_duration AS max_completion_duration,
+        cd.date AS completedDate,
+        hw.completionDuration AS completionDuration,
+        hw.completionState AS completionState,
+        hw.maxCompletionDuration AS maxCompletionDuration,
         hw.formatted AS formatted,
-        hw.requires_submission AS requires_submission,
-        hw.submission_type AS submission_type,
-        hw.difficulty_level AS difficulty_level,
-        hw.background_color AS background_color,
-        hw.public_name AS public_name,
+        hw.requiresSubmission AS requiresSubmission,
+        hw.submissionType AS submissionType,
+        hw.difficultyLevel AS difficultyLevel,
+        hw.backgroundColor AS backgroundColor,
+        hw.publicName AS publicName,
         hw.themes AS themes,
         hw.attachments AS attachments,
         hw.checksum AS checksum,
-        hw.update_count AS update_count,
-        ufd.date AS update_first_date,
-        uld.date AS update_last_date,
-        hw.update_files AS update_files,
+        hw.updateCount AS updateCount,
+        ufd.date AS updateFirstDate,
+        uld.date AS updateLastDate,
+        hw.updateFiles AS updateFiles,
         hw.temporary AS temporary,
         hw.json AS json,
-        s.name AS student_name,
-        sc.name AS school_name,
-        g.name AS grade_name,
-        sub.subject AS subject_name,
-        t.name AS teacher_name,
-        sd.date AS course_start_date,
-        ed.date AS course_end_date
-      FROM fact_homework hw
-      LEFT JOIN dim_students s ON hw.student_id = s.student_id
-      LEFT JOIN dim_schools sc ON hw.school_id = sc.school_id
-      LEFT JOIN dim_subjects sub ON hw.subject_id = sub.subject_id
-      LEFT JOIN dim_grades g ON hw.grade_id = g.grade_id
-      LEFT JOIN dim_dates dd ON hw.due_date_id = dd.date_id
-      LEFT JOIN dim_dates ad ON hw.assigned_date_id = ad.date_id
-      LEFT JOIN dim_dates cd ON hw.completed_date_id = cd.date_id
-      LEFT JOIN dim_dates ufd ON hw.update_first_date_id = ufd.date_id
-      LEFT JOIN dim_dates uld ON hw.update_last_date_id = uld.date_id
-      LEFT JOIN fact_courses c ON hw.fact_course_id = c.fact_id
-      LEFT JOIN dim_teachers t ON c.teacher_id = t.teacher_id
-      LEFT JOIN dim_dates sd ON c.start_date_id = sd.date_id
-      LEFT JOIN dim_dates ed ON c.end_date_id = ed.date_id
+        s.name AS studentName,
+        sc.name AS schoolName,
+        g.name AS gradeName,
+        sub.subject AS subjectName,
+        t.name AS teacherName,
+        sd.date AS courseStartDate,
+        ed.date AS courseEndDate
+      FROM factHomework hw
+      LEFT JOIN dimStudents s ON hw.studentId = s.studentId
+      LEFT JOIN dimSchools sc ON hw.schoolId = sc.schoolId
+      LEFT JOIN dimSubjects sub ON hw.subjectId = sub.subjectId
+      LEFT JOIN dimGrades g ON hw.gradeId = g.gradeId
+      LEFT JOIN dimDates dd ON hw.dueDateId = dd.dateId
+      LEFT JOIN dimDates ad ON hw.assignedDateId = ad.dateId
+      LEFT JOIN dimDates cd ON hw.completedDateId = cd.dateId
+      LEFT JOIN dimDates ufd ON hw.updateFirstDateId = ufd.dateId
+      LEFT JOIN dimDates uld ON hw.updateLastDateId = uld.dateId
+      LEFT JOIN factCourses c ON hw.factCourseId = c.factId
+      LEFT JOIN dimTeachers t ON c.teacherId = t.teacherId
+      LEFT JOIN dimDates sd ON c.startDateId = sd.dateId
+      LEFT JOIN dimDates ed ON c.endDateId = ed.dateId
       ;
     `
 
@@ -307,8 +293,7 @@ export default class DataWarehouse {
     this.#db.exec(createFactHomeworkTable)
     this.#db.exec(createProcessedFilesTable)
     this.#db.exec(createUsersTable)
-    this.#db.exec(createPronoteAccountsTable)
-    this.#db.exec(createUserAccountsTable)
+    this.#db.exec(createUserStudentsLinkTable)
     this.#db.exec(createViewQuery)
   }
 
@@ -316,38 +301,38 @@ export default class DataWarehouse {
     const stmt = this.#db.prepare(
       'SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE `type`=\'table\' AND name = ?) as tableExists'
     )
-    const row = stmt.get('dim_students')
+    const row = stmt.get('dimStudents')
     return row?.tableExists == 1 ? true : false
   }
 
   getStudentId(name) {
-    const stmt = this.#db.prepare('SELECT student_id FROM dim_students WHERE name = ?')
+    const stmt = this.#db.prepare('SELECT studentId FROM dimStudents WHERE name = ?')
     const row = stmt.get(name)
-    return row ? row.student_id : null
+    return row ? row.studentId : null
   }
 
   getSubjectId(subject) {
-    const stmt = this.#db.prepare('SELECT subject_id FROM dim_subjects WHERE subject = ?')
+    const stmt = this.#db.prepare('SELECT subjectId FROM dimSubjects WHERE subject = ?')
     const row = stmt.get(subject)
-    return row ? row.subject_id : null
+    return row ? row.subjectId : null
   }
 
   getSchoolId(name) {
-    const stmt = this.#db.prepare('SELECT school_id FROM dim_schools WHERE name = ?')
+    const stmt = this.#db.prepare('SELECT schoolId FROM dimSchools WHERE name = ?')
     const row = stmt.get(name)
-    return row ? row.school_id : null
+    return row ? row.schoolId : null
   }
 
   getGradeId(name) {
-    const stmt = this.#db.prepare('SELECT grade_id FROM dim_grades WHERE name = ?')
+    const stmt = this.#db.prepare('SELECT gradeId FROM dimGrades WHERE name = ?')
     const row = stmt.get(name)
-    return row ? row.grade_id : null
+    return row ? row.gradeId : null
   }
 
   getTeacherId(name, subjectId) {
-    const stmt = this.#db.prepare('SELECT teacher_id FROM dim_teachers WHERE name = ? AND subject_id = ?')
+    const stmt = this.#db.prepare('SELECT teacherId FROM dimTeachers WHERE name = ? AND subjectId = ?')
     const row = stmt.get(name, subjectId)
-    return row ? row.teacher_id : null
+    return row ? row.teacherId : null
   }
 
   getDateId(date) {
@@ -357,9 +342,9 @@ export default class DataWarehouse {
     if (typeof date?.toISOString === 'function') {
       date = date.toISOString()
     }
-    const stmt = this.#db.prepare('SELECT date_id FROM dim_dates WHERE date = ?')
+    const stmt = this.#db.prepare('SELECT dateId FROM dimDates WHERE date = ?')
     const row = stmt.get(date)
-    return row ? row.date_id : null
+    return row ? row.dateId : null
   }
 
   getContentId(contentId) {
@@ -375,56 +360,56 @@ export default class DataWarehouse {
   }
 
   insertStudent(name) {
-    const stmt = this.#db.prepare('INSERT INTO dim_students (name) VALUES (?)')
+    const stmt = this.#db.prepare('INSERT INTO dimStudents (name) VALUES (?)')
     const info = stmt.run(name)
     return info.lastInsertRowid
   }
 
   insertSchool(name) {
-    const stmt = this.#db.prepare('INSERT INTO dim_schools (name) VALUES (?)')
+    const stmt = this.#db.prepare('INSERT INTO dimSchools (name) VALUES (?)')
     const info = stmt.run(name)
     return info.lastInsertRowid
   }
 
   insertGrade(name) {
-    const stmt = this.#db.prepare('INSERT INTO dim_grades (name) VALUES (?)')
+    const stmt = this.#db.prepare('INSERT INTO dimGrades (name) VALUES (?)')
     const info = stmt.run(name)
     return info.lastInsertRowid
   }
 
   insertSubject({subject, backgroundColor}) {
-    const stmt = this.#db.prepare('INSERT INTO dim_subjects (subject, backgroundColor) VALUES (?, ?)')
+    const stmt = this.#db.prepare('INSERT INTO dimSubjects (subject, backgroundColor) VALUES (?, ?)')
     const info = stmt.run(subject, backgroundColor)
     return info.lastInsertRowid
   }
 
   insertTeacher(name, subjectId) {
-    const stmt = this.#db.prepare('INSERT INTO dim_teachers (name, subject_id) VALUES (?, ?)')
+    const stmt = this.#db.prepare('INSERT INTO dimTeachers (name, subjectId) VALUES (?, ?)')
     const info = stmt.run(name, subjectId)
     return info.lastInsertRowid
   }
 
   /**
-   * Insert a date into the dim_dates table.
+   * Insert a date into the dimDates table.
    * @param {DateWrapper} date - The date to insert.
    * @returns {number} The ID of the inserted date.
    */
   insertDate(date) {
-    let date_time_formatted = null
+    let dateTimeFormatted = null
     if (date) {
-      date_time_formatted = date.toISOString()
+      dateTimeFormatted = date.toISOString()
     } else {
       throw new Error('Date is null')
     }
     const unixTimestamp = date.getUnixTimestamp() // Assuming DateWrapper has a method getUnixTimestamp
-    const stmt = this.#db.prepare(`INSERT INTO dim_dates(
+    const stmt = this.#db.prepare(`INSERT INTO dimDates(
         date, year, month,
         week, weekday, day,
-        hour, minute, second, millisecond, unix_timestamp
+        hour, minute, second, millisecond, unixTimestamp
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     try {
       const data = [
-        date_time_formatted,
+        dateTimeFormatted,
         date.getYear(),
         date.getMonth(),
         date.getWeekOfTheYear(),
@@ -439,7 +424,7 @@ export default class DataWarehouse {
       const info = stmt.run(...data)
       return info.lastInsertRowid
     } catch (e) {
-      console.log('Error inserting date', date_time_formatted, e)
+      console.log('Error inserting date', dateTimeFormatted, e)
       throw e
     }
   }
@@ -458,189 +443,189 @@ export default class DataWarehouse {
     return dateId
   }
 
-  getFactCourse(fact_key) {
-    const stmt = this.#db.prepare('SELECT * FROM fact_courses WHERE fact_key = ?')
-    return stmt.get(fact_key)
+  getFactCourse(factKey) {
+    const stmt = this.#db.prepare('SELECT * FROM factCourses WHERE factKey = ?')
+    return stmt.get(factKey)
   }
 
   insertFactCourse({
-    fact_key,
-    subject_id,
-    student_id,
-    school_id,
-    grade_id,
-    teacher_id,
-    start_date_id,
-    end_date_id,
-    homework_date_id,
-    content_list,
+    factKey,
+    subjectId,
+    studentId,
+    schoolId,
+    gradeId,
+    teacherId,
+    startDateId,
+    endDateId,
+    homeworkDateId,
+    contentList,
     checksum,
     locked,
-    update_first_date_id,
-    update_last_date_id,
-    update_count,
-    update_files,
+    updateFirstDateId,
+    updateLastDateId,
+    updateCount,
+    updateFiles,
   }) {
     const stmt = this.#db.prepare(`
-      INSERT INTO fact_courses (
-        fact_key, subject_id, student_id, school_id, grade_id,
-        teacher_id, start_date_id, end_date_id, homework_date_id,
-        content_list, checksum, locked,
-        update_first_date_id, update_last_date_id, update_count, update_files
+      INSERT INTO factCourses (
+        factKey, subjectId, studentId, schoolId, gradeId,
+        teacherId, startDateId, endDateId, homeworkDateId,
+        contentList, checksum, locked,
+        updateFirstDateId, updateLastDateId, updateCount, updateFiles
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     const info = stmt.run(
-      fact_key,
-      subject_id,
-      student_id,
-      school_id,
-      grade_id,
-      teacher_id,
-      start_date_id,
-      end_date_id,
-      homework_date_id,
-      content_list,
+      factKey,
+      subjectId,
+      studentId,
+      schoolId,
+      gradeId,
+      teacherId,
+      startDateId,
+      endDateId,
+      homeworkDateId,
+      contentList,
       checksum,
       locked ? 1 : 0,
-      update_first_date_id,
-      update_last_date_id,
-      update_count,
-      update_files
+      updateFirstDateId,
+      updateLastDateId,
+      updateCount,
+      updateFiles
     )
     return info.lastInsertRowid
   }
 
   updateFactCourse({
-    fact_key,
-    subject_id,
-    student_id,
-    school_id,
-    grade_id,
-    teacher_id,
-    start_date_id,
-    end_date_id,
-    homework_date_id,
-    content_list,
+    factKey,
+    subjectId,
+    studentId,
+    schoolId,
+    gradeId,
+    teacherId,
+    startDateId,
+    endDateId,
+    homeworkDateId,
+    contentList,
     checksum,
     locked,
-    update_first_date_id,
-    update_last_date_id,
-    update_count,
-    update_files,
+    updateFirstDateId,
+    updateLastDateId,
+    updateCount,
+    updateFiles,
   }) {
     const stmt = this.#db.prepare(`
-      UPDATE fact_courses SET
-        subject_id = ?, student_id = ?, school_id = ?, grade_id = ?,
-        teacher_id = ?, start_date_id = ?, end_date_id = ?, homework_date_id = ?,
-        content_list = ?, checksum = ?, locked = ?,
-        update_first_date_id = ?, update_last_date_id = ?, update_count = ?, update_files = ?
-      WHERE fact_key = ?
+      UPDATE factCourses SET
+        subjectId = ?, studentId = ?, schoolId = ?, gradeId = ?,
+        teacherId = ?, startDateId = ?, endDateId = ?, homeworkDateId = ?,
+        contentList = ?, checksum = ?, locked = ?,
+        updateFirstDateId = ?, updateLastDateId = ?, updateCount = ?, updateFiles = ?
+      WHERE factKey = ?
     `)
     const info = stmt.run(
-      subject_id,
-      student_id,
-      school_id,
-      grade_id,
-      teacher_id,
-      start_date_id,
-      end_date_id,
-      homework_date_id,
-      content_list,
+      subjectId,
+      studentId,
+      schoolId,
+      gradeId,
+      teacherId,
+      startDateId,
+      endDateId,
+      homeworkDateId,
+      contentList,
       checksum,
       locked ? 1 : 0,
-      update_first_date_id,
-      update_last_date_id,
-      update_count,
-      update_files,
-      fact_key
+      updateFirstDateId,
+      updateLastDateId,
+      updateCount,
+      updateFiles,
+      factKey
     )
     return info.lastInsertRowid
   }
 
-  getFactHomework(fact_key) {
-    const stmt = this.#db.prepare('SELECT * FROM fact_homework WHERE fact_key = ?')
-    return stmt.get(fact_key)
+  getFactHomework(factKey) {
+    const stmt = this.#db.prepare('SELECT * FROM factHomework WHERE factKey = ?')
+    return stmt.get(factKey)
   }
 
   insertFactHomework(data) {
     const {
-      fact_key,
-      fact_course_id,
-      student_id,
-      school_id,
-      grade_id,
-      subject_id,
-      due_date_id,
-      assigned_date_id,
+      factKey,
+      factCourseId,
+      studentId,
+      schoolId,
+      gradeId,
+      subjectId,
+      dueDateId,
+      assignedDateId,
       description,
       formatted,
-      requires_submission,
+      requiresSubmission,
       completed,
-      completed_date_id,
-      submission_type,
-      difficulty_level,
-      completion_duration,
-      max_completion_duration,
-      background_color,
-      public_name,
+      completedDateId,
+      completionDuration,
+      completionState,
+      maxCompletionDuration,
+      submissionType,
+      difficultyLevel,
+      backgroundColor,
+      publicName,
       themes,
       attachments,
       checksum,
-      notification_checksum,
-      update_count,
-      update_first_date_id,
-      update_last_date_id,
-      update_files,
-      completion_state,
+      notificationChecksum,
+      updateCount,
+      updateFirstDateId,
+      updateLastDateId,
+      updateFiles,
       temporary = 1,
       json,
-      notification_state = this.NOTIFICATION_STATE_WAITING,
-      notification_state_date_id = null,
+      notificationState = this.NOTIFICATION_STATE_WAITING,
+      notificationStateDateId = null,
     } = data
     const stmt = this.#db.prepare(`
-      INSERT INTO fact_homework (
-        fact_key, fact_course_id, student_id, school_id, grade_id,
-        subject_id, due_date_id, assigned_date_id, description, formatted, requires_submission,
-        completed, completed_date_id, completion_duration, completion_state, max_completion_duration,
-        submission_type, difficulty_level, background_color, public_name, themes, attachments,
-        checksum, notification_checksum, update_count, update_first_date_id, update_last_date_id, update_files, temporary,
-        json, notification_state, notification_state_date_id
+      INSERT INTO factHomework (
+        factKey, factCourseId, studentId, schoolId, gradeId,
+        subjectId, dueDateId, assignedDateId, description, formatted, requiresSubmission,
+        completed, completedDateId, completionDuration, completionState, maxCompletionDuration,
+        submissionType, difficultyLevel, backgroundColor, publicName, themes, attachments,
+        checksum, notificationChecksum, updateCount, updateFirstDateId, updateLastDateId, updateFiles, temporary,
+        json, notificationState, notificationStateDateId
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     try {
       const info = stmt.run(
-        fact_key,
-        fact_course_id,
-        student_id,
-        school_id,
-        grade_id,
-        subject_id,
-        due_date_id,
-        assigned_date_id,
+        factKey,
+        factCourseId,
+        studentId,
+        schoolId,
+        gradeId,
+        subjectId,
+        dueDateId,
+        assignedDateId,
         description,
         formatted ? 1 : 0,
-        requires_submission ? 1 : 0,
+        requiresSubmission ? 1 : 0,
         completed ? 1 : 0,
-        completed_date_id,
-        completion_duration,
-        completion_state,
-        max_completion_duration,
-        submission_type,
-        difficulty_level,
-        background_color,
-        public_name,
+        completedDateId,
+        completionDuration,
+        completionState,
+        maxCompletionDuration,
+        submissionType,
+        difficultyLevel,
+        backgroundColor,
+        publicName,
         themes,
         attachments,
         checksum,
-        notification_checksum,
-        update_count,
-        update_first_date_id,
-        update_last_date_id,
-        update_files,
+        notificationChecksum,
+        updateCount,
+        updateFirstDateId,
+        updateLastDateId,
+        updateFiles,
         temporary ? 1 : 0,
         json,
-        notification_state,
-        notification_state_date_id
+        notificationState,
+        notificationStateDateId
       )
       return info.lastInsertRowid
     } catch (e) {
@@ -651,79 +636,79 @@ export default class DataWarehouse {
 
   updateFactHomework(data) {
     const {
-      fact_key,
-      fact_course_id,
-      student_id,
-      school_id,
-      grade_id,
-      subject_id,
-      due_date_id,
-      assigned_date_id,
+      factKey,
+      factCourseId,
+      studentId,
+      schoolId,
+      gradeId,
+      subjectId,
+      dueDateId,
+      assignedDateId,
       description,
       formatted,
-      requires_submission,
+      requiresSubmission,
       completed,
-      completed_date_id,
-      completion_duration,
-      completion_state,
-      max_completion_duration,
-      submission_type,
-      difficulty_level,
-      background_color,
-      public_name,
+      completedDateId,
+      completionDuration,
+      completionState,
+      maxCompletionDuration,
+      submissionType,
+      difficultyLevel,
+      backgroundColor,
+      publicName,
       themes,
       attachments,
       checksum,
-      notification_checksum,
-      update_count,
-      update_first_date_id,
-      update_last_date_id,
-      update_files,
+      notificationChecksum,
+      updateCount,
+      updateFirstDateId,
+      updateLastDateId,
+      updateFiles,
       temporary = 0,
       json,
     } = data
     const stmt = this.#db.prepare(`
-      UPDATE fact_homework SET
-        fact_course_id = ?, student_id = ?, school_id = ?, grade_id = ?,
-        subject_id = ?, due_date_id = ?, assigned_date_id = ?, description = ?, formatted = ?, requires_submission = ?,
-        completed = ?, completed_date_id = ?, completion_duration = ?, completion_state = ?, max_completion_duration = ?,
-        submission_type = ?, difficulty_level = ?, background_color = ?, public_name = ?, themes = ?, attachments = ?,
-        checksum = ?, notification_checksum = ?, update_count = ?, update_first_date_id = ?, update_last_date_id = ?, update_files = ?,
+      UPDATE factHomework SET
+        factCourseId = ?, studentId = ?, schoolId = ?, gradeId = ?,
+        subjectId = ?, dueDateId = ?, assignedDateId = ?, description = ?, formatted = ?, requiresSubmission = ?,
+        completed = ?, completedDateId = ?, completionDuration = ?, completionState = ?, maxCompletionDuration = ?,
+        submissionType = ?, difficultyLevel = ?, backgroundColor = ?, publicName = ?, themes = ?, attachments = ?,
+        checksum= ?, notificationChecksum = ?, updateCount = ?, updateFirstDateId = ?, updateLastDateId = ?, updateFiles = ?,
         temporary = ?, json = ?
-      WHERE fact_key = ?
+      WHERE factKey = ?
     `)
     try {
       const info = stmt.run(
-        fact_course_id,
-        student_id,
-        school_id,
-        grade_id,
-        subject_id,
-        due_date_id,
-        assigned_date_id,
+        factCourseId,
+        studentId,
+        schoolId,
+        gradeId,
+        subjectId,
+        dueDateId,
+        assignedDateId,
         description,
         formatted ? 1 : 0,
-        requires_submission ? 1 : 0,
+        requiresSubmission ? 1 : 0,
         completed ? 1 : 0,
-        completed_date_id,
-        completion_duration,
-        completion_state,
-        max_completion_duration,
-        submission_type,
-        difficulty_level,
-        background_color,
-        public_name,
+        completedDateId,
+        completionDuration,
+        completionState,
+        maxCompletionDuration,
+        submissionType,
+        difficultyLevel,
+        backgroundColor,
+        publicName,
         themes,
         attachments,
         checksum,
-        notification_checksum,
-        update_count,
-        update_first_date_id,
-        update_last_date_id,
-        update_files,
+        notificationChecksum,
+        updateCount,
+        updateFirstDateId,
+        updateLastDateId,
+        updateFiles,
         temporary ? 1 : 0,
         json,
-        fact_key
+        factKey
       )
       return info.changes
     } catch (e) {
@@ -732,14 +717,14 @@ export default class DataWarehouse {
     }
   }
 
-  updateFactHomeworkTemporary(fact_key, temporary) {
+  updateFactHomeworkTemporary(factKey, temporary) {
     const stmt = this.#db.prepare(`
-      UPDATE fact_homework SET
+      UPDATE factHomework SET
         temporary = ?
-      WHERE fact_key = ?
+      WHERE factKey = ?
     `)
     try {
-      const info = stmt.run(temporary ? 1 : 0, fact_key)
+      const info = stmt.run(temporary ? 1 : 0, factKey)
       return info.changes
     } catch (e) {
       console.error(e)
@@ -766,32 +751,32 @@ export default class DataWarehouse {
   }
 
   /**
-   * Insert a file into the processed_files table.
+   * Insert a file into the processedFiles table.
    * @param {string} fileId - The ID of the file to insert.
    * @param {string} status - The processing status of the file to insert.
    */
   insertProcessedFile(fileId, status) {
-    const stmt = this.#db.prepare('INSERT OR REPLACE INTO processed_files (file_id, processing_status) VALUES (?, ?)')
+    const stmt = this.#db.prepare('INSERT OR REPLACE INTO processedFiles (fileId, processingStatus) VALUES (?, ?)')
     stmt.run(fileId, status)
   }
 
   isFileProcessed(fileId) {
-    const selectStmt = this.#db.prepare('SELECT processing_status FROM processed_files WHERE file_id = ?')
+    const selectStmt = this.#db.prepare('SELECT processingStatus FROM processedFiles WHERE fileId = ?')
     const result = selectStmt.get(fileId)
-    return result?.processing_status == DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED
+    return result?.processingStatus == DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED
   }
 
   getPushSubscriptions() {
-    const stmt = this.#db.prepare('SELECT id, push_endpoint, push_auth, push_p256dh, push_expiration_time FROM users WHERE push_endpoint IS NOT NULL')
+    const stmt = this.#db.prepare('SELECT id, pushEndpoint, pushAuth, pushP256dh, pushExpirationTime FROM users WHERE pushEndpoint IS NOT NULL')
     return stmt.all().map((row) => {
       return {
         id: row.id,
-        endpoint: row.push_endpoint,
+        endpoint: row.pushEndpoint,
         keys: {
-          auth: row.push_auth,
-          p256dh: row.push_p256dh,
+          auth: row.pushAuth,
+          p256dh: row.pushP256dh,
         },
-        expirationTime: row.push_expiration_time,
+        expirationTime: row.pushExpirationTime,
       }
     })
   }
@@ -799,11 +784,11 @@ export default class DataWarehouse {
   deletePushSubscriptionByEndpoint(endpoint) {
     const stmt = this.#db.prepare(`
       UPDATE users
-      SET push_endpoint = NULL,
-          push_auth = NULL,
-          push_p256dh = NULL,
-          push_expiration_time = NULL
-      WHERE push_endpoint = ?
+      SET pushEndpoint = NULL,
+          pushAuth = NULL,
+          pushP256dh = NULL,
+          pushExpirationTime = NULL
+      WHERE pushEndpoint = ?
     `)
     const info = stmt.run(endpoint)
     return info.changes
@@ -811,20 +796,20 @@ export default class DataWarehouse {
 
   getSubscriptionByEndpoint(endpoint) {
     const stmt = this.#db.prepare(`
-      SELECT push_endpoint, push_auth, push_p256dh, push_expiration_time
+      SELECT pushEndpoint, pushAuth, pushP256dh, pushExpirationTime
       FROM users
-      WHERE push_endpoint = ?
+      where pushEndpoint = ?
     `)
     const row = stmt.get(endpoint)
     if (!row) {
       return null
     }
     return {
-      endpoint: row.push_endpoint,
-      expirationTime: row.push_expiration_time,
+      endpoint: row.pushEndpoint,
+      expirationTime: row.pushExpirationTime,
       keys: {
-        auth: row.push_auth,
-        p256dh: row.push_p256dh,
+        auth: row.pushAuth,
+        p256dh: row.pushP256dh,
       },
     }
   }
@@ -832,10 +817,10 @@ export default class DataWarehouse {
   insertUserSubscription(userId, endpoint, auth, p256dh, expirationTime) {
     const stmt = this.#db.prepare(`
       UPDATE users
-      SET push_endpoint = ?,
-          push_auth = ?,
-          push_p256dh = ?,
-          push_expiration_time = ?
+      SET pushEndpoint = ?,
+          pushAuth = ?,
+          pushP256dh = ?,
+          pushExpirationTime = ?
       WHERE id = ?
     `)
     // Note: You'll need to pass the user's ID. This is a simplified version
@@ -845,16 +830,16 @@ export default class DataWarehouse {
   }
 
   updateHomeworkNotificationSent(
-    fact_key,
-    notification_state = this.NOTIFICATION_STATE_SENT,
-    notification_state_date_id = null
+    factKey,
+    notificationState = this.NOTIFICATION_STATE_SENT,
+    notificationStateDateId = null
   ) {
     const stmt = this.#db.prepare(`
-      UPDATE fact_homework SET
-        notification_state = ?, notification_state_date_id = ?
-      WHERE fact_key = ?
+      UPDATE factHomework SET
+        notificationState = ?, notificationStateDateId = ?
+      WHERE factKey = ?
     `)
-    const info = stmt.run(notification_state, notification_state_date_id, fact_key)
+    const info = stmt.run(notificationState, notificationStateDateId, factKey)
     return info.changes
   }
 
@@ -865,15 +850,15 @@ export default class DataWarehouse {
    */
   reportTemporaryHomeworks(dateTime) {
     const query = `
-      SELECT json
-      FROM fact_homework
-      WHERE temporary = 1
-      AND update_first_date_id IN (
-        SELECT date_id
-        FROM dim_dates
-        WHERE date < ?
-      )
-    `
+        SELECT json
+        FROM factHomework
+        WHERE temporary = 1
+        AND updateFirstDateId IN (
+          SELECT dateId
+          FROM dimDates
+          WHERE date < ?
+        )
+      `
     const result = this.#db.all(query, dateTime.toISOString())
     return result
   }
@@ -885,34 +870,16 @@ export default class DataWarehouse {
    */
   removeTemporaryHomeworks(dateTime) {
     const stmt = this.#db.prepare(`
-      DELETE FROM fact_homework
+      DELETE FROM factHomework
       WHERE temporary = 1
-      AND update_first_date_id IN (
-        SELECT date_id
-        FROM dim_dates
+      AND updateFirstDateId IN (
+        SELECT dateId
+        FROM dimDates
         WHERE date < ?
       )
     `)
     const results = stmt.run(dateTime.toISOString())
     return results.changes
-  }
-
-  sendNotification(homework) {
-    const notification = {
-      title: 'Homework Reminder',
-      body: `You have homework due for ${homework.subject_name} on ${homework.due_date}`,
-      icon: '/path/to/icon.png',
-    }
-
-    if (Notification.permission === 'granted') {
-      new Notification(notification.title, notification)
-    } else if (Notification.permission !== 'denied') {
-      Notification.requestPermission().then((permission) => {
-        if (permission === 'granted') {
-          new Notification(notification.title, notification)
-        }
-      })
-    }
   }
 
   getUserByLogin(login) {
@@ -952,56 +919,12 @@ export default class DataWarehouse {
     return info.lastInsertRowid
   }
 
-  createPronoteAccount({
-    name,
-    cas_url,
-    pronote_login,
-    pronote_password,
-    firstName,
-    lastName
-  }) {
-    const stmt = this.#db.prepare(`
-      INSERT INTO accounts (
-        name, cas_url, pronote_login, pronote_password, firstName, lastName
-      ) VALUES (?, ?, ?, ?, ?, ?)
-    `)
-    const info = stmt.run(
-      name,
-      cas_url,
-      pronote_login,
-      pronote_password,
-      firstName,
-      lastName
-    )
-    return info.lastInsertRowid
-  }
-
-  linkUserAccount(userId, accountId) {
-    const stmt = this.#db.prepare(`
-      INSERT OR IGNORE INTO user_accounts_link (
-        user_id, account_id
-      ) VALUES (?, ?)
-    `)
-    const info = stmt.run(userId, accountId)
-    return info.changes > 0
-  }
-
-  getPronoteAccountsForUser(userId) {
-    const stmt = this.#db.prepare(`
-      SELECT pa.*
-      FROM accounts pa
-      JOIN user_accounts_link ua ON ua.account_id = pa.id
-      WHERE ua.user_id = ?
-    `)
-    return stmt.all(userId)
-  }
-
   updateUser(userId, {
     login,
     password,
     firstName,
     lastName,
-    role
+    role = DataWarehouse.USER_ROLE_USER
   }) {
     const updates = []
     const params = []
@@ -1028,10 +951,9 @@ export default class DataWarehouse {
     }
 
     if (updates.length === 0) {
-      return 0
+      throw new Error('No fields to update')
     }
 
-    updates.push('updated_at = CURRENT_TIMESTAMP')
     params.push(userId)
 
     const stmt = this.#db.prepare(`
@@ -1044,13 +966,40 @@ export default class DataWarehouse {
     return info.changes
   }
 
-  updatePronoteAccount(accountId, {
+  createPronoteStudent({
     name,
-    cas_url,
-    pronote_login,
-    pronote_password,
+    fullName,
     firstName,
-    lastName
+    lastName,
+    pronoteCasUrl,
+    pronoteLogin,
+    pronotePassword,
+  }) {
+    const stmt = this.#db.prepare(`
+      INSERT INTO dimStudents (
+        name, fullName, firstName, lastName, pronoteCasUrl, pronoteLogin, pronotePassword
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `)
+    const info = stmt.run(
+      name,
+      fullName,
+      firstName,
+      lastName,
+      pronoteCasUrl,
+      pronoteLogin,
+      pronotePassword,
+    )
+    return info.lastInsertRowid
+  }
+
+  updatePronoteStudent(studentId, {
+    name,
+    fullName,
+    firstName,
+    lastName,
+    pronoteCasUrl,
+    pronoteLogin,
+    pronotePassword,
   }) {
     const updates = []
     const params = []
@@ -1059,17 +1008,9 @@ export default class DataWarehouse {
       updates.push('name = ?')
       params.push(name)
     }
-    if (cas_url !== undefined) {
-      updates.push('cas_url = ?')
-      params.push(cas_url)
-    }
-    if (pronote_login) {
-      updates.push('pronote_login = ?')
-      params.push(pronote_login)
-    }
-    if (pronote_password) {
-      updates.push('pronote_password = ?')
-      params.push(pronote_password)
+    if (fullName !== undefined) {
+      updates.push('fullName = ?')
+      params.push(fullName)
     }
     if (firstName !== undefined) {
       updates.push('firstName = ?')
@@ -1079,44 +1020,84 @@ export default class DataWarehouse {
       updates.push('lastName = ?')
       params.push(lastName)
     }
+    if (pronoteCasUrl !== undefined) {
+      updates.push('pronoteCasUrl = ?')
+      params.push(pronoteCasUrl)
+    }
+    if (pronoteLogin) {
+      updates.push('pronoteLogin = ?')
+      params.push(pronoteLogin)
+    }
+    if (pronotePassword) {
+      updates.push('pronotePassword = ?')
+      params.push(pronotePassword)
+    }
 
     if (updates.length === 0) {
       return 0
     }
 
-    updates.push('updated_at = CURRENT_TIMESTAMP')
-    params.push(accountId)
+    params.push(studentId)
 
     const stmt = this.#db.prepare(`
-      UPDATE accounts
+      UPDATE dimStudents
       SET ${updates.join(', ')}
-      WHERE id = ?
+      WHERE studentId = ?
     `)
 
     const info = stmt.run(...params)
     return info.changes
   }
 
-  listUsers() {
+  getStudentByName(name) {
     const stmt = this.#db.prepare(`
-      SELECT
-        u.id, u.login, u.firstName, u.lastName,
-        u.role, u.created_at, u.updated_at,
-        json_group_array(json_object(
-          'id', pa.id,
-          'cas_url', pa.cas_url,
-          'login', pa.pronote_login
-        )) as accounts
-      FROM users u
-      LEFT JOIN user_accounts_link ua ON ua.user_id = u.id
-      LEFT JOIN accounts pa ON pa.id = ua.account_id
-      GROUP BY u.id
+      SELECT studentId as id, name, pronoteCasUrl,
+             pronoteLogin, pronotePassword, firstName, lastName
+      FROM dimStudents
+      WHERE name = ?
+    `)
+    return stmt.get(name)
+  }
+
+  getStudents() {
+    const stmt = this.#db.prepare(`
+      SELECT studentId as id, name, pronoteCasUrl,
+             pronoteLogin, pronotePassword, firstName, lastName
+      FROM dimStudents
+      WHERE pronoteLogin IS NOT NULL
     `)
     return stmt.all()
   }
 
-  getPronoteAccountByName(name) {
-    const stmt = this.#db.prepare('SELECT * FROM accounts WHERE name = ?')
-    return stmt.get(name)
+  listUsers() {
+    const stmt = this.#db.prepare(`
+        u.role, u.createdAt, u.updatedAt
+        u.id, u.login, u.firstName, u.lastName,
+        u.role, u.createdAt, u.updatedAt
+      FROM users u
+    `)
+    return stmt.all()
+  }
+
+  linkUserStudent(userId, studentId) {
+    const stmt = this.#db.prepare(`
+      INSERT OR IGNORE INTO userStudentsLink (userId, studentId)
+      VALUES (?, ?)
+    `)
+    const info = stmt.run(userId, studentId)
+    return info.lastInsertRowid
+  }
+
+  getStudentsForUser = (userId) => {
+    const stmt = this.#db.prepare(`
+      SELECT
+        s.studentId as id,
+        s.name, s.pronoteCasUrl,
+        s.firstName, s.lastName
+      FROM dimStudents s
+      JOIN userStudentsLink usl ON s.studentId = usl.studentId
+      WHERE usl.userId = ?
+    `)
+    return stmt.all(userId)
   }
 }

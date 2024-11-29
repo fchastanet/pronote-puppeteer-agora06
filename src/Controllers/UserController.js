@@ -8,18 +8,16 @@ export default class UserController {
     this.#dataWarehouse = dataWarehouse
   }
 
-  async getAccountsAction(req, res) {
+  async getStudentsAction(req, res) {
     if (!req.session || !req.session.user) {
       return res.status(401).json({message: 'Unauthorized'})
     }
 
     try {
-      const accounts = await this.#dataWarehouse.getPronoteAccountsForUser(req.session.user.id)
-      // eslint-disable-next-line no-unused-vars
-      const filteredAccounts = accounts.map(({pronote_password, pronote_login, ...account}) => account)
-      res.json({accounts: filteredAccounts})
+      const students = this.#dataWarehouse.getStudentsForUser(req.session.user.id)
+      res.json({students: students})
     } catch (error) {
-      console.error('Error fetching accounts:', error)
+      console.error('Error fetching students:', error)
       res.status(500).json({message: 'Internal server error'})
     }
   }

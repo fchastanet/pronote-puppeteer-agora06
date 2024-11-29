@@ -29,7 +29,7 @@ export default class AuthService {
       login: data?.login ?? '',
       firstName: data?.firstName ?? '',
       lastName: data?.lastName ?? '',
-      welcomeMessage: data?.role === 'admin' ? 'Administrator' : `${data.firstName} ${data.lastName} (Role User)`,
+      welcomeMessage: data?.role === 'admin' ? 'Administrator' : `${data?.firstName} ${data?.lastName} (Role User)`,
       role: data?.role ?? 'unauthenticated'
     }
     console.log(authData)

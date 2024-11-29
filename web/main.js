@@ -10,7 +10,7 @@ import initHomeworksDurationChart from './js/charts/homeworksDurationChart'
 import dayjs from 'dayjs'
 import showToast from './js/components/toastMessage/toastMessage'
 import initLanguageSelector from './js/components/languageSelector/languageSelector'
-import showAccountSelector from './js/components/accountSelector/accountSelector'
+import showStudentSelector from './js/components/studentSelector/studentSelector'
 
 const showMetrics = () => {
   initDayjs(dayjs)
@@ -68,7 +68,7 @@ const logout = async () => {
       document.getElementById('loginForm').classList.toggle('hidden', false)
       document.getElementById('dashboard').classList.toggle('hidden', true)
       document.getElementById('logoutButton').classList.toggle('hidden', true)
-      document.getElementById('accountSelector').classList.toggle('hidden', true)
+      document.getElementById('studentSelector').classList.toggle('hidden', true)
       const event = new CustomEvent('userLoggedOut', {detail: response})
       window.dispatchEvent(event)
     } else {
@@ -106,7 +106,7 @@ window.addEventListener('userLoggedIn', (event) => {
   const welcomeMessage = document.getElementById('welcomeMessage')
   welcomeMessage.classList.toggle('hidden', false)
   welcomeMessage.textContent = `Welcome, ${event.detail.welcomeMessage}`
-  showAccountSelector()
+  showStudentSelector()
   showMetrics()
 })
 

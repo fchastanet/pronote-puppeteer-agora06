@@ -50,36 +50,37 @@ export default class ProcessorDataService {
     this.#db.createSchema()
   }
 
-  async initAccounts(accountsInitializationFile) {
-    const config = await import(accountsInitializationFile)
-    // Process accounts first
-    const accountIds = {}
-    for (const [, accountData] of Object.entries(config.default.accounts)) {
-      const existingAccount = this.#db.getPronoteAccountByName(accountData.name)
-      const newAccountData = {
-        name: accountData.name,
-        firstName: accountData.firstName,
-        lastName: accountData.lastName,
-        cas_url: accountData.casUrl,
-        pronote_login: accountData.login,
-        pronote_password: accountData.password
+  async initStudents(studentsInitializationFile) {
+    const config = await import(studentsInitializationFile)
+    // Process students first
+    const studentIds = {}
+    for (const [, studentData] of Object.entries(config.default.students)) {
+      const existingStudent = this.#db.getStudentByName(studentData.name)
+      const newStudentData = {
+        name: studentData.name,
+        fullName: `${studentData.firstName} ${studentData.lastName}`,
+        firstName: studentData.firstName,
+        lastName: studentData.lastName,
+        pronoteCasUrl: studentData.pronoteCasUrl,
+        pronoteLogin: studentData.pronoteLogin,
+        pronotePassword: studentData.pronotePassword
       }
-      if (existingAccount) {
+      if (existingStudent) {
         if (this.#verbose) {
-          console.log(`Updating account '${accountData.name}'`)
+          console.log(`Updating student '${studentData.name}'`)
         }
-        this.#db.updatePronoteAccount(existingAccount.id, newAccountData)
-        accountIds[accountData.name] = existingAccount.id
+        this.#db.updatePronoteStudent(existingStudent.id, newStudentData)
+        studentIds[studentData.name] = existingStudent.id
       } else {
         if (this.#verbose) {
-          console.log(`Creating account '${accountData.name}'`)
+          console.log(`Creating student '${studentData.name}'`)
         }
-        const accountId = this.#db.createPronoteAccount(newAccountData)
-        accountIds[accountData.name] = accountId
+        const studentId = this.#db.createPronoteStudent(newStudentData)
+        studentIds[studentData.name] = studentId
       }
     }
 
-    // Process users and link them to accounts
+    // Process users and link them to students
     for (const [, userData] of Object.entries(config.default.users)) {
       const existingUser = this.#db.getUserByLogin(userData.login)
       let userId
@@ -103,14 +104,16 @@ export default class ProcessorDataService {
         userId = this.#db.createUser(newUserData)
       }
 
-      // Link user to accounts
-      for (const accountKey of userData.accounts) {
-        const accountId = accountIds[accountKey]
-        if (accountId) {
+      // Link account to students
+      for (const studentKey of userData.students) {
+        const studentId = studentIds[studentKey]
+        if (studentId) {
           if (this.#verbose) {
-            console.log(`Linking user '${userData.login}' to account '${accountKey}'`)
+            console.log(`Linking user '${userData.login}' to student '${studentKey}'`)
           }
-          this.#db.linkUserAccount(userId, accountId)
+          this.#db.linkUserStudent(userId, studentId)
+        } else {
+          console.error(`Student '${studentKey}' not found for user '${userData.login}'`)
         }
       }
     }
@@ -118,7 +121,13 @@ export default class ProcessorDataService {
 
   process() {
     try {
-      this.processDirectories(this.#resultsDir)
+      this.#db.getStudents().forEach((student) => {
+        const resultsDir = path.join(this.#resultsDir, student.name)
+        if (this.#verbose) {
+          console.log(`Processing results for ${student.name} in '${resultsDir}'`)
+        }
+        this.processDirectories(resultsDir)
+      })
     } catch (error) {
       console.error('Unable to connect to the database:', error)
     }
@@ -339,52 +348,52 @@ export default class ProcessorDataService {
     if (typeof factCourse === 'undefined') {
       updateFiles.push({filePath, checksum: course.checksum, id: course.id})
       factCourseId = this.#db.insertFactCourse({
-        fact_key: course.key,
-        student_id: studentId,
-        school_id: schoolId,
-        subject_id: subjectId,
-        grade_id: gradeId,
-        teacher_id: teacherIds.length > 0 ? teacherIds[0] : null, // Assuming only one teacher is used for simplicity
-        start_date_id: startDateId,
-        end_date_id: endDateId,
+        factKey: course.key,
+        studentId,
+        schoolId,
+        subjectId,
+        gradeId,
+        teacherId: teacherIds.length > 0 ? teacherIds[0] : null, // Assuming only one teacher is used for simplicity
+        startDateId,
+        endDateId,
         checksum: course.checksum,
-        homework_date_id: homeworkDateId,
-        content_list: JSON.stringify(course.contentList, null, 2)?.replace(/\00/g, ''),
+        homeworkDateId,
+        contentList: JSON.stringify(course.contentList, null, 2)?.replace(/\00/g, ''),
         locked: course.locked,
-        update_count: 1,
-        update_first_date_id: updateLastDateId,
-        update_last_date_id: updateLastDateId,
-        update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g, ''),
+        updateCount: 1,
+        updateFirstDateId: updateLastDateId,
+        updateLastDateId: updateLastDateId,
+        updateFiles: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g, ''),
       })
     } else {
-      factCourseId = factCourse.fact_id
+      factCourseId = factCourse.factId
       if (course.checksum != factCourse.checksum) {
-        updateFiles = JSON.parse(factCourse.update_files)
+        updateFiles = JSON.parse(factCourse.updateFiles)
         updateFiles.push({filePath, checksum: course.checksum, id: course.id})
         this.#db.updateFactCourse({
-          fact_key: course.key,
-          student_id: studentId,
-          school_id: schoolId,
-          subject_id: subjectId,
-          grade_id: gradeId,
-          teacher_id: teacherIds.length > 0 ? teacherIds[0] : null, // Assuming only one teacher is used for simplicity
-          start_date_id: startDateId,
-          end_date_id: endDateId,
+          factKey: course.key,
+          studentId,
+          schoolId,
+          subjectId,
+          gradeId,
+          teacherId: teacherIds.length > 0 ? teacherIds[0] : null, // Assuming only one teacher is used for simplicity
+          startDateId,
+          endDateId,
           checksum: course.checksum,
-          homework_date_id: homeworkDateId,
-          content_list: JSON.stringify(course.contentList, null, 2)?.replace(/\00/g, ''),
+          homeworkDateId,
+          contentList: JSON.stringify(course.contentList, null, 2)?.replace(/\00/g, ''),
           locked: course.locked,
-          update_first_date_id: factCourse.update_first_date_id,
-          update_last_date_id: updateLastDateId,
-          update_count: factCourse.update_count + 1,
-          update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g, ''),
+          updateFirstDateId: factCourse.updateFirstDateId,
+          updateLastDateId: updateLastDateId,
+          updateCount: factCourse.updateCount + 1,
+          updateFiles: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g, ''),
         })
       }
     }
     if (factCourseId !== null) {
       this.#courseIdFactMapping[course.id] = {
-        fact_id: factCourseId,
-        fact_key: course.key,
+        factId: factCourseId,
+        factKey: course.key,
       }
     }
   }
@@ -415,7 +424,7 @@ export default class ProcessorDataService {
     const maxCompletionDuration = dueDate !== null && assignedDate !== null ? dueDate.diff(assignedDate, 'second') : null
     const updateLastDateId = this.#db.getOrInsertDate(this.#crawlDate)
 
-    const factCourseKey = this.#courseIdFactMapping?.[homework.plannedCourseId]?.fact_key
+    const factCourseKey = this.#courseIdFactMapping?.[homework.plannedCourseId]?.factKey
     let factCourse = null
     if (factCourseKey !== null) {
       factCourse = this.#db.getFactCourse(factCourseKey)
@@ -429,9 +438,9 @@ export default class ProcessorDataService {
     this.#knownHomeworkUniqueId[homeworkKey] = homework.id
     const factHomework = this.#db.getFactHomework(homeworkKey)
     let updateFiles = []
-    let completedDateId = factHomework?.completed_date_id || null
-    let completionState = factHomework?.completion_state || DataWarehouse.COMPLETION_STATE_IN_PROGRESS
-    let completionDuration = factHomework?.completion_duration || null
+    let completedDateId = factHomework?.completedDateId || null
+    let completionState = factHomework?.completionState || DataWarehouse.COMPLETION_STATE_IN_PROGRESS
+    let completionDuration = factHomework?.completionDuration || null
 
     this.#homeworkIds.push({
       homeworkId: homework.id,
@@ -442,7 +451,7 @@ export default class ProcessorDataService {
       submissionType: homework.submissionType,
       description: homework.description,
       plannedCourseId: homework.plannedCourseId,
-      courseKey: factCourse?.fact_key,
+      courseKey: factCourse?.factKey,
     })
     if (completionState === DataWarehouse.COMPLETION_STATE_IN_PROGRESS) {
       if (homework.completed) {
@@ -478,74 +487,74 @@ export default class ProcessorDataService {
         id: homework.id,
       })
       this.#db.insertFactHomework({
-        fact_key: homeworkKey,
-        fact_course_id: factCourse?.fact_id ?? null,
-        student_id: studentId,
-        school_id: schoolId,
-        grade_id: gradeId,
-        subject_id: subjectId,
-        due_date_id: dueDateId,
-        assigned_date_id: assignedDateId,
+        factKey: homeworkKey,
+        factCourseId: factCourse?.factId ?? null,
+        studentId,
+        schoolId,
+        gradeId,
+        subjectId,
+        dueDateId,
+        assignedDateId,
         description: homework.description,
         formatted: homework.formatted,
-        requires_submission: homework.requiresSubmission,
-        submission_type: homework.submissionType,
-        difficulty_level: homework.difficultyLevel,
+        requiresSubmission: homework.requiresSubmission,
+        submissionType: homework.submissionType,
+        difficultyLevel: homework.difficultyLevel,
         completed: homework.completed,
-        completed_date_id: completedDateId,
-        completion_duration: completionDuration,
-        completion_state: completionState,
-        max_completion_duration: maxCompletionDuration,
-        background_color: homework.backgroundColor,
-        public_name: homework.publicName,
+        completedDateId,
+        completionDuration,
+        completionState,
+        maxCompletionDuration,
+        backgroundColor: homework.backgroundColor,
+        publicName: homework.publicName,
         themes: JSON.stringify(homework.themes, null, 2)?.replace(/\00/g, ''),
         attachments: JSON.stringify(homework.attachments, null, 2)?.replace(/\00/g, ''),
         checksum: homework.checksum,
-        notification_checksum: homework.notificationChecksum,
-        update_count: 1,
-        update_first_date_id: updateLastDateId,
-        update_last_date_id: updateLastDateId,
-        update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g, ''),
+        notificationChecksum: homework.notificationChecksum,
+        updateCount: 1,
+        updateFirstDateId: updateLastDateId,
+        updateLastDateId: updateLastDateId,
+        updateFiles: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g, ''),
         json: JSON.stringify(homework.json, null, 2)?.replace(/\00/g, ''),
       })
       this.#notificationsService.stackHomeworkNotification(homework, 'new')
     } else if (homework.checksum != factHomework.checksum) {
-      updateFiles = JSON.parse(factHomework.update_files)
+      updateFiles = JSON.parse(factHomework.updateFiles)
       updateFiles.push({
         filePath,
         checksum: homework.checksum,
         id: homework.id,
       })
       this.#db.updateFactHomework({
-        fact_key: homeworkKey,
-        fact_course_id: factCourse?.fact_id ?? null,
-        student_id: studentId,
-        school_id: schoolId,
-        grade_id: gradeId,
-        subject_id: subjectId,
-        due_date_id: dueDateId,
-        assigned_date_id: assignedDateId,
+        factKey: homeworkKey,
+        factCourseId: factCourse?.factId ?? null,
+        studentId,
+        schoolId,
+        gradeId,
+        subjectId,
+        dueDateId,
+        assignedDateId,
         description: homework.description,
         formatted: homework.formatted,
-        requires_submission: homework.requiresSubmission,
+        requiresSubmission: homework.requiresSubmission,
         completed: homework.completed,
-        completed_date_id: completedDateId,
-        completion_duration: completionDuration,
-        completion_state: completionState,
-        max_completion_duration: maxCompletionDuration,
-        submission_type: homework.submissionType,
-        difficulty_level: homework.difficultyLevel,
-        background_color: homework.backgroundColor,
-        public_name: homework.publicName,
+        completedDateId,
+        completionDuration,
+        completionState,
+        maxCompletionDuration,
+        submissionType: homework.submissionType,
+        difficultyLevel: homework.difficultyLevel,
+        backgroundColor: homework.backgroundColor,
+        publicName: homework.publicName,
         themes: JSON.stringify(homework.themes, null, 2)?.replace(/\00/g, ''),
         attachments: JSON.stringify(homework.attachments, null, 2)?.replace(/\00/g, ''),
         checksum: homework.checksum,
-        notification_checksum: homework.notificationChecksum,
+        notificationChecksum: homework.notificationChecksum,
         temporary: 0,
-        update_first_date_id: factHomework.update_first_date_id,
-        update_last_date_id: updateLastDateId,
-        update_count: factHomework.update_count + 1,
-        update_files: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g, ''),
+        updateFirstDateId: factHomework.updateFirstDateId,
+        updateLastDateId: updateLastDateId,
+        updateCount: factHomework.updateCount + 1,
+        updateFiles: JSON.stringify(updateFiles, null, 2)?.replace(/\00/g, ''),
         json: JSON.stringify(homework.json, null, 2)?.replace(/\00/g, ''),
       })
       // TODO do not send notification if only change is homework completed state
@@ -592,7 +601,7 @@ export default class ProcessorDataService {
       assignedDate: homeworkItem.assignedDate,
       submissionType: homeworkItem.submissionType,
       description: homeworkItem.description,
-      courseKey: factCourse?.fact_key,
+      courseKey: factCourse?.factKey,
     }
     return Utils.md5sum(data)
   }

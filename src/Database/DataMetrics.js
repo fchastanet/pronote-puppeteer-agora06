@@ -14,7 +14,7 @@ export default class DataMetrics {
     const query = `
       SELECT
         (SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) AS completionRate
-      FROM fact_homework;
+      FROM factHomework;
     `
     const result = await this.#db.get(query)
     return result.completionRate
@@ -23,9 +23,9 @@ export default class DataMetrics {
   async getOnTimeCompletionRate() {
     const query = `
       SELECT
-        (SUM(CASE WHEN completed = 1 AND completion_duration < max_completion_duration THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) AS onTimeCompletionRate
-      FROM fact_homework
-      WHERE completion_duration IS NOT null AND max_completion_duration IS NOT null;
+        (SUM(CASE WHEN completed = 1 AND completionDuration < maxCompletionDuration THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) AS onTimeCompletionRate
+      FROM factHomework
+      WHERE completionDuration IS NOT null AND maxCompletionDuration IS NOT null;
     `
     const result = await this.#db.get(query)
     return result.onTimeCompletionRate
@@ -34,13 +34,13 @@ export default class DataMetrics {
   async getHomeworkLoadPerWeek() {
     const query = `
       SELECT
-        assigned_date.date AS date,
-        CONCAT(assigned_date.year, '-', assigned_date.week) AS week,
+        assignedDate.date AS date,
+        CONCAT(assignedDate.year, '-', assignedDate.week) AS week,
         COUNT(*) AS count
-      FROM fact_homework
-      JOIN dim_dates as assigned_date ON fact_homework.assigned_date_id = assigned_date.date_id
-      GROUP BY assigned_date.year, assigned_date.week
-      ORDER BY assigned_date.year, assigned_date.week;
+      FROM factHomework
+      JOIN dimDates as assignedDate ON factHomework.assignedDateId = assignedDate.dateId
+      GROUP BY assignedDate.year, assignedDate.week
+      ORDER BY assignedDate.year, assignedDate.week;
     `
     const result = await this.#db.all(query)
     return result
@@ -49,11 +49,11 @@ export default class DataMetrics {
   async getHomeworkLoadPerDay() {
     const query = `
       SELECT
-        STRFTIME('%Y-%m-%d', assigned_date.date) AS day,
+        STRFTIME('%Y-%m-%d', assignedDate.date) AS day,
         COUNT(*) AS count
-      FROM fact_homework
-      JOIN dim_dates as assigned_date ON fact_homework.assigned_date_id = assigned_date.date_id
-      GROUP BY assigned_date.year, assigned_date.month, assigned_date.day
+      FROM factHomework
+      JOIN dimDates as assignedDate ON factHomework.assignedDateId = assignedDate.dateId
+      GROUP BY assignedDate.year, assignedDate.month, assignedDate.day
       ORDER BY date ASC;
     `
     const result = await this.#db.all(query)
@@ -63,12 +63,12 @@ export default class DataMetrics {
   async getHomeworkLoadPerWeekDay() {
     const query = `
       SELECT
-        assigned_date.weekday AS weekday,
+        assignedDate.weekday AS weekday,
         COUNT(*) AS count
-      FROM fact_homework
-      JOIN dim_dates as assigned_date ON fact_homework.assigned_date_id = assigned_date.date_id
-      GROUP BY assigned_date.weekday
-      ORDER BY assigned_date.weekday;
+      FROM factHomework
+      JOIN dimDates as assignedDate ON factHomework.assignedDateId = assignedDate.dateId
+      GROUP BY assignedDate.weekday
+      ORDER BY assignedDate.weekday;
     `
     const result = await this.#db.all(query)
     return result
@@ -77,11 +77,11 @@ export default class DataMetrics {
   async getHomeworkLoadPerSubject() {
     const query = `
       SELECT
-        dim_subjects.subject,
+        dimSubjects.subject,
         COUNT(*) AS count
-      FROM fact_homework
-      JOIN dim_subjects ON fact_homework.subject_id = dim_subjects.subject_id
-      GROUP BY fact_homework.subject_id
+      FROM factHomework
+      JOIN dimSubjects ON factHomework.subjectId = dimSubjects.subjectId
+      GROUP BY factHomework.subjectId
       ORDER BY count DESC;
     `
     const result = await this.#db.all(query)
@@ -93,9 +93,9 @@ export default class DataMetrics {
       SELECT
         subject,
         (SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) AS completionRate
-      FROM fact_homework
-      JOIN dim_subjects ON fact_homework.subject_id = dim_subjects.subject_id
-      GROUP BY fact_homework.subject_id
+      FROM factHomework
+      JOIN dimSubjects ON factHomework.subjectId = dimSubjects.subjectId
+      GROUP BY factHomework.subjectId
       ORDER BY completionRate DESC;
     `
     const result = await this.#db.all(query)
@@ -106,11 +106,11 @@ export default class DataMetrics {
     const query = `
       SELECT
         subject,
-        AVG(max_completion_duration) AS averageDuration
-      FROM fact_homework
-      JOIN dim_subjects ON fact_homework.subject_id = dim_subjects.subject_id
-      WHERE max_completion_duration IS NOT null
-      GROUP BY fact_homework.subject_id;
+        AVG(maxCompletionDuration) AS averageDuration
+      FROM factHomework
+      JOIN dimSubjects ON factHomework.subjectId = dimSubjects.subjectId
+      WHERE maxCompletionDuration IS NOT null
+      GROUP BY factHomework.subjectId;
     `
     const result = await this.#db.all(query)
     return result
@@ -120,10 +120,10 @@ export default class DataMetrics {
     const query = `
       SELECT
         subject,
-        AVG(completion_duration) AS averageDuration
-      FROM fact_homework
-      JOIN dim_subjects ON fact_homework.subject_id = dim_subjects.subject_id
-      GROUP BY fact_homework.subject_id;
+        AVG(completionDuration) AS averageDuration
+      FROM factHomework
+      JOIN dimSubjects ON factHomework.subjectId = dimSubjects.subjectId
+      GROUP BY factHomework.subjectId;
     `
     const result = await this.#db.all(query)
     return result
@@ -132,20 +132,20 @@ export default class DataMetrics {
   async getHomeworksDuration() {
     const query = `
        SELECT
-        row_number() OVER(ORDER BY fact_id) AS id,
+        row_number() OVER(ORDER BY factId) AS id,
         assignedDate.date AS assignedDate,
         completionDate.date AS completionDate,
         dueDate.date AS dueDate,
-        completion_state as completionState,
-        dim_subjects.subject AS subject,
-        fact_homework.description
-      FROM fact_homework
-      JOIN dim_subjects ON fact_homework.subject_id = dim_subjects.subject_id
-      JOIN dim_dates as assignedDate ON fact_homework.assigned_date_id = assignedDate.date_id
-      JOIN dim_dates as dueDate ON fact_homework.due_date_id = dueDate.date_id
-      LEFT JOIN dim_dates as completionDate ON fact_homework.completed_date_id = completionDate.date_id
-      WHERE completion_state != 3 -- state unknown
-      ORDER BY completion_duration DESC;
+        completionState as completionState,
+        dimSubjects.subject AS subject,
+        factHomework.description
+      FROM factHomework
+      JOIN dimSubjects ON factHomework.subjectId = dimSubjects.subjectId
+      JOIN dimDates as assignedDate ON factHomework.assignedDateId = assignedDate.dateId
+      JOIN dimDates as dueDate ON factHomework.dueDateId = dueDate.dateId
+      LEFT JOIN dimDates as completionDate ON factHomework.completedDateId = completionDate.dateId
+      WHERE completionState != 3 -- state unknown
+      ORDER BY completionDuration DESC;
     `
     const result = await this.#db.all(query)
     return result

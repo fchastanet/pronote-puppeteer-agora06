@@ -1,20 +1,20 @@
 export default {
-  accounts: {
-    account1: {
-      name: 'account1',
+  students: {
+    student1: {
+      name: 'student1',
       firstName: 'firstName1',
       lastName: 'lastName1',
-      casUrl: 'https://cas.agora06.fr/login?service=https%3A%2F%2Fl-eganaude.agora06.fr%2Fsg.do%3FPROC%3DIDENTIFICATION_FRONT',
-      login: '',
-      password: ''
+      pronoteCasUrl: 'https://cas.agora06.fr/login?service=https%3A%2F%2Fl-eganaude.agora06.fr%2Fsg.do%3FPROC%3DIDENTIFICATION_FRONT',
+      pronoteLogin: '',
+      pronotePassword: ''
     },
-    account2: {
-      name: 'account2',
-      casUrl: 'https://cas.agora06.fr/login?service=https%3A%2F%2Fl-eganaude.agora06.fr%2Fsg.do%3FPROC%3DIDENTIFICATION_FRONT',
+    student2: {
+      name: 'student2',
       firstName: 'firstName2',
       lastName: 'lastName2',
-      login: '',
-      password: ''
+      pronoteCasUrl: 'https://cas.agora06.fr/login?service=https%3A%2F%2Fl-eganaude.agora06.fr%2Fsg.do%3FPROC%3DIDENTIFICATION_FRONT',
+      pronoteLogin: '',
+      pronotePassword: ''
     }
   },
   users: {
@@ -24,7 +24,7 @@ export default {
       firstName: 'firstName1',
       lastName: 'lastName1',
       role: 'user',
-      accounts: ['account1'],
+      students: ['student1'],
     },
     student2: {
       login: 'student2',
@@ -32,7 +32,7 @@ export default {
       firstName: 'firstName2',
       lastName: 'lastName2',
       role: 'user',
-      accounts: ['account2'],
+      students: ['student2'],
     },
     admin: {
       login: 'admin',
@@ -40,7 +40,7 @@ export default {
       firstName: 'Admin',
       lastName: 'Admin',
       role: 'admin',
-      accounts: ['account1', 'account2'],
+      students: ['student1', 'student2'],
     },
   }
 }

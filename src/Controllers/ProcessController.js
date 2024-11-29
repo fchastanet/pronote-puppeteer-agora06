@@ -14,7 +14,7 @@ export default class ProcessController {
   #skipDataProcess
   #skipDataMetrics
   #verbose
-  #accountsInitializationFile
+  #studentsInitializationFile
 
   constructor({
     pronoteRetrievalService,
@@ -24,7 +24,7 @@ export default class ProcessController {
     skipDataProcess,
     skipDataMetrics,
     verbose,
-    accountsInitializationFile,
+    studentsInitializationFile,
   }) {
     this.#pronoteRetrievalService = pronoteRetrievalService
     this.#processorDataService = processorDataService
@@ -33,7 +33,7 @@ export default class ProcessController {
     this.#skipDataProcess = skipDataProcess
     this.#skipDataMetrics = skipDataMetrics
     this.#verbose = verbose
-    this.#accountsInitializationFile = accountsInitializationFile
+    this.#studentsInitializationFile = studentsInitializationFile
   }
 
   async process() {
@@ -41,7 +41,7 @@ export default class ProcessController {
       console.debug('Start process ...')
     }
     await this.#createDatabase()
-    await this.#initAccounts()
+    await this.#initStudents()
     await this.#retrievePronoteData()
     await this.#processPronoteData()
     await this.#processDataMetrics()
@@ -60,17 +60,17 @@ export default class ProcessController {
     }
   }
 
-  async #initAccounts() {
-    if (this.#accountsInitializationFile) {
+  async #initStudents() {
+    if (this.#studentsInitializationFile) {
       if (this.#verbose) {
-        console.debug('Initializing accounts ...')
+        console.debug('Initializing students ...')
       }
-      if (!fs.existsSync(this.#accountsInitializationFile)) {
-        throw new Error(`The accounts initialization file does not exist: ${this.#accountsInitializationFile}`)
+      if (!fs.existsSync(this.#studentsInitializationFile)) {
+        throw new Error(`The students initialization file does not exist: ${this.#studentsInitializationFile}`)
       }
-      await this.#processorDataService.initAccounts(this.#accountsInitializationFile)
+      await this.#processorDataService.initStudents(this.#studentsInitializationFile)
       if (this.#verbose) {
-        console.debug('Accounts initialized.')
+        console.debug('Students initialized.')
       }
     }
   }

@@ -57,33 +57,28 @@ const parseCommandOptions = (argv) => {
 const main = async () => {
   dotenv.config()
 
-  const casUrl = process.env.CAS_URL
-  const login = process.env.LOGIN
-  const password = process.env.PASSWORD
   const databaseFile = process.env.SQLITE_DATABASE_FILE
 
   const resultsDir = path.join(process.cwd(), process.env.RESULTS_DIR)
 
   const commandOptions = parseCommandOptions(process.argv)
   databaseConnection = new DatabaseConnection(databaseFile, commandOptions.debug)
+  const dataWarehouse = new DataWarehouse(databaseConnection)
 
   crawler = new Crawler(commandOptions.debug)
   const pronoteCrawler = new PronoteCrawler({
     crawler,
-    casUrl,
-    login,
-    password,
     debug: commandOptions.debug,
     verbose: commandOptions.verbose,
   })
   const pronoteRetrievalService = new PronoteRetrievalService({
     pronoteCrawler,
+    dataWarehouse,
     resultsDir,
     debug: commandOptions.debug,
     verbose: commandOptions.verbose,
   })
 
-  const dataWarehouse = new DataWarehouse(databaseConnection)
 
   const pushSubscriptionService = new PushSubscriptionService(
     dataWarehouse,
@@ -124,7 +119,7 @@ const main = async () => {
     skipDataProcess: commandOptions.skipDataProcess,
     skipDataMetrics: commandOptions.skipDataMetrics,
     verbose: commandOptions.verbose,
-    accountsInitializationFile: path.join(process.cwd(), '.accounts.js'),
+    studentsInitializationFile: path.join(process.cwd(), '.students.js'),
   })
   await processController.process()
 }

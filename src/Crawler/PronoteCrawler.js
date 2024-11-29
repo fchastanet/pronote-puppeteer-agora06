@@ -16,12 +16,6 @@ export default class PronoteCrawler {
   #debugMode = false
   /** @type {boolean} #verbose */
   #verbose = false
-  /** @type {string} #login */
-  #login = ''
-  /** @type {string} #password */
-  #password = ''
-  /** @type {string} #casUrl */
-  #casUrl = ''
   #sessionNumber = null
   // crawl session related variables
   /** @type {string} #resultDir */
@@ -29,13 +23,10 @@ export default class PronoteCrawler {
   /** @type {DateWrapper} #currentDate */
   #currentDate = null
 
-  constructor({crawler, login, password, casUrl, debugMode, verbose}) {
+  constructor({crawler, debugMode, verbose}) {
     this.#crawler = crawler
     this.#verbose = verbose
     this.#debugMode = debugMode
-    this.#login = login
-    this.#password = password
-    this.#casUrl = casUrl
   }
 
   async init() {
@@ -147,20 +138,23 @@ export default class PronoteCrawler {
     return null
   }
 
-  async crawl(resultDir, currentDate) {
+  async crawl({
+    resultDir, currentDate,
+    login, password, casUrl,
+  }) {
     this.#currentDate = currentDate
     this.#resultDir = resultDir
 
-    await this.#loginToPronote()
+    await this.#loginToPronote({login, password, casUrl})
     await this.#extractGeneralInformation()
     await this.#navigateToCahierDeTexte()
     await this.#navigateToTravailAFaire()
   }
 
-  async #loginToPronote() {
+  async #loginToPronote({login, password, casUrl}) {
     // ---------------------------------------------------------------------------------------------------
     console.info('Step 1: Navigate to cas')
-    await this.#page.goto(this.#casUrl, {waitUntil: 'networkidle2'})
+    await this.#page.goto(casUrl, {waitUntil: 'networkidle2'})
     await this.#page.waitForSelector('#idp-EDU') // Wait for the user type selector
     await this.#page.click('#idp-EDU')
     await this.#page.evaluate(() => {
@@ -183,8 +177,8 @@ export default class PronoteCrawler {
         document.querySelector('#username').value = login
         document.querySelector('#password').value = password
       },
-      this.#login,
-      this.#password
+      login,
+      password
     )
     await this.#page.click('button[type="submit"]') // Submit the login form
     await this.#page.waitForNavigation({waitUntil: 'domcontentloaded'}) // Wait for the page to navigate after login
