@@ -781,26 +781,13 @@ export default class DataWarehouse {
     })
   }
 
-  deletePushSubscriptionByEndpoint(endpoint) {
-    const stmt = this.#db.prepare(`
-      UPDATE users
-      SET pushEndpoint = NULL,
-          pushAuth = NULL,
-          pushP256dh = NULL,
-          pushExpirationTime = NULL
-      WHERE pushEndpoint = ?
-    `)
-    const info = stmt.run(endpoint)
-    return info.changes
-  }
-
-  getSubscriptionByEndpoint(endpoint) {
+  getUserSubscription(userId) {
     const stmt = this.#db.prepare(`
       SELECT pushEndpoint, pushAuth, pushP256dh, pushExpirationTime
       FROM users
-      where pushEndpoint = ?
+      where id = ?
     `)
-    const row = stmt.get(endpoint)
+    const row = stmt.get(userId)
     if (!row) {
       return null
     }
@@ -814,7 +801,33 @@ export default class DataWarehouse {
     }
   }
 
-  insertUserSubscription(userId, endpoint, auth, p256dh, expirationTime) {
+  deleteSubscriptionsByEndpoint(endpoint) {
+    const stmt = this.#db.prepare(`
+      UPDATE users
+      SET pushEndpoint = NULL,
+          pushAuth = NULL,
+          pushP256dh = NULL,
+          pushExpirationTime = NULL
+      WHERE pushEndpoint = ?
+    `)
+    const info = stmt.run(endpoint)
+    return info.changes
+  }
+
+  deleteUserSubscription(userId) {
+    const stmt = this.#db.prepare(`
+      UPDATE users
+      SET pushEndpoint = NULL,
+          pushAuth = NULL,
+          pushP256dh = NULL,
+          pushExpirationTime = NULL
+      WHERE id = ?
+    `)
+    const info = stmt.run(userId)
+    return info.changes
+  }
+
+  updateUserSubscription(userId, endpoint, auth, p256dh, expirationTime) {
     const stmt = this.#db.prepare(`
       UPDATE users
       SET pushEndpoint = ?,

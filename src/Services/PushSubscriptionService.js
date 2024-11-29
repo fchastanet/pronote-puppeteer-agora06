@@ -56,12 +56,8 @@ export default class PushSubscriptionService {
     })
   }
 
-  async getSubscriptionByEndpoint(endpoint) {
-    return this.#dataWarehouse.getSubscriptionByEndpoint(endpoint)
-  }
-
   async pushSubscription(userId, subscription) {
-    this.#dataWarehouse.insertUserSubscription(
+    this.#dataWarehouse.updateUserSubscription(
       userId,
       subscription.endpoint,
       subscription.keys.auth,
@@ -71,7 +67,15 @@ export default class PushSubscriptionService {
   }
 
   async removeSubscriptionByEndpoint(endpoint) {
-    this.#dataWarehouse.deletePushSubscriptionByEndpoint(endpoint)
+    this.#dataWarehouse.deleteUserSubscription(endpoint)
+  }
+
+  async deleteUserSubscription(userId) {
+    this.#dataWarehouse.deleteUserSubscription(userId)
+  }
+
+  async getUserSubscription(userId) {
+    this.#dataWarehouse.getUserSubscription(userId)
   }
 
   async sendNotification(notification, notificationKey, subscriptions) {
@@ -91,7 +95,7 @@ export default class PushSubscriptionService {
         .catch((error) => {
           if (error.statusCode === 410) {
             console.error('Error endpoint has gone, removing endpoint:', subscription.endpoint)
-            this.#dataWarehouse.deletePushSubscriptionByEndpoint(subscription.endpoint)
+            this.#dataWarehouse.deleteSubscriptionsByEndpoint(subscription.endpoint)
           } else {
             console.error('Error sending notification:', error)
           }

@@ -11,10 +11,6 @@ export default class PushSubscriptionController {
   postSubscription(req, res, next) {
     try {
       const body = req.body
-      if (body?.old?.endpoint) {
-        console.log('old subscription added : ', body.old)
-        this.#pushSubscriptionService.removeSubscriptionByEndpoint(body.old.endpoint)
-      }
       this.#pushSubscriptionService.pushSubscription(req.session.user.id, body.new)
       console.log('Subscription added : ', body.new)
       this.#pushSubscriptionService.sendNotificationToSubscriber(body.new, {
@@ -36,18 +32,15 @@ export default class PushSubscriptionController {
         res.sendStatus(400)
         return
       }
-      const subscription = await this.#pushSubscriptionService.getSubscriptionByEndpoint(endpoint)
-      if (!subscription) {
-        // subscription not found, consider subscription removed successfully
-        res.sendStatus(200)
-        return
+      const subscription = await this.#pushSubscriptionService.getUserSubscription(req.session.user.id)
+      this.#pushSubscriptionService.deleteUserSubscription(req.session.user.id)
+      console.log('Subscription removed : ', endpoint, 'for user', req.session.user.id)
+      if (subscription) {
+        this.#pushSubscriptionService.sendNotificationToSubscriber(subscription, {
+          title: 'Notification System',
+          body: 'Subscription removed',
+        })
       }
-      this.#pushSubscriptionService.removeSubscriptionByEndpoint(subscription.endpoint)
-      console.log('Subscription removed : ', endpoint)
-      this.#pushSubscriptionService.sendNotificationToSubscriber(subscription, {
-        title: 'Notification System',
-        body: 'Subscription removed',
-      })
       // Send 204 - no content
       res.status(204).json({})
     } catch (e) {
