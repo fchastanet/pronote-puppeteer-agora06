@@ -1,0 +1,144 @@
+Table dimStudents {
+  studentId INT [pk, increment]
+  name TEXT
+  fullName TEXT
+  firstName TEXT
+  lastName TEXT
+  pronoteCasUrl TEXT
+  pronoteLogin TEXT
+  pronotePassword TEXT
+}
+
+Table dimSchools {
+  schoolId INT [pk, increment]
+  name TEXT
+}
+
+Table dimGrades {
+  gradeId INT [pk, increment]
+  name TEXT
+}
+
+Table dimSubjects {
+  subjectId INT [pk, increment]
+  subject TEXT
+  background_color TEXT
+}
+
+Table dimTeachers {
+  teacherId INT  [pk, increment]
+  subjectId INT [ref: > dimSubjects.subjectId]
+  name TEXT
+}
+
+Table dimDates {
+  dateId INT  [pk, increment]
+  date DATETIME
+  year INT
+  month INT
+  week INT
+  weekday INT
+  day INT
+  hour INT
+  minute INT
+  second INT
+  millisecond INT
+  unixTimestamp INT
+}
+
+Table factCourses {
+  studentId INT [ref: > dimStudents.studentId]
+  factId INT [pk, increment]
+  factKey TEXT
+  schoolId INT [ref: > dimSchools.schoolId]
+  gradeId INT [ref: > dimGrades.gradeId]
+  subjectId INT [ref: > dimSubjects.subjectId]
+  teacherId INT [ref: > dimTeachers.teacherId]
+  contentList TEXT
+  locked BOOL
+  checksum TEXT
+  updateCount INT [ default:1]
+  updateFiles JSON
+  startDateId INT [ref: > dimDates.dateId]
+  endDateId INT [ref: > dimDates.dateId]
+  homeworkDateId INT [ref: > dimDates.dateId]
+  updateFirstDateId INT [ref: > dimDates.dateId]
+  updateLastDateId INT [ref: > dimDates.dateId]
+}
+
+enum completionStateEnum {
+  inProgress
+  completed
+  overDue
+  unknown
+}
+Table factHomework {
+  factId INT [pk, increment]
+  studentId INT [ref: > dimStudents.studentId]
+  factCourseId INT [ref: > factCourses.factId]
+  factKey TEXT
+  schoolId INT [ref: > dimSchools.schoolId]
+  gradeId INT [ref: > dimGrades.gradeId]
+  subjectId INT [ref: > dimSubjects.subjectId]
+
+  completed BOOL
+  completionDuration INT
+  completionState completionStateEnum
+  maxCompletionDuration INT
+
+  description TEXT
+  formatted BOOL
+  requiresSubmission BOOL
+  submissionType enum
+  difficultyLevel INT
+
+  backgroundColor TEXT
+  publicName TEXT
+  themes JSON
+  attachments JSON
+
+  checksum TEXT
+  notificationChecksum TEXT
+  updateFiles JSON
+  temporary BOOL
+  JSON JSON
+  updateCount INT
+  notificationState INT
+  updateFirstDateId INT [ref: > dimDates.dateId]
+  assignedDateId INT [ref: > dimDates.dateId]
+  completedDateId INT [ref: > dimDates.dateId]
+  dueDateId INT [ref: > dimDates.dateId]
+  updateLastDateId INT [ref: > dimDates.dateId]
+  notificationStateDateId INT [ref: > dimDates.dateId]
+}
+
+Enum processingStatusEnum {
+  waiting
+  processed
+  error
+}
+Table processedFiles {
+  fileId INT [pk, increment]
+  processingStatus processingStatusEnum
+}
+
+Table users {
+  id INT [pk, increment]
+  login TEXT
+  password TEXT
+  firstName TEXT
+  lastName TEXT
+  role TEXT [default: "user"]
+  pushEndpoint TEXT
+  pushAuth TEXT
+  pushP256dh TEXT
+  pushExpirationTime DATETIME
+  createdAt DATETIME [default: `now()`]
+  updatedAt DATETIME
+}
+
+Table userStudentsLink {
+  userId INT [ref: > users.id]
+  studentId INT [ref: > dimStudents.studentId]
+  createdAt DATETIME [default: `now()`]
+}

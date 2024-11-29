@@ -4,9 +4,11 @@
 
 - [1. What this tool does ?](#1-what-this-tool-does-)
 - [2. Architecture](#2-architecture)
-  - [2.1. Data Processor](#21-data-processor)
-  - [2.2. Backend Server](#22-backend-server)
-  - [2.3. Client](#23-client)
+  - [2.1. Software architecture](#21-software-architecture)
+  - [2.2. Database](#22-database)
+  - [2.3. Data Processor](#23-data-processor)
+  - [2.4. Backend Server](#24-backend-server)
+  - [2.5. Client](#25-client)
 - [3. Serve the project](#3-serve-the-project)
   - [3.1. Alternative to pinggy](#31-alternative-to-pinggy)
   - [3.2. NodeJs hosting](#32-nodejs-hosting)
@@ -43,6 +45,9 @@ little node js tool to get pronote data as json files
 
 ## 2. Architecture
 
+
+### 2.1. Software architecture
+
 The architecture is decomposed in 4 parts:
 
 - Data processor responsible to gather pronote data,
@@ -57,7 +62,13 @@ The architecture is decomposed in 4 parts:
 ![Pronote project architecture diagram](doc/sequenceDiagram.png)
 [Pronote project architecture plantuml diagram](doc/sequenceDiagram.puml)
 
-### 2.1. Data Processor
+### 2.2. Database
+
+![db diagram](doc/database-diagram.png)
+[db diagram](https://dbdiagram.io/d/pronote-67499b7fe9daa85aca20e147)
+[db edit link (only me)](https://dbdiagram.io/d/pronote-67499b7fe9daa85aca20e147)
+
+### 2.3. Data Processor
 
 This process can be launched using the command:
 `node src/dataProcessor.js`
@@ -71,7 +82,7 @@ This process does the following tasks:
 - generateNotifications: generates notification to subscribed
   browser clients
 
-### 2.2. Backend Server
+### 2.4. Backend Server
 
 The server can be launched using the command:
 `yarn run backendServer`
@@ -80,7 +91,7 @@ It internally runs an Express server that serves different web
 services.
 It is served by default on <http://localhost:3001>.
 
-### 2.3. Client
+### 2.5. Client
 
 The client side can be launched in 2 different ways:
 
