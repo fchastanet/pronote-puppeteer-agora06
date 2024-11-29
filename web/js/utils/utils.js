@@ -5,6 +5,11 @@ const stripTags = (html) => {
   return div.textContent || div.innerText || ''
 }
 
+const timeout = async (ms) => {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 export {
-  stripTags
+  stripTags,
+  timeout,
 }

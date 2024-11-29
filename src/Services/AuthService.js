@@ -30,7 +30,14 @@ export default class AuthService {
       firstName: data?.firstName ?? '',
       lastName: data?.lastName ?? '',
       welcomeMessage: data?.role === 'admin' ? 'Administrator' : `${data?.firstName} ${data?.lastName} (Role User)`,
-      role: data?.role ?? 'unauthenticated'
+      role: data?.role ?? 'unauthenticated',
+      pushNotification: {
+        enabled: (!!data?.pushEndpoint && !!data?.pushAuth && !!data?.pushP256dh),
+        pushEndpoint: data?.pushEndpoint,
+        pushAuth: data?.pushAuth,
+        pushP256dh: data?.pushP256dh,
+        pushExpirationTime: data?.pushExpirationTime,
+      }
     }
     console.log(authData)
     return authData

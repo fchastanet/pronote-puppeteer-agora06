@@ -28,10 +28,6 @@ export default class PushSubscriptionController {
   async deleteSubscription(req, res, next) {
     try {
       const endpoint = req.query.endpoint?.toString()
-      if (!endpoint) {
-        res.sendStatus(400)
-        return
-      }
       const subscription = await this.#pushSubscriptionService.getUserSubscription(req.session.user.id)
       this.#pushSubscriptionService.deleteUserSubscription(req.session.user.id)
       console.log('Subscription removed : ', endpoint, 'for user', req.session.user.id)

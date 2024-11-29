@@ -1,5 +1,4 @@
 import './css/main.css'
-import {initSubscription} from './js/pushNotifications/client'
 import {initDayjs} from './js/utils/dayjs'
 import initCompletionRateChart from './js/charts/completionRateChart'
 import initOnTimeCompletionRateChart from './js/charts/onTimeCompletionRateChart'
@@ -11,6 +10,7 @@ import dayjs from 'dayjs'
 import showToast from './js/components/toastMessage/toastMessage'
 import initLanguageSelector from './js/components/languageSelector/languageSelector'
 import showStudentSelector from './js/components/studentSelector/studentSelector'
+import PushNotifications from './js/pushNotifications/pushNotifications'
 
 const showMetrics = () => {
   initDayjs(dayjs)
@@ -114,7 +114,8 @@ window.webServiceUrl = ''
 window.addEventListener('load', async () => {
   const appDiv = document.getElementById('app')
   window.webServiceUrl = appDiv.getAttribute('data-web-service-url')
-  initSubscription()
+  const pushNotifications = new PushNotifications()
+  pushNotifications.setListeners()
   initLanguageSelector()
   document.getElementById('loginButton').addEventListener('click', login)
   document.getElementById('logoutButton').addEventListener('click', logout)
