@@ -85,9 +85,6 @@ export default class PushSubscriptionService {
       webpush
         .sendNotification(subscription, payloadStr)
         .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-          }
           const msg = `Notification ${notificationKey} sent successfully to subscriber ${subscription.id}`
           if (this.#debug) {
             console.log(msg, response)

@@ -31,16 +31,19 @@ export default class PronoteRetrievalService {
       for (const account of students) {
         const currentResultDir = path.join(
           this.#resultsDir,
-          account.name,
+          account.name.replace(/ /g, '_'),
           folderDate
         )
+        console.log('Processing account:', account.name)
+        console.log('Results directory:', currentResultDir)
 
         await this.#pronoteCrawler.init()
         await this.#pronoteCrawler.crawl({
-          currentResultDir, currentDate,
-          login: account.login,
-          password: account.password,
-          casUrl: account.casUrl,
+          resultDir: currentResultDir,
+          currentDate,
+          login: account.pronoteLogin,
+          password: account.pronotePassword,
+          casUrl: account.pronoteCasUrl,
         })
 
         if (this.#debug) {
