@@ -21,7 +21,6 @@
       <option value="en">English</option>
       <option value="fr">Français</option>
     </select>
-    <select id="studentSelector" class="studentSelector hidden"></select>
     <div id="loginForm" class="login">
       <div class="loginFields">
         <span data-translate="login"></span>
@@ -59,7 +58,23 @@
 
   <div id="dashboard" class="hidden">
     <h1>Homework Metrics Dashboard (%MODE%)</h1>
-    <div class="dashboardGrid">
+    <div id="dashboardFilters" class="dashboardFilters">
+      <label for="studentSelector">
+        <span data-translate="student"></span>
+      </label>
+      <select id="studentSelector" class="studentSelector hidden"></select>
+      <label for="startDateSelector">
+        <span data-translate="startDate"></span>
+      </label>
+      <input type="date" id="startDateSelector" />
+      <label for="endDateSelector">
+        <span data-translate="endDate"></span>
+      </label>
+      <input type="date" id="endDateSelector" />
+      <button id="refreshButton" class="button refreshButton">
+        <span data-translate="refresh"></span>
+    </div>
+    <div class="dashboardGrid" class="hidden">
       <div class="chart-container" id="completionRateChart"></div>
       <div class="chart-container" id="onTimeCompletionRateChart"></div>
       <div class="chart-container" id="homeworkLoadChart"></div>

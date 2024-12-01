@@ -119,10 +119,14 @@ export default class ProcessorDataService {
     }
   }
 
+  #escapePath = (filename) => {
+    return path.basename(filename.replace(/ /g, '_'))
+  }
+
   process() {
     try {
       this.#db.getStudents().forEach((student) => {
-        const resultsDir = path.join(this.#resultsDir, student.name)
+        const resultsDir = path.join(this.#resultsDir, this.#escapePath(student.name))
         if (this.#verbose) {
           console.log(`Processing results for ${student.name} in '${resultsDir}'`)
         }

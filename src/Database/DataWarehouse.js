@@ -1101,7 +1101,7 @@ export default class DataWarehouse {
     return info.lastInsertRowid
   }
 
-  getStudentsForUser = (userId) => {
+  getStudentsForUser(userId) {
     const stmt = this.#db.prepare(`
       SELECT
         s.studentId as id,

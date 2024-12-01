@@ -9,7 +9,10 @@ import DataWarehouse from '#pronote/Database/DataWarehouse.js'
 import processManagement from '#pronote/Utils/ProcessManagement.js'
 import AuthService from '#pronote/Services/AuthService.js'
 import LoginController from '#pronote/Controllers/LoginController.js'
-import UserController from './Controllers/UserController.js'
+import UserController from '#pronote/Controllers/UserController.js'
+import DataMetrics from '#pronote/Database/DataMetrics.js'
+import DashboardController from '#pronote/Controllers/DashboardController.js'
+import ProcessorMetricsService from '#pronote/Services/ProcessorMetricsService.js'
 
 let databaseConnection = null
 processManagement((options) => {
@@ -66,12 +69,17 @@ const main = async () => {
   await pushSubscriptionService.init()
   const pushSubscriptionController = new PushSubscriptionController(pushSubscriptionService)
 
+  const dataMetrics = new DataMetrics(databaseConnection)
+  const processorMetricsService = new ProcessorMetricsService(dataMetrics, dataWarehouse)
+  const dashboardController = new DashboardController({processorMetricsService})
+
   const userController = new UserController(dataWarehouse)
 
   const server = new HttpServer({
     pushSubscriptionController,
     loginController,
     userController,
+    dashboardController,
     resultsDir,
     port: process.env?.SERVER_PORT ?? 3001,
     origin: process.env?.ASSETS_URL ?? 'http://localhost:3000',

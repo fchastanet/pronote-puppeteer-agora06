@@ -1,32 +1,83 @@
+import DataWarehouse from '#pronote/Database/DataWarehouse.js'
 import DataMetrics from '../Database/DataMetrics.js'
-import path from 'path'
-import fs from 'fs'
+import dayjs from 'dayjs'
 
 export default class ProcessorMetricsService {
   /** @type {DataMetrics} */
-  #db
-  #publicDir
-  #verbose
-  #debug
+  #dataMetrics
+  /** @type {DataWarehouse} */
+  #dataWarehouse
 
-  constructor(db, publicDir, debug = false, verbose = false) {
-    this.#db = db
-    this.#publicDir = publicDir
-    this.#debug = debug
-    this.#verbose = verbose
+  constructor(dataMetrics, dataWarehouse) {
+    this.#dataMetrics = dataMetrics
+    this.#dataWarehouse = dataWarehouse
   }
 
-  async process() {
-    const completionRate = await this.#db.getCompletionRate()
-    const onTimeCompletionRate = await this.#db.getOnTimeCompletionRate()
-    const homeworkLoadPerWeek = await this.#db.getHomeworkLoadPerWeek()
-    const homeworkLoadPerDay = await this.#db.getHomeworkLoadPerDay()
-    const homeworkLoadPerWeekDay = await this.#db.getHomeworkLoadPerWeekDay()
-    const homeworkLoadPerSubject = await this.#db.getHomeworkLoadPerSubject()
-    const completionPerSubject = await this.#db.getCompletionPerSubject()
-    const averageDurationPerSubjectGivenToExpected = await this.#db.getAverageDurationPerSubjectGivenToExpected()
-    const averageDurationPerSubjectGivenToDone = await this.#db.getAverageDurationPerSubjectGivenToDone()
-    const homeworksDuration = await this.#db.getHomeworksDuration()
+  dashboardFiltersConfig(userId) {
+    const students = this.#dataWarehouse.getStudentsForUser(userId)
+    const {minDate, maxDate} = this.#dataMetrics.getMinMaxDate(userId)
+    let endDate = dayjs()
+    if (dayjs(endDate).isAfter(maxDate)) {
+      endDate = maxDate
+    }
+    let startDate = dayjs().subtract(1, 'month')
+    if (dayjs(startDate).isBefore(minDate)) {
+      startDate = minDate
+    }
+
+    return {
+      students,
+      minDate,
+      maxDate,
+      startDate: startDate.format('YYYY-MM-DD'),
+      endDate: endDate.format('YYYY-MM-DD'),
+    }
+  }
+
+  validateFilters(filters, userId) {
+    const {startDate, endDate, students} = filters
+    const decodedStartDate = dayjs(startDate)
+    const decodedEndDate = dayjs(endDate)
+    if (!decodedStartDate.isValid() || !decodedEndDate.isValid()) {
+      throw new Error('Invalid date format')
+    }
+    if (decodedStartDate.isAfter(decodedEndDate)) {
+      throw new Error('Invalid date range')
+    }
+    const minMaxDates = this.#dataMetrics.getMinMaxDate(userId)
+    if (decodedStartDate.isBefore(minMaxDates.minDate) || decodedEndDate.isAfter(minMaxDates.maxDate)) {
+      throw new Error('Date range out of bounds')
+    }
+    const decodedStudents = JSON.parse(students)
+    if (students !== 'ALL') {
+      if (!Array.isArray(decodedStudents)) {
+        throw new Error('Invalid students')
+      }
+      const availableStudentIds = this.#dataWarehouse.getStudentsForUser(userId)?.map((student) => student.id)
+      for (const studentId of decodedStudents) {
+        if (!availableStudentIds.includes(studentId)) {
+          throw new Error(`Invalid student: ${studentId}`)
+        }
+      }
+    }
+    return {
+      startDate: decodedStartDate.format('YYYY-MM-DD'),
+      endDate: decodedEndDate.format('YYYY-MM-DD'),
+      students: students === 'ALL' ? 'ALL' : decodedStudents,
+    }
+  }
+
+  async process(filters) {
+    const completionRate = this.#dataMetrics.getCompletionRate(filters)
+    const onTimeCompletionRate = this.#dataMetrics.getOnTimeCompletionRate(filters)
+    const homeworkLoadPerWeek = this.#dataMetrics.getHomeworkLoadPerWeek(filters)
+    const homeworkLoadPerDay = this.#dataMetrics.getHomeworkLoadPerDay(filters)
+    const homeworkLoadPerWeekDay = this.#dataMetrics.getHomeworkLoadPerWeekDay(filters)
+    const homeworkLoadPerSubject = this.#dataMetrics.getHomeworkLoadPerSubject(filters)
+    const completionPerSubject = this.#dataMetrics.getCompletionPerSubject(filters)
+    const averageDurationPerSubjectGivenToExpected = this.#dataMetrics.getAverageDurationPerSubjectGivenToExpected(filters)
+    const averageDurationPerSubjectGivenToDone = this.#dataMetrics.getAverageDurationPerSubjectGivenToDone(filters)
+    const homeworksDuration = this.#dataMetrics.getHomeworksDuration(filters)
 
     const metrics = {
       completionRate,
@@ -40,26 +91,7 @@ export default class ProcessorMetricsService {
       averageDurationPerSubjectGivenToDone,
       homeworksDuration,
     }
-    this.save(metrics)
 
     return new Promise((resolve) => resolve(metrics))
-  }
-
-  save(metrics) {
-    const jsonString = JSON.stringify(metrics, null, 2).replace(/\00/g, '')
-    const targetFile = path.join(this.#publicDir, 'metrics.json')
-    if (this.#verbose) {
-      console.debug(`Writing metrics to '${targetFile}'.`)
-    }
-    if (this.#debug) {
-      console.debug(`Metrics: ${jsonString}`)
-    }
-    try {
-      fs.writeFileSync(targetFile, jsonString, { encoding: 'utf8' })
-    } catch (err) {
-      console.error(err)
-      throw err
-    }
-    console.log(`Metrics written into '${targetFile}'`)
   }
 }

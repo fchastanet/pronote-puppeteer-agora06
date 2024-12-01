@@ -10,127 +10,321 @@ export default class DataMetrics {
     this.#db = databaseConnection
   }
 
-  async getCompletionRate() {
+  getMinMaxDate(userId) {
     const query = `
+      SELECT MIN(assignedDate.date) AS minDate, MAX(dueDate.date) AS maxDate
+      FROM factHomework
+      JOIN userStudentsLink ON factHomework.studentId = userStudentsLink.studentId
+      JOIN dimDates as assignedDate ON factHomework.assignedDateId = assignedDate.dateId
+      JOIN dimDates as dueDate ON factHomework.dueDateId = dueDate.dateId
+      WHERE userStudentsLink.userId = ?
+    `
+    const params = [userId]
+
+    const stmt = this.#db.prepare(query)
+    return stmt.all(...params)?.[0]
+  }
+
+  getCompletionRate(filters) {
+    const {startDate, endDate, students} = filters
+    let query = `
       SELECT
         (SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) AS completionRate
-      FROM factHomework;
+      FROM factHomework
+      JOIN dimDates as assignedDate ON factHomework.assignedDateId = assignedDate.dateId
+      WHERE 1=1
     `
-    const result = await this.#db.get(query)
+    const params = []
+
+    if (startDate) {
+      query += ' AND assignedDate.date >= ?'
+      params.push(startDate)
+    }
+    if (endDate) {
+      query += ' AND assignedDate.date <= ?'
+      params.push(endDate)
+    }
+    if (students && students !== 'ALL') {
+      query += ' AND factHomework.studentId IN (' + students.map(() => '?').join(',') + ')'
+      params.push(...students)
+    }
+
+    const result = this.#db.get(query, ...params)
     return result.completionRate
   }
 
-  async getOnTimeCompletionRate() {
-    const query = `
+  getOnTimeCompletionRate(filters) {
+    const {startDate, endDate, students} = filters
+    let query = `
       SELECT
         (SUM(CASE WHEN completed = 1 AND completionDuration < maxCompletionDuration THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) AS onTimeCompletionRate
       FROM factHomework
-      WHERE completionDuration IS NOT null AND maxCompletionDuration IS NOT null;
+      JOIN dimDates as assignedDate ON factHomework.assignedDateId = assignedDate.dateId
+      WHERE completionDuration IS NOT null AND maxCompletionDuration IS NOT null
     `
-    const result = await this.#db.get(query)
+    const params = []
+
+    if (startDate) {
+      query += ' AND assignedDate.date >= ?'
+      params.push(startDate)
+    }
+    if (endDate) {
+      query += ' AND assignedDate.date <= ?'
+      params.push(endDate)
+    }
+    if (students && students !== 'ALL') {
+      query += ' AND factHomework.studentId IN (' + students.map(() => '?').join(',') + ')'
+      params.push(...students)
+    }
+
+    const result = this.#db.get(query, ...params)
     return result.onTimeCompletionRate
   }
 
-  async getHomeworkLoadPerWeek() {
-    const query = `
+  getHomeworkLoadPerWeek(filters) {
+    const {startDate, endDate, students} = filters
+    let query = `
       SELECT
         assignedDate.date AS date,
         CONCAT(assignedDate.year, '-', assignedDate.week) AS week,
         COUNT(*) AS count
       FROM factHomework
       JOIN dimDates as assignedDate ON factHomework.assignedDateId = assignedDate.dateId
-      GROUP BY assignedDate.year, assignedDate.week
-      ORDER BY assignedDate.year, assignedDate.week;
+      WHERE 1=1
     `
-    const result = await this.#db.all(query)
+    const params = []
+
+    if (startDate) {
+      query += ' AND assignedDate.date >= ?'
+      params.push(startDate)
+    }
+    if (endDate) {
+      query += ' AND assignedDate.date <= ?'
+      params.push(endDate)
+    }
+    if (students && students !== 'ALL') {
+      query += ' AND factHomework.studentId IN (' + students.map(() => '?').join(',') + ')'
+      params.push(...students)
+    }
+
+    query += `
+      GROUP BY assignedDate.year, assignedDate.week
+      ORDER BY assignedDate.year, assignedDate.week
+    `
+
+    const result = this.#db.all(query, ...params)
     return result
   }
 
-  async getHomeworkLoadPerDay() {
-    const query = `
+  getHomeworkLoadPerDay(filters) {
+    const {startDate, endDate, students} = filters
+    let query = `
       SELECT
         STRFTIME('%Y-%m-%d', assignedDate.date) AS day,
         COUNT(*) AS count
       FROM factHomework
       JOIN dimDates as assignedDate ON factHomework.assignedDateId = assignedDate.dateId
-      GROUP BY assignedDate.year, assignedDate.month, assignedDate.day
-      ORDER BY date ASC;
+      WHERE 1=1
     `
-    const result = await this.#db.all(query)
+    const params = []
+
+    if (startDate) {
+      query += ' AND assignedDate.date >= ?'
+      params.push(startDate)
+    }
+    if (endDate) {
+      query += ' AND assignedDate.date <= ?'
+      params.push(endDate)
+    }
+    if (students && students !== 'ALL') {
+      query += ' AND factHomework.studentId IN (' + students.map(() => '?').join(',') + ')'
+      params.push(...students)
+    }
+
+    query += `
+      GROUP BY assignedDate.year, assignedDate.month, assignedDate.day
+      ORDER BY date ASC
+    `
+
+    const result = this.#db.all(query, ...params)
     return result
   }
 
-  async getHomeworkLoadPerWeekDay() {
-    const query = `
+  getHomeworkLoadPerWeekDay(filters) {
+    const {startDate, endDate, students} = filters
+    let query = `
       SELECT
         assignedDate.weekday AS weekday,
         COUNT(*) AS count
       FROM factHomework
       JOIN dimDates as assignedDate ON factHomework.assignedDateId = assignedDate.dateId
-      GROUP BY assignedDate.weekday
-      ORDER BY assignedDate.weekday;
+      WHERE 1=1
     `
-    const result = await this.#db.all(query)
+    const params = []
+
+    if (startDate) {
+      query += ' AND assignedDate.date >= ?'
+      params.push(startDate)
+    }
+    if (endDate) {
+      query += ' AND assignedDate.date <= ?'
+      params.push(endDate)
+    }
+    if (students && students !== 'ALL') {
+      query += ' AND factHomework.studentId IN (' + students.map(() => '?').join(',') + ')'
+      params.push(...students)
+    }
+
+    query += `
+      GROUP BY assignedDate.weekday
+      ORDER BY assignedDate.weekday
+    `
+
+    const result = this.#db.all(query, ...params)
     return result
   }
 
-  async getHomeworkLoadPerSubject() {
-    const query = `
+  getHomeworkLoadPerSubject(filters) {
+    const {startDate, endDate, students} = filters
+    let query = `
       SELECT
         dimSubjects.subject,
         COUNT(*) AS count
       FROM factHomework
       JOIN dimSubjects ON factHomework.subjectId = dimSubjects.subjectId
-      GROUP BY factHomework.subjectId
-      ORDER BY count DESC;
+      JOIN dimDates as assignedDate ON factHomework.assignedDateId = assignedDate.dateId
+      WHERE 1=1
     `
-    const result = await this.#db.all(query)
+    const params = []
+
+    if (startDate) {
+      query += ' AND assignedDate.date >= ?'
+      params.push(startDate)
+    }
+    if (endDate) {
+      query += ' AND assignedDate.date <= ?'
+      params.push(endDate)
+    }
+    if (students && students !== 'ALL') {
+      query += ' AND factHomework.studentId IN (' + students.map(() => '?').join(',') + ')'
+      params.push(...students)
+    }
+
+    query += `
+      GROUP BY factHomework.subjectId
+      ORDER BY count DESC
+    `
+
+    const result = this.#db.all(query, ...params)
     return result
   }
 
-  async getCompletionPerSubject() {
-    const query = `
+  getCompletionPerSubject(filters) {
+    const {startDate, endDate, students} = filters
+    let query = `
       SELECT
         subject,
         (SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) AS completionRate
       FROM factHomework
       JOIN dimSubjects ON factHomework.subjectId = dimSubjects.subjectId
-      GROUP BY factHomework.subjectId
-      ORDER BY completionRate DESC;
+      JOIN dimDates as assignedDate ON factHomework.assignedDateId = assignedDate.dateId
+      WHERE 1=1
     `
-    const result = await this.#db.all(query)
+    const params = []
+
+    if (startDate) {
+      query += ' AND assignedDate.date >= ?'
+      params.push(startDate)
+    }
+    if (endDate) {
+      query += ' AND assignedDate.date <= ?'
+      params.push(endDate)
+    }
+    if (students && students !== 'ALL') {
+      query += ' AND factHomework.studentId IN (' + students.map(() => '?').join(',') + ')'
+      params.push(...students)
+    }
+
+    query += `
+      GROUP BY factHomework.subjectId
+      ORDER BY completionRate DESC
+    `
+
+    const result = this.#db.all(query, ...params)
     return result
   }
 
-  async getAverageDurationPerSubjectGivenToExpected() {
-    const query = `
+  getAverageDurationPerSubjectGivenToExpected(filters) {
+    const {startDate, endDate, students} = filters
+    let query = `
       SELECT
         subject,
         AVG(maxCompletionDuration) AS averageDuration
       FROM factHomework
       JOIN dimSubjects ON factHomework.subjectId = dimSubjects.subjectId
+      JOIN dimDates as assignedDate ON factHomework.assignedDateId = assignedDate.dateId
       WHERE maxCompletionDuration IS NOT null
-      GROUP BY factHomework.subjectId;
     `
-    const result = await this.#db.all(query)
+    const params = []
+
+    if (startDate) {
+      query += ' AND assignedDate.date >= ?'
+      params.push(startDate)
+    }
+    if (endDate) {
+      query += ' AND assignedDate.date <= ?'
+      params.push(endDate)
+    }
+    if (students && students !== 'ALL') {
+      query += ' AND factHomework.studentId IN (' + students.map(() => '?').join(',') + ')'
+      params.push(...students)
+    }
+
+    query += `
+      GROUP BY factHomework.subjectId
+    `
+
+    const result = this.#db.all(query, ...params)
     return result
   }
 
-  async getAverageDurationPerSubjectGivenToDone() {
-    const query = `
+  getAverageDurationPerSubjectGivenToDone(filters) {
+    const {startDate, endDate, students} = filters
+    let query = `
       SELECT
         subject,
         AVG(completionDuration) AS averageDuration
       FROM factHomework
       JOIN dimSubjects ON factHomework.subjectId = dimSubjects.subjectId
-      GROUP BY factHomework.subjectId;
+      JOIN dimDates as assignedDate ON factHomework.assignedDateId = assignedDate.dateId
+      WHERE 1=1
     `
-    const result = await this.#db.all(query)
+    const params = []
+
+    if (startDate) {
+      query += ' AND assignedDate.date >= ?'
+      params.push(startDate)
+    }
+    if (endDate) {
+      query += ' AND assignedDate.date <= ?'
+      params.push(endDate)
+    }
+    if (students && students !== 'ALL') {
+      query += ' AND factHomework.studentId IN (' + students.map(() => '?').join(',') + ')'
+      params.push(...students)
+    }
+
+    query += `
+      GROUP BY factHomework.subjectId
+    `
+
+    const result = this.#db.all(query, ...params)
     return result
   }
 
-  async getHomeworksDuration() {
-    const query = `
+  getHomeworksDuration(filters) {
+    const {startDate, endDate, students} = filters
+    let query = `
        SELECT
         row_number() OVER(ORDER BY factId) AS id,
         assignedDate.date AS assignedDate,
@@ -145,9 +339,27 @@ export default class DataMetrics {
       JOIN dimDates as dueDate ON factHomework.dueDateId = dueDate.dateId
       LEFT JOIN dimDates as completionDate ON factHomework.completedDateId = completionDate.dateId
       WHERE completionState != 3 -- state unknown
-      ORDER BY completionDuration DESC;
     `
-    const result = await this.#db.all(query)
+    const params = []
+
+    if (startDate) {
+      query += ' AND assignedDate.date >= ?'
+      params.push(startDate)
+    }
+    if (endDate) {
+      query += ' AND assignedDate.date <= ?'
+      params.push(endDate)
+    }
+    if (students && students !== 'ALL') {
+      query += ' AND factHomework.studentId IN (' + students.map(() => '?').join(',') + ')'
+      params.push(...students)
+    }
+
+    query += `
+      ORDER BY completionDuration DESC
+    `
+
+    const result = this.#db.all(query, ...params)
     return result
   }
 }

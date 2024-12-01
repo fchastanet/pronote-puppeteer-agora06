@@ -1,34 +1,8 @@
 import './css/main.css'
-import {initDayjs} from './js/utils/dayjs'
-import initCompletionRateChart from './js/charts/completionRateChart'
-import initOnTimeCompletionRateChart from './js/charts/onTimeCompletionRateChart'
-import initHomeworkLoadChart from './js/charts/homeworkLoadChart'
-import initHomeworkLoadPerWeekDayChart from './js/charts/homeworkLoadPerWeekDayChart'
-import initSubjectMetricsChart from './js/charts/subjectMetricsChart'
-import initHomeworksDurationChart from './js/charts/homeworksDurationChart'
-import dayjs from 'dayjs'
 import showToast from './js/components/toastMessage/toastMessage'
 import initLanguageSelector from './js/components/languageSelector/languageSelector'
-import showStudentSelector from './js/components/studentSelector/studentSelector'
 import PushNotifications from './js/pushNotifications/pushNotifications'
-
-const showMetrics = () => {
-  initDayjs(dayjs)
-  fetch(`${window.webServiceUrl}/metrics.json`, {
-    credentials: 'include', // important for sending cookies
-    headers: {'Content-Type': 'application/json'}
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      document.getElementById('dashboard').classList.toggle('hidden', false)
-      initCompletionRateChart(data)
-      initOnTimeCompletionRateChart(data)
-      initHomeworkLoadChart(data)
-      initHomeworkLoadPerWeekDayChart(data)
-      initSubjectMetricsChart(data)
-      initHomeworksDurationChart(data)
-    })
-}
+import Dashboard from './js/dashboard/dashboard'
 
 const login = async () => {
   const login = document.getElementById('login').value
@@ -106,8 +80,8 @@ window.addEventListener('userLoggedIn', (event) => {
   const welcomeMessage = document.getElementById('welcomeMessage')
   welcomeMessage.classList.toggle('hidden', false)
   welcomeMessage.textContent = `Welcome, ${event.detail.welcomeMessage}`
-  showStudentSelector()
-  showMetrics()
+  const dashboard = new Dashboard()
+  dashboard.init()
 })
 
 window.webServiceUrl = ''

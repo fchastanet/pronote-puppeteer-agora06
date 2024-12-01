@@ -37,7 +37,7 @@ export default class LoginController {
     return authData
   }
 
-  logoutAction(req, res) {
+  async logoutAction(req, res) {
     if (!req.session || !req.session.user) {
       console.info('Logout failed: Not logged in')
       return res.status(200).json({message: 'Not logged in'})
@@ -54,7 +54,7 @@ export default class LoginController {
     })
   }
 
-  checkLoggedInAction = async (req, res) => {
+  async checkLoggedInAction(req, res) {
     const sessionUser = req?.session.user
     if (!sessionUser) {
       if (this.#verbose) {

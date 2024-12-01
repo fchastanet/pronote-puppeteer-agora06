@@ -1,6 +1,7 @@
 export default {
   students: {
     student1: {
+      // name should match the name present in results/<fullName>/<date>/studentInfo.json
       name: 'student1',
       firstName: 'firstName1',
       lastName: 'lastName1',

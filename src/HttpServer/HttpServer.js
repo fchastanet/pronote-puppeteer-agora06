@@ -4,6 +4,7 @@ import cors from 'cors'
 import bodyParser from 'body-parser'
 import PushSubscriptionController from '#pronote/Controllers/PushSubscriptionController.js'
 import LoginController from '#pronote/Controllers/LoginController.js'
+import DashboardController from '#pronote/Controllers/DashboardController.js'
 import SqliteStoreFactory from 'better-sqlite3-session-store'
 import cookieParser from 'cookie-parser'
 import UserController from '#pronote/Controllers/UserController.js'
@@ -17,6 +18,8 @@ export default class HttpServer {
   #loginController
   /** @type {UserController} */
   #userController
+  /** @type {DashboardController} */
+  #dashboardController
   #resultsDir
   #port
   #origin
@@ -28,7 +31,7 @@ export default class HttpServer {
   #debug
 
   constructor({
-    pushSubscriptionController, loginController,
+    pushSubscriptionController, loginController, dashboardController,
     userController,
     resultsDir, port = 3001, origin,
     sessionDatabaseFile,
@@ -41,6 +44,7 @@ export default class HttpServer {
     this.#resultsDir = resultsDir
     this.#pushSubscriptionController = pushSubscriptionController
     this.#loginController = loginController
+    this.#dashboardController = dashboardController
     this.#userController = userController
     this.#origin = origin
     this.#sessionExpirationInMs = sessionExpirationInMs
@@ -133,14 +137,6 @@ export default class HttpServer {
       checkSessionCookie,
       this.#pushSubscriptionController.deleteSubscription.bind(this.#pushSubscriptionController)
     )
-    app.get(
-      '/metrics.json',
-      cors(corsOptions),
-      checkSessionCookie,
-      (req, res) => {
-        res.sendFile(`${this.#resultsDir}/metrics.json`)
-      }
-    )
     app.post(
       '/login',
       cors(corsOptions),
@@ -160,10 +156,17 @@ export default class HttpServer {
     )
 
     app.get(
-      '/students',
+      '/dashboardFiltersConfig',
       cors(corsOptions),
       checkSessionCookie,
-      this.#userController.getStudentsAction.bind(this.#userController)
+      this.#dashboardController.dashboardFiltersConfigAction.bind(this.#dashboardController)
+    )
+
+    app.get(
+      '/dashboardMetrics',
+      cors(corsOptions),
+      checkSessionCookie,
+      this.#dashboardController.dashboardMetricsAction.bind(this.#dashboardController)
     )
 
     app.listen(this.#port, '0.0.0.0', () => {

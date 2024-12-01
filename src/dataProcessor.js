@@ -47,7 +47,6 @@ const parseCommandOptions = (argv) => {
     .option('-v, --verbose', 'Activates verbose mode (details loaded pages, ...).', false)
     .option('--skip-pronote', 'Skips pronote data retrieval.', false)
     .option('--skip-data-process', 'Skips data process.', false)
-    .option('--skip-data-metrics', 'Skips data metrics.', false)
     .option('--skip-notifications', 'Skips notifications generation.', false)
     .parse(argv)
 
@@ -103,21 +102,11 @@ const main = async () => {
     commandOptions.verbose
   )
 
-  const dataMetrics = new DataMetrics(databaseConnection)
-  const processorMetricsService = new ProcessorMetricsService(
-    dataMetrics,
-    resultsDir,
-    commandOptions.debug,
-    commandOptions.verbose
-  )
-
   const processController = new ProcessController({
     pronoteRetrievalService,
     processorDataService,
-    processorMetricsService,
     skipPronoteDataRetrieval: commandOptions.skipPronote,
     skipDataProcess: commandOptions.skipDataProcess,
-    skipDataMetrics: commandOptions.skipDataMetrics,
     verbose: commandOptions.verbose,
     studentsInitializationFile: path.join(process.cwd(), '.students.js'),
   })
