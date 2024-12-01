@@ -8,6 +8,8 @@ import initHomeworksDurationChart from '../charts/homeworksDurationChart'
 import initStudentSelector from '../components/filters/studentSelector'
 import initDatesSelector from '../components/filters/dates'
 import dayjs from 'dayjs'
+import showToast from '../components/toastMessage/toastMessage'
+import {CustomError} from '../utils/utils'
 
 class Dashboard {
   constructor() {
@@ -87,25 +89,36 @@ class Dashboard {
   }
 
   async #refreshedMetrics(filters) {
-    fetch(`${window.webServiceUrl}/dashboardMetrics?${filters}`, {
-      credentials: 'include', // important for sending cookies
-      headers: {'Content-Type': 'application/json'}
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        return response.json()
+    try {
+      const response = await fetch(`${window.webServiceUrl}/dashboardMetrics?${filters}`, {
+        credentials: 'include', // important for sending cookies
+        headers: {'Content-Type': 'application/json'}
       })
-      .then((data) => {
-        document.getElementById('dashboard').classList.toggle('hidden', false)
-        initCompletionRateChart(data)
-        initOnTimeCompletionRateChart(data)
-        initHomeworkLoadChart(data)
-        initHomeworkLoadPerWeekDayChart(data)
-        initSubjectMetricsChart(data)
-        initHomeworksDurationChart(data)
-      })
+
+      if ([200, 400].indexOf(response.status) === -1) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const json = await response.json()
+      if (response.status === 400) {
+        throw new CustomError(json.message)
+      }
+
+      document.getElementById('dashboard').classList.toggle('hidden', false)
+      showToast('Dashboard filters updated', true)
+      initCompletionRateChart(json)
+      initOnTimeCompletionRateChart(json)
+      initHomeworkLoadChart(json)
+      initHomeworkLoadPerWeekDayChart(json)
+      initSubjectMetricsChart(json)
+      initHomeworksDurationChart(json)
+    } catch (error) {
+      console.error('Error fetching dashboard metrics:', error)
+      if (error instanceof CustomError) {
+        showToast(`Error fetching dashboard metrics : ${error.message}`, false)
+      } else {
+        showToast('Error fetching dashboard metrics', false)
+      }
+    }
   }
 
 }

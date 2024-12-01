@@ -12,7 +12,7 @@ export default class DataMetrics {
 
   getMinMaxDate(userId) {
     const query = `
-      SELECT MIN(assignedDate.date) AS minDate, MAX(dueDate.date) AS maxDate
+      SELECT date(MIN(assignedDate.date)) AS minDate, date(MAX(dueDate.date)) AS maxDate
       FROM factHomework
       JOIN userStudentsLink ON factHomework.studentId = userStudentsLink.studentId
       JOIN dimDates as assignedDate ON factHomework.assignedDateId = assignedDate.dateId

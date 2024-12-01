@@ -45,8 +45,13 @@ export default class ProcessorMetricsService {
       throw new Error('Invalid date range')
     }
     const minMaxDates = this.#dataMetrics.getMinMaxDate(userId)
-    if (decodedStartDate.isBefore(minMaxDates.minDate) || decodedEndDate.isAfter(minMaxDates.maxDate)) {
-      throw new Error('Date range out of bounds')
+    const minDate = dayjs(minMaxDates.minDate)
+    const maxDate = dayjs(minMaxDates.maxDate)
+    if (decodedStartDate.isBefore(minDate)) {
+      throw new Error(`Start date cannot be before ${minDate.format('YYYY-MM-DD')}`)
+    }
+    if (decodedEndDate.isAfter(maxDate)) {
+      throw new Error(`End date cannot be after ${maxDate.format('YYYY-MM-DD')}`)
     }
     const decodedStudents = JSON.parse(students)
     if (students !== 'ALL') {
