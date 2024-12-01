@@ -95,13 +95,14 @@ It is served by default on <http://localhost:3001>.
 
 The client side can be launched in 2 different ways:
 
-- development: using HMR by launching `yarn run dev`
+- development: using HMR by launching `yarn run frontendServer-dev`
 
   - served by default on <http://localhost:3000>
   - will contact server url provided by `VITE_WEBSERVICE_URL` env
     variable (defaults to <http://localhost:3001>)
   - `VITE_WEBSERVICE_URL` env variable is injected in index.html
     using the file `web/.env.development`
+  - if OOM error appears try to use `export NODE_OPTIONS=--max-old-space-size=8192`
 
 - production:
 
