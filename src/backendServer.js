@@ -40,11 +40,14 @@ const parseCommandOptions = (argv) => {
 }
 
 const main = async () => {
-  dotenv.config()
+  const envFile = process.env.ENV_FILE ?? '.env'
+  console.log('loading envFile', envFile)
+  dotenv.config({path: path.join(process.cwd(), envFile)})
 
   const databaseFile = process.env.SQLITE_DATABASE_FILE
 
   const resultsDir = path.join(process.cwd(), process.env.RESULTS_DIR)
+  const publicDir = path.join(process.cwd(), process.env.PUBLIC_DIR)
   const commandOptions = parseCommandOptions(process.argv)
 
   databaseConnection = new DatabaseConnection(databaseFile, commandOptions.debug)
@@ -81,6 +84,7 @@ const main = async () => {
     userController,
     dashboardController,
     resultsDir,
+    publicDir,
     port: process.env?.SERVER_PORT ?? 3001,
     origin: process.env?.ASSETS_URL ?? 'http://localhost:3000',
     sessionDatabaseFile: process.env?.SESSION_DATABASE_FILE,

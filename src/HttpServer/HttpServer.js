@@ -8,6 +8,7 @@ import DashboardController from '#pronote/Controllers/DashboardController.js'
 import SqliteStoreFactory from 'better-sqlite3-session-store'
 import cookieParser from 'cookie-parser'
 import UserController from '#pronote/Controllers/UserController.js'
+import path from 'path'
 
 import {default as SqliteDatabase} from 'better-sqlite3'
 
@@ -21,6 +22,7 @@ export default class HttpServer {
   /** @type {DashboardController} */
   #dashboardController
   #resultsDir
+  #publicDir
   #port
   #origin
   #sessionExpirationInMs
@@ -33,7 +35,7 @@ export default class HttpServer {
   constructor({
     pushSubscriptionController, loginController, dashboardController,
     userController,
-    resultsDir, port = 3001, origin,
+    resultsDir, publicDir, port = 3001, origin,
     sessionDatabaseFile,
     sessionExpirationInMs = 900000,
     sessionSecret,
@@ -42,6 +44,7 @@ export default class HttpServer {
   }) {
     this.#port = port
     this.#resultsDir = resultsDir
+    this.#publicDir = publicDir
     this.#pushSubscriptionController = pushSubscriptionController
     this.#loginController = loginController
     this.#dashboardController = dashboardController
@@ -83,6 +86,9 @@ export default class HttpServer {
 
     app.set('etag', false)
     app.set('lastModified', false)
+
+    // Serve static files from the dist folder
+    app.use(express.static(this.#publicDir))
 
     // Configure cookie parser middleware
     app.use(cookieParser())

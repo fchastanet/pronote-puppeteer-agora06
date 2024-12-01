@@ -10,8 +10,10 @@
   - [2.4. Backend Server](#24-backend-server)
   - [2.5. Client](#25-client)
 - [3. Serve the project](#3-serve-the-project)
-  - [3.1. Alternative to pinggy](#31-alternative-to-pinggy)
-  - [3.2. NodeJs hosting](#32-nodejs-hosting)
+  - [3.1. development mode](#31-development-mode)
+  - [3.2. production mode](#32-production-mode)
+  - [3.3. Alternative to pinggy](#33-alternative-to-pinggy)
+  - [3.4. NodeJs hosting](#34-nodejs-hosting)
 - [4. Results directory](#4-results-directory)
   - [4.1. cahierDeTexte-courses.json](#41-cahierdetexte-coursesjson)
   - [4.2. cahierDeTexte-travailAFaire.json](#42-cahierdetexte-travailafairejson)
@@ -113,34 +115,66 @@ The client side can be launched in 2 different ways:
 
 ## 3. Serve the project
 
+### 3.1. development mode
+
 Launch data process (retrieve pronote data + process data):
 `yarn run dataProcessor`
 
 Launch web server:
 `yarn run frontendServer-dev`
-or
-`yarn run frontendServer-prod`
 
 Launch backend server (api):
 `yarn run backendServer`
+
+### 3.2. production mode
+
+backend server will serve both api and frontend static files.
+
+Launch data process (retrieve pronote data + process data):
+`yarn run dataProcessor`
+
+Create `.env.prod` based on `.env.template`
+Example:
+
+```text
+RESULTS_DIR=results
+PUBLIC_DIR=dist
+
+SQLITE_DATABASE_FILE=db/pronote.sqlite
+
+SESSION_DATABASE_FILE=db/sessions.sqlite
+SESSION_EXPIRATION_IN_MS=900000
+SESSION_SECRET=pleaseChangeMe
+SESSION_COOKIE_SECURE=0
+
+NOTIFICATIONS_RATE_LIMIT=5
+
+SERVER_PORT=3001
+WEBSERVICE_URL=http://localhost:3001
+ASSETS_PORT=3001
+ASSETS_URL=http://localhost:3001
+```
+
+Launch web server (+api):
+`ENV_FILE=.env.prod yarn run backendServer`
 
 Launch ssh tunnel to get a https url in order to be able to subscribe to notification service:
 <https://pinggy.io/blog/best_ngrok_alternatives/>
 
 ```bash
 ssh -p 443 \
-  -L4300:localhost:3000 \
+  -L4300:localhost:3001 \
   -o StrictHostKeyChecking=no \
   -o ServerAliveInterval=30 \
-  -t -R0:localhost:3000 eu.a.pinggy.io x:https
+  -t -R0:localhost:3001 eu.a.pinggy.io x:https
 ```
 
-### 3.1. Alternative to pinggy
+### 3.3. Alternative to pinggy
 
 [Cloudflare](https://www.cloudflare.com/en-gb/plans/developer-platform/)
 [awesome-tunneling](https://github.com/anderspitman/awesome-tunneling)
 
-### 3.2. NodeJs hosting
+### 3.4. NodeJs hosting
 
 [Vercel](https://vercel.com/) free but limited in number of cron
 

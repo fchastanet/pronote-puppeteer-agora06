@@ -28,7 +28,6 @@
   "scripts": {
     "dataProcessor": "node ./src/dataProcessor.js",
     "backendServer": "node ./src/backendServer.js",
-    "frontendServer-prod": "node ./src/frontendServer.js",
     "frontendServer-dev": "vite",
     "frontendServer-build": "vite build",
     "frontendServer-preview": "vite preview"
