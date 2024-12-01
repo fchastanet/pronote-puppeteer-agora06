@@ -1,0 +1,30 @@
+@mixin light-dark {
+  background-color: light-dark(#333, #f4f4f4);
+  color: light-dark(#f2f2f2, black);
+}
+
+.dashboardFilters {
+    display: flex;
+    justify-content: center;
+    margin: 20px;
+    gap: 10px;
+
+    &-label {
+      @include light-dark;
+    }
+    &-dateRangeSelector {
+      @include light-dark;
+    }
+
+    &-studentSelector {
+      margin-right: 20px;
+      height: 26px;
+      @include light-dark;
+    }
+
+    &-date {
+      @include light-dark;
+    }
+
+}
+

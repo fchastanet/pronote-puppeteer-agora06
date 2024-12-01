@@ -6,49 +6,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Homework Metrics Dashboard</title>
   <link rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0&icon_names=login,logout,notifications,notifications_off" />
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0&icon_names=date_range,login,logout,notifications,notifications_off" />
 </head>
 
 <body>
   <div id="app" data-web-service-url="%VITE_WEBSERVICE_URL%"></div>
   <script type="module" src="/main.js"></script>
   <div class="navbar">
-    <a href="#" data-translate="home"></a>
-    <a href="#" data-translate="metrics"></a>
-    <a href="#" data-translate="settings"></a>
-    <span id="welcomeMessage" class="welcomeMessage hidden"></span>
-    <select id="languageSelector" class="languageSelector">
+    <a href="#" data-translate="home" class="navbar-link"></a>
+    <a href="#" data-translate="metrics" class="navbar-link"></a>
+    <a href="#" data-translate="settings" class="navbar-link"></a>
+    <span id="welcomeMessage" class="navbar-welcomeMessage hidden"></span>
+    <select id="languageSelector" class="navbar-languageSelector">
       <option value="en">English</option>
       <option value="fr">Français</option>
     </select>
-    <div id="loginForm" class="login">
-      <div class="loginFields">
+    <div id="loginForm" class="navbar-login">
+      <div class="navbar-login-loginFields">
         <span data-translate="login"></span>
         <input type="text" id="login" placeholder="" />
         <input type="password" id="password" placeholder="" />
       </div>
-      <button id="loginButton" class="button loginButton">
+      <button id="loginButton" class="navbar-button navbar-login-loginButton">
         <span class="material-symbols-outlined">
           login
         </span>
         <span data-translate="login"></span>
       </button>
     </div>
-    <button id="subscribeButton" class="button notificationsButton subscribeNotificationsButton hidden"
+    <button id="subscribeButton"
+      class="navbar-button navbar-notificationsButton navbar-subscribeNotificationsButton hidden"
       title="you will not receive notifications until you click on that button">
       <span class="material-symbols-outlined">
         notifications_off
       </span>
       <span data-translate="subscribe"></span>
     </button>
-    <button id="unsubscribeButton" class="button notificationsButton unsubscribeNotificationsButton hidden"
+    <button id="unsubscribeButton"
+      class="navbar-button navbar-notificationsButton navbar-unsubscribeNotificationsButton hidden"
       title="you are currently subscribed, you will receive notifications, unless you click on that button">
       <span class="material-symbols-outlined">
         notifications
       </span>
       <span data-translate="subscribed"></span>
     </button>
-    <button id="logoutButton" class="button logoutButton hidden">
+    <button id="logoutButton" class="navbar-button navbar-login-logoutButton hidden">
       <span class="material-symbols-outlined">
         logout
       </span>
@@ -59,20 +61,22 @@
   <div id="dashboard" class="hidden">
     <h1>Homework Metrics Dashboard (%MODE%)</h1>
     <div id="dashboardFilters" class="dashboardFilters">
-      <label for="studentSelector">
+      <label for="studentSelector" class="dashboardFilters-label">
         <span data-translate="student"></span>
+        <select id="studentSelector" class="dashboardFilters-studentSelector hidden"></select>
       </label>
-      <select id="studentSelector" class="studentSelector hidden"></select>
-      <label for="startDateSelector">
-        <span data-translate="startDate"></span>
-      </label>
-      <input type="date" id="startDateSelector" />
-      <label for="endDateSelector">
-        <span data-translate="endDate"></span>
-      </label>
-      <input type="date" id="endDateSelector" />
+      <div id="dateRangeSelector" class="dashboardFilters-dateRangeSelector">
+        <span class="material-symbols-outlined">
+          date_range
+        </span>
+        <input type="date" id="startDateSelector" class="dashboardFilters-date dashboardFilters-startDate"
+          data-title-translate="startDate" />
+        <input type="date" id="endDateSelector" class="dashboardFilters-date dashboardFilters-endDate"
+          data-title-translate="endDate" />
+      </div>
       <button id="refreshButton" class="button refreshButton">
         <span data-translate="refresh"></span>
+      </button>
     </div>
     <div class="dashboardGrid" class="hidden">
       <div class="chart-container" id="completionRateChart"></div>

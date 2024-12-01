@@ -1,4 +1,8 @@
-import './css/main.css'
+import './css/main.scss'
+import './css/dashboard-filters.scss'
+import './css/dashboard.scss'
+import './css/navbar.scss'
+
 import showToast from './js/components/toastMessage/toastMessage'
 import initLanguageSelector from './js/components/languageSelector/languageSelector'
 import PushNotifications from './js/pushNotifications/pushNotifications'

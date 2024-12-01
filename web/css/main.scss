@@ -1,0 +1,36 @@
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  margin: 0;
+  padding: 0;
+  background-color: light-dark(black, #f4f4f4);
+}
+
+h1 {
+  color: light-dark(#f4f4f4, black);
+  text-align: center;
+  margin: 20px 0;
+}
+
+.material-symbols-outlined {
+  vertical-align: bottom;
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;  /* Preferred icon size */
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+}
+
+.hidden {
+  display: none !important;
+}

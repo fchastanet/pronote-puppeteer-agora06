@@ -1,0 +1,37 @@
+
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+.chart-container {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  height: 400px;
+}
+#homeworksDurationChart {
+  grid-column: span 3;
+}
+.descriptionEllipsis {
+  display: inline-block;
+  width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tooltip.homeworkDescription {
+  display: block;
+  white-space: preserve-spaces;
+  word-wrap: break-word;
+  width: 500px;
+}
+.bullet {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 10px;
+  margin-right: 4px;
+}

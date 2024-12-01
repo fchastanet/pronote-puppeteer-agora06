@@ -16,6 +16,10 @@ const initLanguageSelector = () => {
     const key = el.getAttribute('data-translate')
     el.textContent = translations[userLang][key]
   })
+  document.querySelectorAll('[data-title-translate]').forEach((el) => {
+    const key = el.getAttribute('data-title-translate')
+    el.title = translations[userLang][key]
+  })
 
   document.getElementById('login').placeholder = translations[userLang].loginPlaceholder
   document.getElementById('password').placeholder = translations[userLang].passwordPlaceholder
