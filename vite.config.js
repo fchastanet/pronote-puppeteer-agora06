@@ -9,6 +9,13 @@ export default defineConfig({
     outDir: '../dist',
     emptyOutDir: true,
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        api: 'modern-compiler'
+      }
+    }
+  },
   server: {
     open: 'index.html',
     port: ASSETS_PORT,
