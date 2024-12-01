@@ -66,14 +66,25 @@
         <select id="studentSelector" class="dashboardFilters-studentSelector hidden"></select>
       </label>
       <div id="dateRangeSelector" class="dashboardFilters-dateRangeSelector">
-        <span class="material-symbols-outlined">
-          date_range
-        </span>
-        <input type="date" id="startDateSelector" class="dashboardFilters-date dashboardFilters-startDate"
-          data-title-translate="startDate" />
-        <input type="date" id="endDateSelector" class="dashboardFilters-date dashboardFilters-endDate"
-          data-title-translate="endDate" />
+        <div>
+          <span class="material-symbols-outlined">
+            date_range
+          </span>
+          <input type="date" id="startDateSelector" class="dashboardFilters-date dashboardFilters-startDate"
+            data-title-translate="startDate" />
+          <input type="date" id="endDateSelector" class="dashboardFilters-date dashboardFilters-endDate"
+            data-title-translate="endDate" />
+        </div>
+        <div class="dashboardFilters-quickFilters">
+          <button id="lastMonthButton" class="button lastMonthButton">
+            <span data-translate="lastMonthFilter"></span>
+          </button>
+          <button id="fullYearButton" class="button fullYearButton">
+            <span data-translate="fullYearFilter"></span>
+          </button>
+        </div>
       </div>
+
       <button id="refreshButton" class="button refreshButton">
         <span data-translate="refresh"></span>
       </button>

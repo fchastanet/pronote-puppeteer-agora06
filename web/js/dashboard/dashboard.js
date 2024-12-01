@@ -52,6 +52,12 @@ class Dashboard {
     const dashboard = document.getElementById('dashboard')
     const dashboardFilters = document.getElementById('dashboardFilters')
     const dashboardGrid = document.getElementById('dashboardGrid')
+    const startDateSelector = document.getElementById('startDateSelector')
+    const endDateSelector = document.getElementById('endDateSelector')
+    const refreshButton = document.getElementById('refreshButton')
+    let minDate = null
+    let maxDate = null
+
     window.addEventListener('userLoggedIn', () => {
       dashboard.classList.toggle('hidden', false)
     })
@@ -62,6 +68,8 @@ class Dashboard {
 
     })
     window.addEventListener('filtersLoaded', async (event) => {
+      minDate = event.detail.minDate
+      maxDate = event.detail.maxDate
       const filters = this.#convertFiltersToQueryParams({
         startDate: event.detail.startDate,
         endDate: event.detail.endDate,
@@ -69,7 +77,22 @@ class Dashboard {
       })
       this.#refreshedMetrics(filters)
     })
-    const refreshButton = document.getElementById('refreshButton')
+
+    const lastMonthButton = document.getElementById('lastMonthButton')
+    lastMonthButton.addEventListener('click', () => {
+      const lastMonth = dayjs().subtract(1, 'month')
+      startDateSelector.value = lastMonth.startOf('month').format('YYYY-MM-DD')
+      endDateSelector.value = lastMonth.endOf('month').format('YYYY-MM-DD')
+      refreshButton.click()
+    })
+
+    const fullYearButton = document.getElementById('fullYearButton')
+    fullYearButton.addEventListener('click', () => {
+      startDateSelector.value = minDate
+      endDateSelector.value = maxDate
+      refreshButton.click()
+    })
+
     refreshButton.addEventListener('click', () => {
       const startDateSelector = document.getElementById('startDateSelector')
       const endDateSelector = document.getElementById('endDateSelector')
