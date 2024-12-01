@@ -1,3 +1,4 @@
+import {fetchWithAuth} from '../utils/fetchWithAuth.js'
 import {timeout} from '../utils/utils.js'
 
 class PushNotifications {
@@ -50,29 +51,11 @@ class PushNotifications {
     }
   }
 
-  async #deleteRemoteSubscription() {
-    try {
-      const response = await fetch(`${window.webServiceUrl}/subscription`, {
-        method: 'DELETE',
-        credentials: 'include', // important for sending cookies
-        headers: {
-          'content-type': 'application/json',
-        },
-      })
-      if (response.ok) {
-        console.log('Remote subscription deleted')
-      } else {
-        throw new Error('Error deleting remote subscription')
-      }
-    } catch (error) {
-      console.error('Error deleting remote subscription:', error)
-      throw error
-    }
-  }
-
   async #unsubscribe() {
     try {
-      await this.#deleteRemoteSubscription()
+      await fetchWithAuth(`${window.webServiceUrl}/subscription`, {
+        method: 'DELETE',
+      })
     } catch (error) {
       throw new Error('Error unsubscribing', error)
     }
@@ -166,19 +149,9 @@ class PushNotifications {
 
   async #getPublicVapidKey() {
     try {
-      const response = await fetch(
+      const keys = await fetchWithAuth(
         `${window.webServiceUrl}/publicVapidKey.json?${Date.now()}`,
-        {
-          credentials: 'include', // important for sending cookies
-          headers: {'Content-Type': 'application/json'}
-        }
       )
-      if (response.ok) {
-        console.log('Remote subscription deleted')
-      } else {
-        throw new Error('Error getting public VAPID key')
-      }
-      const keys = await response.json()
       return keys.publicVapidKey
     } catch (error) {
       console.error('Error getting public VAPID key:', error)
@@ -188,21 +161,19 @@ class PushNotifications {
 
   async #remoteSubscription(subscription) {
     try {
-      const response = await fetch(
+      const response = await fetchWithAuth(
         `${window.webServiceUrl}/subscription`,
         {
           method: 'POST',
-          credentials: 'include', // important for sending cookies
           body: JSON.stringify({new: subscription}),
-          headers: {
-            'Content-Type': 'application/json',
-          },
+        },
+        {
+          decodeJsonResponse: false,
+          throwErrorOnResponseKO: true
         }
       )
       if (response.ok) {
         console.log('Subscription sent')
-      } else {
-        throw new Error('Error sending subscription')
       }
     } catch (error) {
       console.error('Error sending subscription:', error)

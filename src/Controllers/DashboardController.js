@@ -28,7 +28,7 @@ export default class DashboardController {
     }
     try {
       const metrics = await this.#processorMetricsService.process(filters)
-      res.json(metrics)
+      res.status(200).json(metrics)
     } catch (error) {
       console.error('Error fetching metrics:', error)
       res.status(500).json({message: 'Internal Server Error'})

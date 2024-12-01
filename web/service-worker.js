@@ -1,3 +1,5 @@
+import {fetchWithAuth} from './js/utils/fetchWithAuth'
+
 let webServiceUrl = null
 
 self.addEventListener('install', function () {
@@ -33,17 +35,20 @@ self.addEventListener(
       },
     })
     const subscription = self.registration.pushManager.subscribe(event.oldSubscription.options).then((subscription) =>
-      fetch(`${webServiceUrl}/subscription`, {
-        method: 'post',
-        credentials: 'include', // important for sending cookies
-        headers: {
-          'Content-type': 'application/json',
+      fetchWithAuth(
+        `${webServiceUrl}/subscription`,
+        {
+          method: 'post',
+          body: JSON.stringify({
+            old: getPayload(event.oldSubscription),
+            new: getPayload(subscription),
+          }),
         },
-        body: JSON.stringify({
-          old: getPayload(event.oldSubscription),
-          new: getPayload(subscription),
-        }),
-      })
+        {
+          decodeJsonResponse: false,
+          throwErrorOnResponseKO: true
+        }
+      )
     )
     event.waitUntil(subscription)
   },

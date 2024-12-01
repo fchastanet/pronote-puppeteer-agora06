@@ -37,7 +37,7 @@ export default class HttpServer {
     sessionDatabaseFile,
     sessionExpirationInMs = 900000,
     sessionSecret,
-    cookieOptions = false,
+    cookieOptions = {},
     debug = false
   }) {
     this.#port = port
@@ -50,14 +50,12 @@ export default class HttpServer {
     this.#sessionExpirationInMs = sessionExpirationInMs
     this.#sessionSecret = sessionSecret
     this.#cookieOptions = {
-      ...{
-        secure: process.env.NODE_ENV === 'production',
-        // lax needed for cross-site cookies
-        sameSite:
-          process.env.NODE_ENV === 'production' ? 'Strict' : 'lax',
-        maxAge: this.#sessionExpirationInMs,
-        httpOnly: true
-      },
+      secure: process.env.NODE_ENV === 'production',
+      // lax needed for cross-site cookies
+      sameSite:
+        process.env.NODE_ENV === 'production' ? 'Strict' : 'lax',
+      maxAge: this.#sessionExpirationInMs,
+      httpOnly: true,
       ...cookieOptions
     }
     this.#sessionDatabaseFile = sessionDatabaseFile
@@ -81,11 +79,13 @@ export default class HttpServer {
 
   start() {
     const app = express()
+    const SqliteStore = SqliteStoreFactory(session)
+
+    app.set('etag', false)
+    app.set('lastModified', false)
 
     // Configure cookie parser middleware
     app.use(cookieParser())
-
-    const SqliteStore = SqliteStoreFactory(session)
 
     // Configure CORS to accept credentials
     const corsOptions = {

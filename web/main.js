@@ -7,6 +7,7 @@ import showToast from './js/components/toastMessage/toastMessage'
 import initLanguageSelector from './js/components/languageSelector/languageSelector'
 import PushNotifications from './js/pushNotifications/pushNotifications'
 import Dashboard from './js/dashboard/dashboard'
+import {fetchWithAuth} from './js/utils/fetchWithAuth'
 
 const login = async () => {
   const login = document.getElementById('login').value
@@ -59,18 +60,13 @@ const logout = async () => {
 
 const checkLoggedIn = async () => {
   try {
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${window.webServiceUrl}/checkLoggedIn`,
-      {
-        method: 'GET',
-        credentials: 'include', // important for sending cookies
-        headers: {'Content-Type': 'application/json'},
-      }
+      {method: 'GET'}
     )
-    const result = await response.json()
 
-    if (response.ok && result?.authenticated) {
-      const event = new CustomEvent('userLoggedIn', {detail: result})
+    if (response?.authenticated) {
+      const event = new CustomEvent('userLoggedIn', {detail: response})
       window.dispatchEvent(event)
     }
   } catch (error) {

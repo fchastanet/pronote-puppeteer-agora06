@@ -10,32 +10,24 @@ import initDatesSelector from '../components/filters/dates'
 import dayjs from 'dayjs'
 import showToast from '../components/toastMessage/toastMessage'
 import {CustomError} from '../utils/utils'
+import {fetchWithAuth} from '../utils/fetchWithAuth'
 
 class Dashboard {
   constructor() {
   }
 
-  #loadFiltersConfig() {
-    fetch(`${window.webServiceUrl}/dashboardFiltersConfig`, {
-      credentials: 'include', // important for sending cookies
-      headers: {'Content-Type': 'application/json'}
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        return response.json()
-      })
-      .then((data) => {
-        const dashboard = document.getElementById('dashboard')
-        dashboard.classList.toggle('hidden', false)
-        const event = new CustomEvent('filtersLoaded', {detail: data})
-        window.dispatchEvent(event)
-        const dashboardFilters = document.getElementById('dashboardFilters')
-        dashboardFilters.classList.toggle('hidden', false)
-      }).catch((error) => {
-        console.error('Error fetching dashboard filters config:', error)
-      })
+  async #loadFiltersConfig() {
+    try {
+      const data = await fetchWithAuth(`${window.webServiceUrl}/dashboardFiltersConfig`)
+      const dashboard = document.getElementById('dashboard')
+      dashboard.classList.toggle('hidden', false)
+      const event = new CustomEvent('filtersLoaded', {detail: data})
+      window.dispatchEvent(event)
+      const dashboardFilters = document.getElementById('dashboardFilters')
+      dashboardFilters.classList.toggle('hidden', false)
+    } catch (error) {
+      console.error('Error fetching dashboard filters config:', error)
+    }
   }
 
   #convertFiltersToQueryParams(filters) {
@@ -113,11 +105,14 @@ class Dashboard {
 
   async #refreshedMetrics(filters) {
     try {
-      const response = await fetch(`${window.webServiceUrl}/dashboardMetrics?${filters}`, {
-        credentials: 'include', // important for sending cookies
-        headers: {'Content-Type': 'application/json'}
-      })
-
+      const response = await fetchWithAuth(
+        `${window.webServiceUrl}/dashboardMetrics?${filters}`,
+        {},
+        {
+          decodeJsonResponse: false,
+          throwErrorOnResponseKO: false
+        }
+      )
       if ([200, 400].indexOf(response.status) === -1) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
