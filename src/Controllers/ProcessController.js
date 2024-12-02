@@ -87,7 +87,7 @@ export default class ProcessController {
     this.#logger.debug('Pronote data warehouse processed.')
   }
 
-  getLogs(processId) {
-    return this.#logger.getLogs(processId)
+  getLogs(processId, format = 'json') {
+    return this.#logger.getLogs(processId, format)
   }
 }

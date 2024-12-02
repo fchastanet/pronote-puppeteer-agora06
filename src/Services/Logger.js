@@ -1,3 +1,7 @@
+export const LOG_FORMAT = {
+  JSON: 'json',
+  TEXT: 'text'
+}
 
 export default class Logger {
   #dataWarehouse = null
@@ -43,7 +47,11 @@ export default class Logger {
     console.error(this.#log('error', ...args))
   }
 
-  getLogs(processId) {
-    return this.#dataWarehouse.getProcessLogs(processId)
+  getLogs(processId, format = LOG_FORMAT.JSON) {
+    const logs = this.#dataWarehouse.getProcessLogs(processId)
+    if (format === LOG_FORMAT.TEXT) {
+      return logs.map((log) => `[${log.timestamp}] ${log.level}: ${log.message}`).join('\n')
+    }
+    return logs
   }
 }

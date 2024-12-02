@@ -236,7 +236,15 @@ export default class HttpServer {
       cors(corsOptions),
       checkBearerToken,
       (req, res) => {
-        const logs = this.#processController.getLogs(req.params.processId)
+        const format = req.query?.format ?? 'json'
+        const logs = this.#processController.getLogs(
+          req.params.processId,
+          format,
+        )
+        if (format === 'text') {
+          res.set('Content-Type', 'text/plain')
+          return res.send(logs)
+        }
         res.json(logs)
       }
     )
