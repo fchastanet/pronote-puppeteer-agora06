@@ -1138,6 +1138,18 @@ export default class DataWarehouse {
   }
 
   getProcessLogs(processId) {
+    if (processId === 'last') {
+      const stmt = this.#db.prepare(`
+        SELECT * FROM processLogs
+        WHERE processId = (
+          SELECT processId FROM processLogs
+          ORDER BY timestamp DESC
+          LIMIT 1
+        )
+        ORDER BY timestamp ASC
+      `)
+      return stmt.all()
+    }
     const stmt = this.#db.prepare(`
       SELECT * FROM processLogs
       WHERE processId = ?

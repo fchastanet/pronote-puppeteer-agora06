@@ -1,9 +1,12 @@
+import DataWarehouse from '#pronote/Database/DataWarehouse.js'
+
 export const LOG_FORMAT = {
   JSON: 'json',
   TEXT: 'text'
 }
 
 export default class Logger {
+  /** @param {DataWarehouse} */
   #dataWarehouse = null
   #processId = null
   #verbose
