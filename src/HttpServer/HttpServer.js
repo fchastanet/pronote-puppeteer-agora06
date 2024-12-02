@@ -8,9 +8,9 @@ import DashboardController from '#pronote/Controllers/DashboardController.js'
 import SqliteStoreFactory from 'better-sqlite3-session-store'
 import cookieParser from 'cookie-parser'
 import UserController from '#pronote/Controllers/UserController.js'
-import path from 'path'
 
 import {default as SqliteDatabase} from 'better-sqlite3'
+import ProcessController from '#pronote/Controllers/ProcessController.js'
 
 export default class HttpServer {
   /** @type {PushSubscriptionController} */
@@ -21,7 +21,8 @@ export default class HttpServer {
   #userController
   /** @type {DashboardController} */
   #dashboardController
-  #resultsDir
+  /** @type {ProcessController} */
+  #processController
   #publicDir
   #port
   #origin
@@ -31,24 +32,26 @@ export default class HttpServer {
   #cookieOptions
   #sessionDatabaseFile
   #debug
+  #apiKey
 
   constructor({
     pushSubscriptionController, loginController, dashboardController,
-    userController,
-    resultsDir, publicDir, port = 3001, origin,
+    userController, processController,
+    publicDir, port = 3001, origin,
     sessionDatabaseFile,
     sessionExpirationInMs = 900000,
     sessionSecret,
     cookieOptions = {},
+    apiKey,
     debug = false
   }) {
     this.#port = port
-    this.#resultsDir = resultsDir
     this.#publicDir = publicDir
     this.#pushSubscriptionController = pushSubscriptionController
     this.#loginController = loginController
     this.#dashboardController = dashboardController
     this.#userController = userController
+    this.#processController = processController
     this.#origin = origin
     this.#sessionExpirationInMs = sessionExpirationInMs
     this.#sessionSecret = sessionSecret
@@ -63,6 +66,7 @@ export default class HttpServer {
     }
     this.#sessionDatabaseFile = sessionDatabaseFile
     this.#debug = debug
+    this.#apiKey = apiKey
   }
 
   #getSessionDb() {
@@ -127,6 +131,24 @@ export default class HttpServer {
       next()
     }
 
+    const getBearerToken = (req) => {
+      const authHeader = req.headers['authorization']
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        return authHeader.slice(7, authHeader.length) // Remove 'Bearer ' prefix
+      }
+      return null
+    }
+
+    const checkBearerToken = (req, res, next) => {
+      const token = getBearerToken(req)
+      if (!token) {
+        return res.status(401).json({message: 'Unauthorized: No bearer token'})
+      }
+      // You can add additional token validation logic here
+      req.token = token // Attach token to request object for further use
+      next()
+    }
+
     app.options('*', cors(corsOptions)) // enable pre-flight request for all routes
     app.get(
       '/publicVapidKey.json',
@@ -175,6 +197,25 @@ export default class HttpServer {
       cors(corsOptions),
       checkSessionCookie,
       this.#dashboardController.dashboardMetricsAction.bind(this.#dashboardController)
+    )
+
+    app.post(
+      '/cron',
+      cors(corsOptions),
+      checkBearerToken,
+      (req, res) => {
+        // Launch background process without waiting
+        Promise.resolve().then(async () => {
+          try {
+            console.log('Background process started')
+            await this.#processController.process()
+          } catch (error) {
+            console.error('Background process error:', error)
+          }
+        })
+        // Return immediately
+        res.status(202).json({message: 'Process started'})
+      }
     )
 
     app.listen(this.#port, '0.0.0.0', () => {

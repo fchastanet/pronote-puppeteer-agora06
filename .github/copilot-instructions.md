@@ -1,5 +1,7 @@
 # copilot instructions
 
+On chat, only provide the relevant changes but not all the file
+
 ## javascript
 
 Always generate javascript code without semicolons
