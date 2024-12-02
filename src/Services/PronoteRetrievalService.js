@@ -3,22 +3,31 @@ import DataWarehouse from '#pronote/Database/DataWarehouse.js'
 import DateWrapper from '#pronote/Utils/DateWrapper.js'
 import Utils from '#pronote/Utils/Utils.js'
 import path from 'path'
+import Logger from './Logger.js'
 
 export default class PronoteRetrievalService {
   /** @type {PronoteCrawler} #pronoteCrawler */
   #pronoteCrawler
   /** @type {DataWarehouse} */
   #dataWarehouse
+  /** @type {Logger} */
+  #logger
   #resultsDir
   #debug
   #verbose
 
-  constructor({pronoteCrawler, dataWarehouse, resultsDir, debug, verbose}) {
+  constructor({pronoteCrawler, dataWarehouse, logger, resultsDir, debug, verbose}) {
     this.#pronoteCrawler = pronoteCrawler
     this.#dataWarehouse = dataWarehouse
+    this.#logger = logger
     this.#resultsDir = resultsDir
     this.#debug = debug
     this.#verbose = verbose
+  }
+
+  setDebug(debug) {
+    this.#debug = debug
+    this.#pronoteCrawler.setDebug(debug)
   }
 
   async process() {
@@ -34,8 +43,8 @@ export default class PronoteRetrievalService {
           account.name.replace(/ /g, '_'),
           folderDate
         )
-        console.log('Processing account:', account.name)
-        console.log('Results directory:', currentResultDir)
+        this.#logger.info('Processing account:', account.name)
+        this.#logger.info('Results directory:', currentResultDir)
 
         await this.#pronoteCrawler.init()
         await this.#pronoteCrawler.crawl({
@@ -47,17 +56,17 @@ export default class PronoteRetrievalService {
         })
 
         if (this.#debug) {
-          console.log('keep window opened for debugging')
+          this.#logger.debug('keep window opened for debugging')
           await Utils.delay(600000)
         } else {
-          console.log('Wait 5 seconds for xhr request to finish')
+          this.#logger.debug('Wait 5 seconds for xhr request to finish')
           await Utils.delay(5000)
         }
 
         await this.#pronoteCrawler.close()
       }
     } catch (error) {
-      console.error('An error occurred during the login process:', error)
+      this.#logger.error('An error occurred during the login process:', error)
     }
   }
 }

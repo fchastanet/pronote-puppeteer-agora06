@@ -19,13 +19,14 @@ export default class DataWarehouse {
   static USER_ROLE_ADMIN = 'admin'
   static USER_ROLE_USER = 'user'
 
-  /**
-   * @type {DatabaseConnection}
-   */
+  /** @type {DatabaseConnection} */
   #db = null
+  /** @type {Logger} */
+  #logger = null
 
-  constructor(databaseConnection) {
+  constructor(databaseConnection, logger) {
     this.#db = databaseConnection
+    this.#logger = logger
   }
 
   createSchema() {
@@ -283,6 +284,18 @@ export default class DataWarehouse {
       ;
     `
 
+    const createLogsTable = `
+      CREATE TABLE IF NOT EXISTS processLogs (
+        logId INTEGER PRIMARY KEY AUTOINCREMENT,
+        processId TEXT,
+        level TEXT,
+        message TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idxProcessLogsProcessId ON processLogs(processId);
+      CREATE INDEX IF NOT EXISTS idxProcessLogsTimestamp ON processLogs(timestamp);
+    `
+
     this.#db.exec(createDimStudentsTable)
     this.#db.exec(createDimSchoolsTable)
     this.#db.exec(createDimGradesTable)
@@ -295,6 +308,7 @@ export default class DataWarehouse {
     this.#db.exec(createUsersTable)
     this.#db.exec(createUserStudentsLinkTable)
     this.#db.exec(createViewQuery)
+    this.#db.exec(createLogsTable)
   }
 
   isSchemaInitialized() {
@@ -424,7 +438,7 @@ export default class DataWarehouse {
       const info = stmt.run(...data)
       return info.lastInsertRowid
     } catch (e) {
-      console.log('Error inserting date', dateTimeFormatted, e)
+      this.#logger.error('Error inserting date', dateTimeFormatted, e)
       throw e
     }
   }
@@ -629,7 +643,7 @@ export default class DataWarehouse {
       )
       return info.lastInsertRowid
     } catch (e) {
-      console.log(e, data)
+      this.#logger.error(e, data)
       throw e
     }
   }
@@ -712,7 +726,7 @@ export default class DataWarehouse {
       )
       return info.changes
     } catch (e) {
-      console.log(e, data)
+      this.#logger.error(e, data)
       throw e
     }
   }
@@ -727,7 +741,7 @@ export default class DataWarehouse {
       const info = stmt.run(temporary ? 1 : 0, factKey)
       return info.changes
     } catch (e) {
-      console.error(e)
+      this.#logger.error(e)
       throw e
     }
   }
@@ -1112,5 +1126,23 @@ export default class DataWarehouse {
       WHERE usl.userId = ?
     `)
     return stmt.all(userId)
+  }
+
+  insertProcessLog(processId, level, message) {
+    const stmt = this.#db.prepare(`
+      INSERT INTO processLogs (processId, level, message)
+      VALUES (?, ?, ?)
+    `)
+    const info = stmt.run(processId, level, message)
+    return info.lastInsertRowid
+  }
+
+  getProcessLogs(processId) {
+    const stmt = this.#db.prepare(`
+      SELECT * FROM processLogs
+      WHERE processId = ?
+      ORDER BY timestamp ASC
+    `)
+    return stmt.all(processId)
   }
 }

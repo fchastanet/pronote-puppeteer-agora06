@@ -6,12 +6,15 @@ import DataWarehouse from '#pronote/Database/DataWarehouse.js'
 import DateWrapper from '#pronote/Utils/DateWrapper.js'
 import Utils from '#pronote/Utils/Utils.js'
 import NotificationsService from '#pronote/Services/NotificationsService.js'
+import Logger from './Logger.js'
 
 export default class ProcessorDataService {
   /** @type {DataWarehouse} */
   #db
   /** @type {NotificationsService} */
   #notificationsService
+  /** @type {Logger} */
+  #logger
   #verbose = false
   #debug = false
   #homeworkConverter
@@ -35,9 +38,10 @@ export default class ProcessorDataService {
   #newHomeworkKeys = []
   #deletedHomeworkKeys = []
 
-  constructor(db, notificationsService, resultsDir, debug, verbose) {
+  constructor(db, notificationsService, logger, resultsDir, debug, verbose) {
     this.#db = db
     this.#notificationsService = notificationsService
+    this.#logger = logger
     this.#resultsDir = resultsDir
     this.#homeworkConverter = new HomeworkConverter()
     this.#courseConverter = new CourseConverter(debug, verbose)
@@ -67,13 +71,13 @@ export default class ProcessorDataService {
       }
       if (existingStudent) {
         if (this.#verbose) {
-          console.log(`Updating student '${studentData.name}'`)
+          this.#logger.debug(`Updating student '${studentData.name}'`)
         }
         this.#db.updatePronoteStudent(existingStudent.id, newStudentData)
         studentIds[studentData.name] = existingStudent.id
       } else {
         if (this.#verbose) {
-          console.log(`Creating student '${studentData.name}'`)
+          this.#logger.debug(`Creating student '${studentData.name}'`)
         }
         const studentId = this.#db.createPronoteStudent(newStudentData)
         studentIds[studentData.name] = studentId
@@ -93,13 +97,13 @@ export default class ProcessorDataService {
       }
       if (existingUser) {
         if (this.#verbose) {
-          console.log(`Updating user '${userData.login}'`)
+          this.#logger.debug(`Updating user '${userData.login}'`)
         }
         this.#db.updateUser(existingUser.id, newUserData)
         userId = existingUser.id
       } else {
         if (this.#verbose) {
-          console.log(`Creating user '${userData.login}'`)
+          this.#logger.debug(`Creating user '${userData.login}'`)
         }
         userId = this.#db.createUser(newUserData)
       }
@@ -109,11 +113,11 @@ export default class ProcessorDataService {
         const studentId = studentIds[studentKey]
         if (studentId) {
           if (this.#verbose) {
-            console.log(`Linking user '${userData.login}' to student '${studentKey}'`)
+            this.#logger.debug(`Linking user '${userData.login}' to student '${studentKey}'`)
           }
           this.#db.linkUserStudent(userId, studentId)
         } else {
-          console.error(`Student '${studentKey}' not found for user '${userData.login}'`)
+          this.#logger.error(`Student '${studentKey}' not found for user '${userData.login}'`)
         }
       }
     }
@@ -128,17 +132,17 @@ export default class ProcessorDataService {
       this.#db.getStudents().forEach((student) => {
         const resultsDir = path.join(this.#resultsDir, this.#escapePath(student.name))
         if (this.#verbose) {
-          console.log(`Processing results for ${student.name} in '${resultsDir}'`)
+          this.#logger.debug(`Processing results for ${student.name} in '${resultsDir}'`)
         }
         this.processDirectories(resultsDir)
       })
     } catch (error) {
-      console.error('Unable to connect to the database:', error)
+      this.#logger.error('Unable to connect to the database:', error)
     }
     try {
       this.#notificationsService.sendNotifications()
     } catch (error) {
-      console.error('Some notifications failed to be sent:', error)
+      this.#logger.error('Some notifications failed to be sent:', error)
     }
   }
 
@@ -156,7 +160,7 @@ export default class ProcessorDataService {
       this.#courseIdFactMapping = {}
 
       if (!fs.existsSync(studentInfoPath) || !fs.existsSync(coursesPath) || !fs.existsSync(homeworksPath)) {
-        console.error(`Missing one or more file in directory '${subDir}'`)
+        this.#logger.error(`Missing one or more file in directory '${subDir}'`)
         return
       }
 
@@ -165,55 +169,55 @@ export default class ProcessorDataService {
         this.#db.isFileProcessed(coursesPath) &&
         this.#db.isFileProcessed(homeworksPath)
       ) {
-        console.info(`Files in directory '${subDir}' are already processed`)
+        this.#logger.info(`Files in directory '${subDir}' are already processed`)
         return
       }
 
-      console.info(`Processing files in directory '${subDir}' ...`)
+      this.#logger.info(`Processing files in directory '${subDir}' ...`)
       this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
       this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
       this.#db.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
 
       try {
-        console.info(`Processing '${studentInfoPath}' ...`)
+        this.#logger.info(`Processing '${studentInfoPath}' ...`)
         const studentInfoContent = JSON.parse(fs.readFileSync(studentInfoPath, 'utf8'))
         this.#crawlDate = new DateWrapper(studentInfoContent.crawlDate)
         this.processStudentInfo(studentInfoContent)
       } catch (error) {
-        console.error(`Unable to process file '${studentInfoPath}' :`, error)
+        this.#logger.error(`Unable to process file '${studentInfoPath}' :`, error)
         this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
         return
       }
 
       try {
-        console.info(`Processing '${coursesPath}' ...`)
+        this.#logger.info(`Processing '${coursesPath}' ...`)
         const coursesContent = JSON.parse(fs.readFileSync(coursesPath, 'utf8'))
         this.processCourses(coursesPath, coursesContent)
       } catch (error) {
-        console.error(`Unable to process file '${coursesPath}' :`, error)
+        this.#logger.error(`Unable to process file '${coursesPath}' :`, error)
         this.#db.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
         return
       }
 
       try {
-        console.info(`Processing '${homeworksPath}' ...`)
+        this.#logger.info(`Processing '${homeworksPath}' ...`)
 
         const homeworksContent = JSON.parse(fs.readFileSync(homeworksPath, 'utf8'))
         this.processHomeworks(homeworksPath, homeworksContent)
         const homeworkIdsPath = path.join(resultsDir, subDir, 'homeworkIds.json')
-        console.info(`Writing ${homeworkIdsPath} ...`)
+        this.#logger.info(`Writing ${homeworkIdsPath} ...`)
         fs.writeFileSync(homeworkIdsPath, JSON.stringify(this.#homeworkIds, null, 2), 'utf8')
       } catch (error) {
-        console.error(`Unable to process file '${homeworksPath}' :`, error)
+        this.#logger.error(`Unable to process file '${homeworksPath}' :`, error)
         this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
         return
       }
 
       if (this.#duplicatedIds.length > 0) {
-        console.warn(`${this.#duplicatedIds.length} duplicated IDs found in '${subDir}'`)
+        this.#logger.warn(`${this.#duplicatedIds.length} duplicated IDs found in '${subDir}'`)
       }
       if (this.#unknownCompletionIds.length > 0) {
-        console.warn(
+        this.#logger.warn(
           `${this.#unknownCompletionIds.length} homeworks already completed before being inserted found in '${subDir}'`
         )
       }
@@ -226,7 +230,7 @@ export default class ProcessorDataService {
       })
       const deletedHomeworkCount = this.#db.removeTemporaryHomeworks(this.#crawlDate)
       if (deletedHomeworkCount > 0) {
-        console.info(`Removed ${deletedHomeworkCount} temporary homeworks in '${subDir}'`)
+        this.#logger.info(`Removed ${deletedHomeworkCount} temporary homeworks in '${subDir}'`)
       }
 
       // write errors report
@@ -239,7 +243,7 @@ export default class ProcessorDataService {
         temporaryHomeworksToRemove: temporaryHomeworksToRemove,
       }
       fs.writeFileSync(errorsReportPath, JSON.stringify(data, null, 2), 'utf8')
-      console.info(`Writing ${errorsReportPath} ...`)
+      this.#logger.info(`Writing ${errorsReportPath} ...`)
 
       // mark file processed only at the end as all files need to re parsed every time
       this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
@@ -267,12 +271,12 @@ export default class ProcessorDataService {
     const items = this.#courseConverter.fromPronote(data)
     // Log the items to debug
     if (this.#debug) {
-      console.debug('Converted Items:', items)
+      this.#logger.debug('Converted Items:', items)
     }
 
     // Check if items is empty
     if (items.length === 0) {
-      console.warn(`No items found in '${filePath}'`)
+      this.#logger.warn(`No items found in '${filePath}'`)
     }
 
     // Process each item in ListeCahierDeTextes
@@ -302,12 +306,12 @@ export default class ProcessorDataService {
     this.#deletedHomeworkKeys = Object.keys(this.#globalKnownHomeworkUniqueId).filter(
       (key) => !(key in this.#knownHomeworkUniqueId)
     )
-    console.log(`${Object.keys(this.#knownHomeworkUniqueId).length} unique IDs found in '${filePath}'`)
+    this.#logger.info(`${Object.keys(this.#knownHomeworkUniqueId).length} unique IDs found in '${filePath}'`)
     if (this.#newHomeworkKeys.length > 0) {
-      console.warn(`${this.#newHomeworkKeys.length} new unique IDs found in '${filePath}'`)
+      this.#logger.warn(`${this.#newHomeworkKeys.length} new unique IDs found in '${filePath}'`)
     }
     if (this.#deletedHomeworkKeys.length > 0) {
-      console.warn(`${this.#deletedHomeworkKeys.length} unique IDs deleted in '${filePath}'`)
+      this.#logger.warn(`${this.#deletedHomeworkKeys.length} unique IDs deleted in '${filePath}'`)
     }
     // add new keys to globalKnownHomeworkUniqueId
     this.#newHomeworkKeys.forEach((key) => {
@@ -433,7 +437,7 @@ export default class ProcessorDataService {
     if (factCourseKey !== null) {
       factCourse = this.#db.getFactCourse(factCourseKey)
     } else {
-      console.log(`Course ${homework.plannedCourseId} not found in #courseIdFactMapping`)
+      this.#logger.warn(`Course ${homework.plannedCourseId} not found in #courseIdFactMapping`)
     }
 
     // Insert fact homework
@@ -461,7 +465,7 @@ export default class ProcessorDataService {
       if (homework.completed) {
         if (typeof factHomework === 'undefined') {
           if (this.#verbose) {
-            console.log(
+            this.#logger.info(
               `Homework ${homework.id} is completed before being inserted, cannot compute completion duration`
             )
           }
@@ -585,14 +589,14 @@ export default class ProcessorDataService {
           homework,
         })
         uniqueId = `${uniqueId}-${i}`
-        console.warn(
+        this.#logger.warn(
           `Duplicated unique ID for homework ID '${homework.id}' in '${filePath}' - new unique ID: '${uniqueId}'`
         )
       }
       this.#homeworkUniqueId[uniqueId] = homework.id
       return uniqueId
     } catch (e) {
-      console.error(e)
+      this.#logger.error(e)
       throw new Error(`Error computing unique ID for homework ID '${homework.id}' in '${filePath}'`)
     }
   }

@@ -19,6 +19,7 @@ import NotificationsService from './Services/NotificationsService.js'
 import ProcessorDataService from './Services/ProcessorDataService.js'
 import ProcessController from './Controllers/ProcessController.js'
 import Crawler from './Crawler/Crawler.js'
+import Logger from './Services/Logger.js'
 
 let databaseConnection = null
 processManagement((options) => {
@@ -48,18 +49,21 @@ const parseCommandOptions = (argv) => {
 const initProcessController = (
   dataWarehouse,
   pushSubscriptionService,
+  logger,
   commandOptions,
   resultsDir
 ) => {
   const crawler = new Crawler(commandOptions.debug)
   const pronoteCrawler = new PronoteCrawler({
     crawler,
+    logger,
     debug: commandOptions.debug,
     verbose: commandOptions.verbose,
   })
   const pronoteRetrievalService = new PronoteRetrievalService({
     pronoteCrawler,
     dataWarehouse,
+    logger,
     resultsDir,
     debug: commandOptions.debug,
     verbose: commandOptions.verbose,
@@ -76,6 +80,7 @@ const initProcessController = (
   const processorDataService = new ProcessorDataService(
     dataWarehouse,
     notificationsService,
+    logger,
     resultsDir,
     commandOptions.debug,
     commandOptions.verbose
@@ -84,6 +89,7 @@ const initProcessController = (
   return new ProcessController({
     pronoteRetrievalService,
     processorDataService,
+    logger,
     skipPronoteDataRetrieval: commandOptions.skipPronote,
     skipDataProcess: commandOptions.skipDataProcess,
     verbose: commandOptions.verbose,
@@ -130,8 +136,10 @@ const main = async () => {
 
   const userController = new UserController(dataWarehouse)
 
+  const logger = new Logger(dataWarehouse, commandOptions.verbose)
+
   const processController = initProcessController(
-    dataWarehouse, pushSubscriptionService, commandOptions, resultsDir
+    dataWarehouse, pushSubscriptionService, logger, commandOptions, resultsDir
   )
   const server = new HttpServer({
     pushSubscriptionController,
@@ -139,6 +147,7 @@ const main = async () => {
     userController,
     dashboardController,
     processController,
+    logger,
     publicDir,
     port: process.env?.SERVER_PORT ?? 3001,
     origin: process.env?.ASSETS_URL ?? 'http://localhost:3000',

@@ -1,11 +1,15 @@
 import puppeteer, {Browser, Page} from 'puppeteer'
 
 export default class Crawler {
-  #debugMode = false
+  #debug = false
   #browsers = []
 
-  constructor(debugMode) {
-    this.#debugMode = debugMode
+  constructor(debug) {
+    this.#debug = debug
+  }
+
+  setDebug(debug) {
+    this.#debug = debug
   }
 
   async close() {
@@ -21,13 +25,13 @@ export default class Crawler {
   async initBrowser() {
     // Launch a headless browser
     const browserArgs = {
-      headless: !this.#debugMode, // Set to 'false' if you want to see the browser (useful for debugging)
+      headless: !this.#debug, // Set to 'false' if you want to see the browser (useful for debugging)
       executablePath: '',
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--start-maximized'],
-      devtools: this.#debugMode,
+      devtools: this.#debug,
       dumpio: false,
     }
-    if (this.#debugMode) {
+    if (this.#debug) {
       // slow down by 250ms
       browserArgs.slowMo = 50
     } else {

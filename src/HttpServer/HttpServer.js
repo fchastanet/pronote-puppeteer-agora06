@@ -8,9 +8,10 @@ import DashboardController from '#pronote/Controllers/DashboardController.js'
 import SqliteStoreFactory from 'better-sqlite3-session-store'
 import cookieParser from 'cookie-parser'
 import UserController from '#pronote/Controllers/UserController.js'
-
+import {randomUUID} from 'crypto'
 import {default as SqliteDatabase} from 'better-sqlite3'
 import ProcessController from '#pronote/Controllers/ProcessController.js'
+import Logger from '#pronote/Services/Logger.js'
 
 export default class HttpServer {
   /** @type {PushSubscriptionController} */
@@ -33,6 +34,8 @@ export default class HttpServer {
   #sessionDatabaseFile
   #debug
   #apiKey
+  /** @type {Logger} */
+  #logger
 
   constructor({
     pushSubscriptionController, loginController, dashboardController,
@@ -43,7 +46,8 @@ export default class HttpServer {
     sessionSecret,
     cookieOptions = {},
     apiKey,
-    debug = false
+    debug = false,
+    logger
   }) {
     this.#port = port
     this.#publicDir = publicDir
@@ -67,6 +71,7 @@ export default class HttpServer {
     this.#sessionDatabaseFile = sessionDatabaseFile
     this.#debug = debug
     this.#apiKey = apiKey
+    this.#logger = logger
   }
 
   #getSessionDb() {
@@ -204,22 +209,40 @@ export default class HttpServer {
       cors(corsOptions),
       checkBearerToken,
       (req, res) => {
+        const processId = randomUUID()
         // Launch background process without waiting
         Promise.resolve().then(async () => {
           try {
-            console.log('Background process started')
-            await this.#processController.process()
+            this.#logger.setProcessId(processId)
+            console.log('req.query?.verbose', req.query?.verbose)
+            console.log('req.query?.debug', req.query?.debug)
+            this.#logger.setVerbose((req.query?.verbose ?? '') === 'true')
+            await this.#processController.process((req.query?.debug ?? '') === 'true')
           } catch (error) {
-            console.error('Background process error:', error)
+            this.#logger.error('Background process error:', error)
           }
         })
-        // Return immediately
-        res.status(202).json({message: 'Process started'})
+        // Return process ID for log retrieval
+        res.status(202).json({
+          message: 'Process started',
+          processId
+        })
+      }
+    )
+
+    // Add endpoint to retrieve logs
+    app.get(
+      '/cron/:processId/logs',
+      cors(corsOptions),
+      checkBearerToken,
+      (req, res) => {
+        const logs = this.#processController.getLogs(req.params.processId)
+        res.json(logs)
       }
     )
 
     app.listen(this.#port, '0.0.0.0', () => {
-      console.log(`CORS-enabled WebServer running at http://127.0.0.1:${this.#port}/`)
+      this.#logger.info(`CORS-enabled WebServer running at http://127.0.0.1:${this.#port}/`)
     })
   }
 }

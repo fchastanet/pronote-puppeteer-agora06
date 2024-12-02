@@ -4,16 +4,19 @@ import fs from 'fs'
 import Utils from '#pronote/Utils/Utils.js'
 import Crawler from '#pronote/Crawler/Crawler.js'
 import DateWrapper from '#pronote/Utils/DateWrapper.js'
+import Logger from '#pronote/Services/Logger.js'
 
 export default class PronoteCrawler {
   /** @type {Crawler} #crawler */
   #crawler
+  /** @type {Logger} */
+  #logger
   /** @type {Browser} #browser */
   #browser = null
   /** @type {Page} #page */
   #page = null
-  /** @type {boolean} #debugMode */
-  #debugMode = false
+  /** @type {boolean} #debug */
+  #debug = false
   /** @type {boolean} #verbose */
   #verbose = false
   #sessionNumber = null
@@ -23,29 +26,35 @@ export default class PronoteCrawler {
   /** @type {DateWrapper} #currentDate */
   #currentDate = null
 
-  constructor({crawler, debugMode, verbose}) {
+  constructor({crawler, logger, debug, verbose}) {
     this.#crawler = crawler
+    this.#logger = logger
     this.#verbose = verbose
-    this.#debugMode = debugMode
+    this.#debug = debug
+  }
+
+  setDebug(debug) {
+    this.#debug = debug
+    this.#crawler.setDebug(debug)
   }
 
   async init() {
-    console.log('Initializing browser')
+    this.#logger.info('Initializing browser')
     this.#browser = await this.#crawler.initBrowser()
 
-    console.log('Initializing page')
+    this.#logger.info('Initializing page')
     try {
       this.#page = await this.#crawler.initPage(this.#browser)
     } catch (error) {
-      console.error('An error occurred during the page initialization', error)
+      this.#logger.error('An error occurred during the page initialization', error)
       return
     }
 
     if (this.#verbose) {
-      this.#page.on('console', (msg) => console.log('PAGE CONSOLE LOGS:', msg.text()))
+      this.#page.on('console', (msg) => this.#logger.info('PAGE CONSOLE LOGS:', msg.text()))
     }
 
-    console.log('Initializing page listeners')
+    this.#logger.info('Initializing page listeners')
     this.#page.on('request', (request) => {
       // Allow the request to be sent
       request.continue()
@@ -56,8 +65,8 @@ export default class PronoteCrawler {
       const request = response.request()
       // Only check responses for XHR requests linked to "cahier de texte"
       const postData = request.postData()
-      if (this.#debugMode) {
-        console.log(
+      if (this.#debug) {
+        this.#logger.debug(
           'Response',
           'resourceType',
           request.resourceType(),
@@ -100,10 +109,10 @@ export default class PronoteCrawler {
   #writeCahierDeTexte(response, postDataObj) {
     // Log response status and URL
 
-    if (this.#debugMode) {
-      console.log('XHR Response', response.status(), response.url())
+    if (this.#debug) {
+      this.#logger.debug('XHR Response', response.status(), response.url())
       // Log response headers
-      console.log('Headers', response.headers())
+      this.#logger.debug('Headers', response.headers())
     }
     const targetFile = this.#getTargetFile(postDataObj)
     if (targetFile === null) {
@@ -115,10 +124,10 @@ export default class PronoteCrawler {
       json.crawlDate = this.#currentDate.toISOString()
       fs.writeFile(targetFile, JSON.stringify(json, null, '  '), (err) => {
         if (err) {
-          console.error(err)
+          this.#logger.error(err)
           process.exit(1)
         } else {
-          console.log(`Result written into '${targetFile}'`)
+          this.#logger.info(`Result written into '${targetFile}'`)
         }
       })
     })
@@ -126,8 +135,8 @@ export default class PronoteCrawler {
 
   #getTargetFile(postDataObj) {
     const tab = postDataObj?.donneesSec?._Signature_?.onglet
-    if (this.#debugMode) {
-      console.log('Onglet', tab)
+    if (this.#debug) {
+      this.#logger.debug('Onglet', tab)
     }
     if (tab === 88) {
       return this.#getResultFile('cahierDeTexte-travailAFaire.json')
@@ -153,7 +162,7 @@ export default class PronoteCrawler {
 
   async #loginToPronote({login, password, casUrl}) {
     // ---------------------------------------------------------------------------------------------------
-    console.info('Step 1: Navigate to cas')
+    this.#logger.info('Step 1: Navigate to cas')
     await this.#page.goto(casUrl, {waitUntil: 'networkidle2'})
     await this.#page.waitForSelector('#idp-EDU') // Wait for the user type selector
     await this.#page.click('#idp-EDU')
@@ -165,12 +174,12 @@ export default class PronoteCrawler {
     await this.#page.waitForNavigation({waitUntil: 'networkidle2'})
 
     // ---------------------------------------------------------------------------------------------------
-    console.info('Step 2: Page to select the profile')
+    this.#logger.info('Step 2: Page to select the profile')
     await this.#page.waitForSelector('button#bouton_responsable')
     await this.#page.click('button#bouton_responsable')
 
     // ---------------------------------------------------------------------------------------------------
-    console.info('Step 3: Log in')
+    this.#logger.info('Step 3: Log in')
     await this.#page.waitForSelector('#username')
     await this.#page.evaluate(
       (login, password) => {
@@ -182,14 +191,14 @@ export default class PronoteCrawler {
     )
     await this.#page.click('button[type="submit"]') // Submit the login form
     await this.#page.waitForNavigation({waitUntil: 'domcontentloaded'}) // Wait for the page to navigate after login
-    console.log('Logged in to CAS Agora06.')
+    this.#logger.info('Logged in to CAS Agora06.')
 
     // ---------------------------------------------------------------------------------------------------
-    console.info('Step 4: From College move to pronote')
+    this.#logger.info('Step 4: From College move to pronote')
     await this.#page.goto('https://0061670h.index-education.net/pronote/')
 
     // ---------------------------------------------------------------------------------------------------
-    console.info('Step 5: Wait for Pronote page to load after CAS login')
+    this.#logger.info('Step 5: Wait for Pronote page to load after CAS login')
     await this.#page.waitForSelector('#id_body') // Adjust the selector according to the Pronote dashboard
     await this.#page.waitForSelector('.label-membre')
   }
@@ -204,7 +213,7 @@ export default class PronoteCrawler {
   }
 
   async #extractGeneralInformation() {
-    console.info('Step 6: Extract information from the Pronote dashboard')
+    this.#logger.info('Step 6: Extract information from the Pronote dashboard')
     const studentInfo = await this.#page.evaluate(() => {
       const fullName = document.querySelector('.label-membre').innerText // Adjust selector based on the page's structure
       const reMatches = fullName.match(/^(?<name>.*) \((?<grade>[^)]+)\)$/)
@@ -223,29 +232,29 @@ export default class PronoteCrawler {
     studentInfo.startParams = this.#extractStartParams(studentInfo.startParams)
     studentInfo.crawlDate = this.#currentDate.toISOString()
 
-    console.log('Student Info:', studentInfo)
+    this.#logger.info('Student Info:', studentInfo)
     this.#sessionNumber = studentInfo.sessionNumber
     const targetFile = this.#getResultFile('studentInfo.json')
     fs.writeFile(targetFile, JSON.stringify(studentInfo, null, '  '), (err) => {
       if (err) {
-        console.error(err)
+        this.#logger.error(err)
         process.exit(1)
       } else {
-        console.log(`Result written into '${targetFile}'`)
+        this.#logger.info(`Result written into '${targetFile}'`)
       }
     })
   }
 
   async #navigateToCahierDeTexte() {
     // by default page "Contenu et ressource" is displayed
-    console.log('click on "Cahier de texte" menu')
+    this.#logger.info('click on "Cahier de texte" menu')
     await this.#page.evaluate(() => {
       const sel = '.objetBandeauEntete_menu div.onglets-wrapper ul li:nth-child(2) div.label-menu_niveau0'
       document.querySelector(sel).click()
     })
     await this.#page.waitForSelector('.conteneur-CDT')
     await Utils.delay(2000) // wait some time to let the page to be fully loaded
-    console.log('change date to 1st september')
+    this.#logger.info('change date to 1st september')
     await this.#page.evaluate(() => {
       // start date selector
       document.getElementById('GInterface.Instances[2].Instances[2].cellule_Edit').click()
@@ -262,7 +271,7 @@ export default class PronoteCrawler {
   }
 
   async #navigateToTravailAFaire() {
-    console.log('click on "travail à faire"')
+    this.#logger.info('click on "travail à faire"')
     await this.#page.evaluate(() => {
       document
         .querySelector('.objetBandeauEntete_secondmenu ul li:nth-child(2)')

@@ -1,13 +1,15 @@
 import ProcessorDataService from '#pronote/Services/ProcessorDataService.js'
-import ProcessorMetricsService from '#pronote/Services/ProcessorMetricsService.js'
 import fs from 'fs'
 import PronoteRetrievalService from '../Services/PronoteRetrievalService.js'
+import Logger from '#pronote/Services/Logger.js'
 
 export default class ProcessController {
   /** @type {PronoteRetrievalService} */
   #pronoteRetrievalService
   /** @type {ProcessorDataService} */
   #processorDataService
+  /** @type {Logger} */
+  #logger
   #skipPronoteDataRetrieval
   #skipDataProcess
   #verbose
@@ -20,6 +22,7 @@ export default class ProcessController {
     skipDataProcess,
     verbose,
     studentsInitializationFile,
+    logger
   }) {
     this.#pronoteRetrievalService = pronoteRetrievalService
     this.#processorDataService = processorDataService
@@ -27,76 +30,64 @@ export default class ProcessController {
     this.#skipDataProcess = skipDataProcess
     this.#verbose = verbose
     this.#studentsInitializationFile = studentsInitializationFile
+    this.#logger = logger
+  }
+
+  setProcessId(processId) {
+    this.#logger.setProcessId(processId)
+  }
+
+  setDebug(debug) {
+    this.#pronoteRetrievalService.setDebug(debug)
   }
 
   async process() {
-    if (this.#verbose) {
-      console.debug('Start process ...')
-    }
+    this.#logger.info('Start process ...')
     await this.#createDatabase()
     await this.#initStudents()
     await this.#retrievePronoteData()
     await this.#processPronoteData()
-    if (this.#verbose) {
-      console.debug('End process ...')
-    }
+    this.#logger.info('End process ...')
   }
 
   async #createDatabase() {
-    if (this.#verbose) {
-      console.debug('Creating database ...')
-    }
+    this.#logger.debug('Creating database ...')
     await this.#processorDataService.createDatabase()
-    if (this.#verbose) {
-      console.debug('Database created.')
-    }
+    this.#logger.debug('Database created.')
   }
 
   async #initStudents() {
     if (this.#studentsInitializationFile) {
-      if (this.#verbose) {
-        console.debug('Initializing students ...')
-      }
+      this.#logger.debug('Initializing students ...')
       if (!fs.existsSync(this.#studentsInitializationFile)) {
         throw new Error(`The students initialization file does not exist: ${this.#studentsInitializationFile}`)
       }
       await this.#processorDataService.initStudents(this.#studentsInitializationFile)
-      if (this.#verbose) {
-        console.debug('Students initialized.')
-      }
+      this.#logger.debug('Students initialized.')
     }
   }
 
   async #retrievePronoteData() {
     if (this.#skipPronoteDataRetrieval) {
-      if (this.#verbose) {
-        console.debug('Pronote data retrieval skipped.')
-      }
+      this.#logger.debug('Pronote data retrieval skipped.')
       return
     }
-    if (this.#verbose) {
-      console.debug('Retrieving Pronote data ...')
-    }
-
+    this.#logger.debug('Retrieving Pronote data ...')
     await this.#pronoteRetrievalService.process()
-    if (this.#verbose) {
-      console.debug('Pronote data retrieved')
-    }
+    this.#logger.debug('Pronote data retrieved')
   }
 
   async #processPronoteData() {
     if (this.#skipDataProcess) {
-      if (this.#verbose) {
-        console.debug('Pronote data processing skipped.')
-      }
+      this.#logger.debug('Pronote data processing skipped.')
       return
     }
-    if (this.#verbose) {
-      console.debug('Pronote data warehouse processing ...')
-    }
+    this.#logger.debug('Pronote data warehouse processing ...')
     await this.#processorDataService.process()
-    if (this.#verbose) {
-      console.debug('Pronote data warehouse processed.')
-    }
+    this.#logger.debug('Pronote data warehouse processed.')
+  }
+
+  getLogs(processId) {
+    return this.#logger.getLogs(processId)
   }
 }
