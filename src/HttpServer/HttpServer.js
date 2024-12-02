@@ -115,6 +115,7 @@ export default class HttpServer {
       secret: this.#sessionSecret,
       resave: false,
       saveUninitialized: false,
+      rolling: true, // Enable rolling sessions
       cookie: this.#cookieOptions,
     }))
 
@@ -122,6 +123,7 @@ export default class HttpServer {
       if (!req.session || !req.session.user) {
         return res.status(401).json({message: 'Unauthorized: No session cookie'})
       }
+      req.session.touch() // Postpone the cookie expiration
       next()
     }
 
