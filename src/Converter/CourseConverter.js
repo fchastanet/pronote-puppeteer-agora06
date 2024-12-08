@@ -1,15 +1,15 @@
 import FromTypeConverter from '#pronote/Converter/FromTypeConverter.js'
 import crypto from 'crypto'
 import Utils from '#pronote/Utils/Utils.js'
+import Logger from '#pronote/Services/Logger.js'
 
 export default class CourseConverter {
-  #verbose = false
-  #debug = false
+  /** @type {Logger} */
+  #logger
 
-  constructor(debug = false, verbose = false) {
+  constructor({logger}) {
     this.fromTypeConverter = new FromTypeConverter()
-    this.#debug = debug
-    this.#verbose = verbose
+    this.#logger = logger
   }
 
   fromPronote(data) {
@@ -33,19 +33,17 @@ export default class CourseConverter {
           continue
         }
         if (courseItem.id in result.coursesIdMapping) {
-          console.error(`Duplicate course id: ${courseItem.id}`, courseItem)
+          this.#logger.error(`Duplicate course id: ${courseItem.id}`, courseItem)
           continue
         }
         result.coursesIdMapping[courseItem.id] = courseItem.key
         result.courses[courseItem.key] = courseItem
       }
     }
-    if (this.#debug) {
-      console.debug('CourseConverter Subjects:')
-      console.debug(JSON.stringify(result.subjects))
-      console.debug('CourseConverter Courses:')
-      console.debug(JSON.stringify(result.courses))
-    }
+    this.#logger.debug('CourseConverter Subjects:')
+    this.#logger.debug(JSON.stringify(result.subjects))
+    this.#logger.debug('CourseConverter Courses:')
+    this.#logger.debug(JSON.stringify(result.courses))
     return result
   }
 
@@ -74,7 +72,7 @@ export default class CourseConverter {
       course.checksum = this.computeCourseItemChecksum(course)
       return course
     } catch (e) {
-      console.error(e, item)
+      this.#logger.error(e, item)
     }
     return null
   }
@@ -83,7 +81,7 @@ export default class CourseConverter {
     try {
       return `${course.subject}-${course.startDate}-${course.endDate}-${course.teacherList.join('-')}`
     } catch (e) {
-      console.error(e, course)
+      this.#logger.error(e, course)
     }
     return null
   }
@@ -115,7 +113,7 @@ export default class CourseConverter {
         attachmentList: item.ListePieceJointe.V.map((attachment) => this.fromPronoteContentAttachment(attachment)),
       }
     } catch (e) {
-      console.error(e, item)
+      this.#logger.error(e, item)
     }
     return null
   }
@@ -130,7 +128,7 @@ export default class CourseConverter {
         isInternal: item.estUnLienInterne,
       }
     } catch (e) {
-      console.error(e, item)
+      this.#logger.error(e, item)
       return null
     }
   }

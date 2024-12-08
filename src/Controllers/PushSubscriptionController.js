@@ -3,16 +3,19 @@ import PushSubscriptionService from '#pronote/Services/PushSubscriptionService.j
 export default class PushSubscriptionController {
   /** @type {PushSubscriptionService} */
   #pushSubscriptionService
+  /** @type {Logger} */
+  #logger
 
-  constructor(pushSubscriptionService) {
+  constructor({pushSubscriptionService, logger}) {
     this.#pushSubscriptionService = pushSubscriptionService
+    this.#logger = logger
   }
 
   postSubscription(req, res, next) {
     try {
       const body = req.body
       this.#pushSubscriptionService.pushSubscription(req.session.user.id, body.new)
-      console.log('Subscription added : ', body.new)
+      this.#logger.log('Subscription added : ', body.new)
       this.#pushSubscriptionService.sendNotificationToSubscriber(body.new, {
         title: 'Notification System',
         body: 'Subscription added',
@@ -20,7 +23,7 @@ export default class PushSubscriptionController {
       // Send 201 - resource created
       res.status(201).json(body.new)
     } catch (e) {
-      console.error('Error adding subscription', e)
+      this.#logger.error('Error adding subscription', e)
       next(e)
     }
   }
@@ -30,7 +33,7 @@ export default class PushSubscriptionController {
       const endpoint = req.query.endpoint?.toString()
       const subscription = await this.#pushSubscriptionService.getUserSubscription(req.session.user.id)
       this.#pushSubscriptionService.deleteUserSubscription(req.session.user.id)
-      console.log('Subscription removed : ', endpoint, 'for user', req.session.user.id)
+      this.#logger.log('Subscription removed : ', endpoint, 'for user', req.session.user.id)
       if (subscription) {
         this.#pushSubscriptionService.sendNotificationToSubscriber(subscription, {
           title: 'Notification System',
@@ -40,7 +43,7 @@ export default class PushSubscriptionController {
       // Send 204 - no content
       res.status(204).json({})
     } catch (e) {
-      console.error('Error removing subscription', e)
+      this.#logger.error('Error removing subscription', e)
       next(e)
     }
   }

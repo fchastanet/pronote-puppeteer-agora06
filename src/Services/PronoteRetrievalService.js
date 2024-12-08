@@ -13,21 +13,12 @@ export default class PronoteRetrievalService {
   /** @type {Logger} */
   #logger
   #resultsDir
-  #debug
-  #verbose
 
-  constructor({pronoteCrawler, dataWarehouse, logger, resultsDir, debug, verbose}) {
+  constructor({pronoteCrawler, dataWarehouse, logger, resultsDir}) {
     this.#pronoteCrawler = pronoteCrawler
     this.#dataWarehouse = dataWarehouse
     this.#logger = logger
     this.#resultsDir = resultsDir
-    this.#debug = debug
-    this.#verbose = verbose
-  }
-
-  setDebug(debug) {
-    this.#debug = debug
-    this.#pronoteCrawler.setDebug(debug)
   }
 
   async process() {
@@ -55,11 +46,11 @@ export default class PronoteRetrievalService {
           casUrl: account.pronoteCasUrl,
         })
 
-        if (this.#debug) {
+        if (this.#logger.debugMode) {
           this.#logger.debug('keep window opened for debugging')
           await Utils.delay(600000)
         } else {
-          this.#logger.debug('Wait 5 seconds for xhr request to finish')
+          this.#logger.info('Wait 5 seconds for xhr request to finish')
           await Utils.delay(5000)
         }
 

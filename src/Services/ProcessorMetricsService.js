@@ -8,7 +8,7 @@ export default class ProcessorMetricsService {
   /** @type {DataWarehouse} */
   #dataWarehouse
 
-  constructor(dataMetrics, dataWarehouse) {
+  constructor({dataMetrics, dataWarehouse}) {
     this.#dataMetrics = dataMetrics
     this.#dataWarehouse = dataWarehouse
   }

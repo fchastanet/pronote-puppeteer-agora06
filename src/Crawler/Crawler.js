@@ -1,15 +1,13 @@
+import Logger from '#pronote/Services/Logger.js'
 import puppeteer, {Browser, Page} from 'puppeteer'
 
 export default class Crawler {
-  #debug = false
+  /** @type {Logger} */
+  #logger
   #browsers = []
 
-  constructor(debug) {
-    this.#debug = debug
-  }
-
-  setDebug(debug) {
-    this.#debug = debug
+  constructor({logger}) {
+    this.#logger = logger
   }
 
   async close() {
@@ -25,13 +23,13 @@ export default class Crawler {
   async initBrowser() {
     // Launch a headless browser
     const browserArgs = {
-      headless: !this.#debug, // Set to 'false' if you want to see the browser (useful for debugging)
+      headless: !this.#logger.debugMode, // Set to 'false' if you want to see the browser (useful for debugging)
       executablePath: '',
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--start-maximized'],
-      devtools: this.#debug,
+      devtools: this.#logger.debugMode,
       dumpio: false,
     }
-    if (this.#debug) {
+    if (this.#logger.debugMode) {
       // slow down by 250ms
       browserArgs.slowMo = 50
     } else {

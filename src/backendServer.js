@@ -20,14 +20,16 @@ import ProcessorDataService from './Services/ProcessorDataService.js'
 import ProcessController from './Controllers/ProcessController.js'
 import Crawler from './Crawler/Crawler.js'
 import Logger from './Services/Logger.js'
+import {randomUUID} from 'crypto'
 
+const logger = new Logger()
 let databaseConnection = null
-processManagement((options) => {
+processManagement(logger, (options) => {
   if (!options.cleanup) {
     return
   }
   if (databaseConnection !== null) {
-    console.log('Closing database connection')
+    logger.info('Closing database connection')
     databaseConnection.close()
   }
 })
@@ -46,14 +48,15 @@ const parseCommandOptions = (argv) => {
   return command.opts()
 }
 
-const initProcessController = (
+const initProcessController = ({
   dataWarehouse,
   pushSubscriptionService,
   logger,
   commandOptions,
+  databaseFile,
   resultsDir
-) => {
-  const crawler = new Crawler(commandOptions.debug)
+}) => {
+  const crawler = new Crawler({logger})
   const pronoteCrawler = new PronoteCrawler({
     crawler,
     logger,
@@ -72,75 +75,87 @@ const initProcessController = (
   const notificationsService = new NotificationsService({
     dataWarehouse,
     pushSubscriptionService,
-    verbose: commandOptions.verbose,
+    logger,
     skipNotifications: commandOptions.skipNotifications,
     rateLimit: process.env.NOTIFICATIONS_RATE_LIMIT,
   })
 
-  const processorDataService = new ProcessorDataService(
+  const processorDataService = new ProcessorDataService({
     dataWarehouse,
     notificationsService,
     logger,
     resultsDir,
-    commandOptions.debug,
-    commandOptions.verbose
-  )
+  })
 
   return new ProcessController({
     pronoteRetrievalService,
     processorDataService,
-    logger,
     skipPronoteDataRetrieval: commandOptions.skipPronote,
+    logger,
     skipDataProcess: commandOptions.skipDataProcess,
-    verbose: commandOptions.verbose,
-    studentsInitializationFile: path.join(process.cwd(), '.students.js'),
+    databaseFile,
+    studentsInitializationFile: path.join(process.cwd(), '.students-dev.js'),
   })
 }
 
 const main = async () => {
+  const commandOptions = parseCommandOptions(process.argv)
+  logger.processId = randomUUID()
+  logger.debugMode = commandOptions.debug
+  logger.verboseMode = commandOptions.verbose
+
   const envFile = process.env.ENV_FILE ?? '.env'
-  console.log('loading envFile', envFile)
+  logger.info('loading envFile', envFile)
   dotenv.config({path: path.join(process.cwd(), envFile)})
 
   const databaseFile = process.env.SQLITE_DATABASE_FILE
 
   const resultsDir = path.join(process.cwd(), process.env.RESULTS_DIR)
   const publicDir = path.join(process.cwd(), process.env.PUBLIC_DIR)
-  const commandOptions = parseCommandOptions(process.argv)
 
-  databaseConnection = new DatabaseConnection(databaseFile, commandOptions.debug)
-  const dataWarehouse = new DataWarehouse(databaseConnection)
+  databaseConnection = new DatabaseConnection({
+    databaseFile, logger
+  })
+  const dataWarehouse = new DataWarehouse(databaseConnection, logger)
 
   const cookieOptions = {
     secure: process.env?.SESSION_COOKIE_SECURE === 1 ?? false,
   }
-  console.log('cookieOptions', cookieOptions)
+  logger.info('cookieOptions', cookieOptions)
   const authService = new AuthService({dataWarehouse})
   const loginController = new LoginController({
+    logger,
     authService,
     cookieOptions,
     verbose: commandOptions.verbose,
   })
 
-  const pushSubscriptionService = new PushSubscriptionService(
+  const pushSubscriptionService = new PushSubscriptionService({
     dataWarehouse,
-    path.join(process.cwd(), 'src', 'HttpServer'),
-    commandOptions.debug
-  )
+    privatePath: path.join(process.cwd(), 'src', 'HttpServer'),
+    logger
+  })
   await pushSubscriptionService.init()
-  const pushSubscriptionController = new PushSubscriptionController(pushSubscriptionService)
+  const pushSubscriptionController = new PushSubscriptionController({
+    logger, pushSubscriptionService
+  })
 
   const dataMetrics = new DataMetrics(databaseConnection)
-  const processorMetricsService = new ProcessorMetricsService(dataMetrics, dataWarehouse)
+  const processorMetricsService = new ProcessorMetricsService({
+    dataMetrics, dataWarehouse
+  })
   const dashboardController = new DashboardController({processorMetricsService})
 
   const userController = new UserController(dataWarehouse)
 
-  const logger = new Logger(dataWarehouse, commandOptions.verbose)
-
-  const processController = initProcessController(
-    dataWarehouse, pushSubscriptionService, logger, commandOptions, resultsDir
-  )
+  const processController = initProcessController({
+    dataWarehouse,
+    pushSubscriptionService,
+    logger,
+    commandOptions,
+    databaseFile,
+    resultsDir
+  })
   const server = new HttpServer({
     pushSubscriptionController,
     loginController,

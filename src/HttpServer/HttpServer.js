@@ -46,7 +46,6 @@ export default class HttpServer {
     sessionSecret,
     cookieOptions = {},
     apiKey,
-    debug = false,
     logger
   }) {
     this.#port = port
@@ -69,7 +68,6 @@ export default class HttpServer {
       ...cookieOptions
     }
     this.#sessionDatabaseFile = sessionDatabaseFile
-    this.#debug = debug
     this.#apiKey = apiKey
     this.#logger = logger
   }
@@ -77,8 +75,8 @@ export default class HttpServer {
   #getSessionDb() {
     if (!this.#sessionDb) {
       const opts = {}
-      if (this.#debug) {
-        opts.verbose = console.log
+      if (this.#logger.debugMode) {
+        opts.verbose = this.#logger
       }
       this.#sessionDb = new SqliteDatabase(
         this.#sessionDatabaseFile,
@@ -154,6 +152,17 @@ export default class HttpServer {
       next()
     }
 
+    const initLoggerMiddleware = (req, res, next) => {
+      const processId = randomUUID()
+      this.#logger.processId = processId
+      this.#logger.debugMode = (req.query?.debug ?? '') === 'true'
+      this.#logger.verboseMode = (req.query?.verbose ?? '') === 'true'
+      req.processId = processId
+      next()
+    }
+
+    app.use(initLoggerMiddleware)
+
     app.options('*', cors(corsOptions)) // enable pre-flight request for all routes
     app.get(
       '/publicVapidKey.json',
@@ -209,15 +218,10 @@ export default class HttpServer {
       cors(corsOptions),
       checkBearerToken,
       (req, res) => {
-        const processId = randomUUID()
         // Launch background process without waiting
         Promise.resolve().then(async () => {
           try {
-            this.#logger.setProcessId(processId)
-            console.log('req.query?.verbose', req.query?.verbose)
-            console.log('req.query?.debug', req.query?.debug)
-            this.#logger.setVerbose((req.query?.verbose ?? '') === 'true')
-            await this.#processController.process((req.query?.debug ?? '') === 'true')
+            await this.#processController.process()
           } catch (error) {
             this.#logger.error('Background process error:', error)
           }
@@ -225,27 +229,29 @@ export default class HttpServer {
         // Return process ID for log retrieval
         res.status(202).json({
           message: 'Process started',
-          processId
+          processId: req.processId
         })
       }
     )
 
-    // Add endpoint to retrieve logs
-    app.get(
-      '/cron/:processId/logs',
+    app.post(
+      '/install',
       cors(corsOptions),
       checkBearerToken,
       (req, res) => {
-        const format = req.query?.format ?? 'json'
-        const logs = this.#processController.getLogs(
-          req.params.processId,
-          format,
-        )
-        if (format === 'text') {
-          res.set('Content-Type', 'text/plain')
-          return res.send(logs)
-        }
-        res.json(logs)
+        // Launch background process without waiting
+        Promise.resolve().then(async () => {
+          try {
+            await this.#processController.install(req.body)
+          } catch (error) {
+            this.#logger.error('Background process error:', error)
+          }
+        })
+        // Return process ID for log retrieval
+        res.status(202).json({
+          message: 'Process started',
+          processId: req.processId
+        })
       }
     )
 

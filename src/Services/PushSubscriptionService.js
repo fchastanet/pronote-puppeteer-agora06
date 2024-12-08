@@ -2,19 +2,21 @@ import webpush from 'web-push'
 import path from 'path'
 import fs from 'fs'
 import DataWarehouse from '#pronote/Database/DataWarehouse.js'
+import Logger from '#pronote/Services/Logger.js'
 
 export default class PushSubscriptionService {
   /** @type {DataWarehouse} */
   #dataWarehouse
+  /** @type {Logger} */
+  #logger
   #privatePath
   #privateKeysTargetFile
-  #debug = false
 
-  constructor(dataWarehouse, privatePath, debug) {
+  constructor({dataWarehouse, privatePath, logger}) {
     this.#dataWarehouse = dataWarehouse
     this.#privatePath = privatePath
     this.#privateKeysTargetFile = path.join(this.#privatePath, 'privateVapidKey.js')
-    this.#debug = debug
+    this.#logger = logger
   }
 
   async init() {
@@ -24,18 +26,18 @@ export default class PushSubscriptionService {
 
   async #generateVapidKeys() {
     if (fs.existsSync(this.#privateKeysTargetFile)) {
-      console.log(`VAPID keys already exist in '${this.#privateKeysTargetFile}'`)
+      this.#logger.info(`VAPID keys already exist in '${this.#privateKeysTargetFile}'`)
       const keys = await import(this.#privateKeysTargetFile)
-      console.log('Public VAPID Key:', keys.publicVapidKey)
-      console.log('Private VAPID Key:', keys.privateVapidKey)
+      this.#logger.info('Public VAPID Key:', keys.publicVapidKey)
+      this.#logger.info('Private VAPID Key:', keys.privateVapidKey)
       return keys
     }
-    console.log('Generating VAPID keys')
+    this.#logger.info('Generating VAPID keys')
     const vapidKeys = webpush.generateVAPIDKeys()
-    console.log('Public VAPID Key:', vapidKeys.publicKey)
-    console.log('Private VAPID Key:', vapidKeys.privateKey)
+    this.#logger.info('Public VAPID Key:', vapidKeys.publicKey)
+    this.#logger.info('Private VAPID Key:', vapidKeys.privateKey)
 
-    console.log('Writing VAPID keys to files')
+    this.#logger.info('Writing VAPID keys to files')
     this.#writeFile(
       this.#privateKeysTargetFile,
       `const publicVapidKey = '${vapidKeys.publicKey}'\nconst privateVapidKey = '${vapidKeys.privateKey}'\nexport { publicVapidKey, privateVapidKey }`
@@ -48,10 +50,10 @@ export default class PushSubscriptionService {
   #writeFile(targetFile, content) {
     fs.writeFileSync(this.#privateKeysTargetFile, content, 'utf8', (err) => {
       if (err) {
-        console.error(err)
+        this.#logger.error(err)
         process.exit(1)
       } else {
-        console.log(`Result written into '${targetFile}'`)
+        this.#logger.info(`Result written into '${targetFile}'`)
       }
     })
   }
@@ -80,24 +82,24 @@ export default class PushSubscriptionService {
 
   async sendNotification(notification, notificationKey, subscriptions) {
     const payloadStr = JSON.stringify(notification)
-    console.log(`Send Notification ${notificationKey} to ${subscriptions.length} subscribers`)
+    this.#logger.info(`Send Notification ${notificationKey} to ${subscriptions.length} subscribers`)
     subscriptions.forEach((subscription) => {
       webpush
         .sendNotification(subscription, payloadStr)
         .then((response) => {
           const msg = `Notification ${notificationKey} sent successfully to subscriber ${subscription.id}`
-          if (this.#debug) {
-            console.log(msg, response)
+          if (this.#logger.debugMode) {
+            this.#logger.info(msg, response)
           } else {
-            console.log(msg)
+            this.#logger.info(msg)
           }
         })
         .catch((error) => {
           if (error.statusCode === 410) {
-            console.error('Error endpoint has gone, removing endpoint:', subscription.endpoint)
+            this.#logger.error('Error endpoint has gone, removing endpoint:', subscription.endpoint)
             this.#dataWarehouse.deleteSubscriptionsByEndpoint(subscription.endpoint)
           } else {
-            console.error('Error sending notification:', error)
+            this.#logger.error('Error sending notification:', error)
           }
         })
     })
@@ -105,7 +107,7 @@ export default class PushSubscriptionService {
 
   async sendNotificationToSubscriber(subscriber, payload) {
     const payloadStr = JSON.stringify(payload)
-    webpush.sendNotification(subscriber, payloadStr).catch((error) => console.error(error))
+    webpush.sendNotification(subscriber, payloadStr).catch((error) => this.#logger.error(error))
   }
 
   async getPublicVapidKey() {

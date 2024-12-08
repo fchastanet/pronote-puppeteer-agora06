@@ -9,4 +9,5 @@ TODO.md
 src/HttpServer/privateVapidKey.js
 stat.html
 dist/
-.students.js
+.students-dev.js
+.students-prod.js

@@ -284,18 +284,6 @@ export default class DataWarehouse {
       ;
     `
 
-    const createLogsTable = `
-      CREATE TABLE IF NOT EXISTS processLogs (
-        logId INTEGER PRIMARY KEY AUTOINCREMENT,
-        processId TEXT,
-        level TEXT,
-        message TEXT,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE INDEX IF NOT EXISTS idxProcessLogsProcessId ON processLogs(processId);
-      CREATE INDEX IF NOT EXISTS idxProcessLogsTimestamp ON processLogs(timestamp);
-    `
-
     this.#db.exec(createDimStudentsTable)
     this.#db.exec(createDimSchoolsTable)
     this.#db.exec(createDimGradesTable)
@@ -308,7 +296,6 @@ export default class DataWarehouse {
     this.#db.exec(createUsersTable)
     this.#db.exec(createUserStudentsLinkTable)
     this.#db.exec(createViewQuery)
-    this.#db.exec(createLogsTable)
   }
 
   isSchemaInitialized() {
@@ -1126,35 +1113,5 @@ export default class DataWarehouse {
       WHERE usl.userId = ?
     `)
     return stmt.all(userId)
-  }
-
-  insertProcessLog(processId, level, message) {
-    const stmt = this.#db.prepare(`
-      INSERT INTO processLogs (processId, level, message)
-      VALUES (?, ?, ?)
-    `)
-    const info = stmt.run(processId, level, message)
-    return info.lastInsertRowid
-  }
-
-  getProcessLogs(processId) {
-    if (processId === 'last') {
-      const stmt = this.#db.prepare(`
-        SELECT * FROM processLogs
-        WHERE processId = (
-          SELECT processId FROM processLogs
-          ORDER BY timestamp DESC
-          LIMIT 1
-        )
-        ORDER BY timestamp ASC
-      `)
-      return stmt.all()
-    }
-    const stmt = this.#db.prepare(`
-      SELECT * FROM processLogs
-      WHERE processId = ?
-      ORDER BY timestamp ASC
-    `)
-    return stmt.all(processId)
   }
 }

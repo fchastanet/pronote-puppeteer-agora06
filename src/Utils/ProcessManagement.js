@@ -1,4 +1,4 @@
-const processManagement = (cleanHandler) => {
+const processManagement = (logger, cleanHandler) => {
   // -----------------------------------------------------------------------------
   // Handle process exit
   // -----------------------------------------------------------------------------
@@ -13,7 +13,7 @@ const processManagement = (cleanHandler) => {
       exitCode = 1
     }
     if (typeof exitCode === 'object' || typeof exitCode === 'string' || exitCode instanceof Error) {
-      console.error(exitCode)
+      logger.error(exitCode)
       exitCode = 2
     }
     if (options.exit) process.exit(exitCode)

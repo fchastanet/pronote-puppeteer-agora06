@@ -2,21 +2,26 @@ import DataWarehouse from '#pronote/Database/DataWarehouse.js'
 import PushSubscriptionService from '#pronote/Services/PushSubscriptionService.js'
 import DateWrapper from '#pronote/Utils/DateWrapper.js'
 import Utils from '#pronote/Utils/Utils.js'
+import Logger from '#pronote/Services/Logger.js'
 
 export default class NotificationsService {
   /** @type {DataWarehouse} */
   #dataWarehouse
   /** @type {PushSubscriptionService} */
   #pushSubscriptionService
-  #verbose
+  /** @type {Logger} */
+  #logger
   #rateLimit
   #skipNotifications
   #notificationsToSend = []
 
-  constructor({dataWarehouse, pushSubscriptionService, verbose, skipNotifications, rateLimit}) {
+  constructor({
+    dataWarehouse, pushSubscriptionService, logger,
+    skipNotifications, rateLimit
+  }) {
     this.#dataWarehouse = dataWarehouse
     this.#pushSubscriptionService = pushSubscriptionService
-    this.#verbose = verbose
+    this.#logger = logger
     this.#skipNotifications = skipNotifications
     this.#rateLimit = rateLimit
   }
@@ -60,22 +65,22 @@ export default class NotificationsService {
 
   async #sendHomeworkNotification(homework, reason, index, total, notificationDate, subscriptions) {
     if (this.#skipNotifications) {
-      console.log('Notifications skipped')
+      this.#logger.info('Notifications skipped')
       return new Promise((resolve) => resolve())
     }
     const homeworkNotification = this.#stylizeHomeworkNotification(homework, reason, index, total)
-    console.log('Sending notification for homework:', homeworkNotification)
+    this.#logger.info('Sending notification for homework:', homeworkNotification)
     await this.#pushSubscriptionService
       .sendNotification(homeworkNotification, homework.factKey, subscriptions)
       .then(() => {
-        console.log('Notification sent')
+        this.#logger.info('Notification sent')
         const dateId = this.#dataWarehouse.getOrInsertDate(notificationDate)
         this.#dataWarehouse.updateHomeworkNotificationSent(
           homework.factKey, DataWarehouse.NOTIFICATION_STATE_SENT, dateId
         )
       })
       .catch((error) => {
-        console.error('Error sending notification:', error)
+        this.#logger.error('Error sending notification:', error)
       })
 
     return new Promise((resolve) => resolve())
@@ -83,7 +88,7 @@ export default class NotificationsService {
 
   stackHomeworkNotification(homework, reason) {
     if (this.#skipNotifications) {
-      console.log('Notifications skipped')
+      this.#logger.info('Notifications skipped')
       return false
     }
     this.#notificationsToSend.push({type: 'homework', homework, reason})
@@ -92,7 +97,7 @@ export default class NotificationsService {
 
   async sendNotifications() {
     if (this.#skipNotifications) {
-      console.log('Notifications skipped')
+      this.#logger.info('Notifications skipped')
       return
     }
     const notificationsCount = this.#notificationsToSend.length
@@ -101,11 +106,11 @@ export default class NotificationsService {
     }
     const subscriptions = await this.#dataWarehouse.getPushSubscriptions()
     if (subscriptions.length === 0) {
-      console.log('No subscribers found, skipped notifications sending')
+      this.#logger.info('No subscribers found, skipped notifications sending')
       return
     }
     if (notificationsCount > this.#rateLimit) {
-      console.log(`Rate limit exceeded, sending max notifications: ${this.#rateLimit}/${notificationsCount}`)
+      this.#logger.info(`Rate limit exceeded, sending max notifications: ${this.#rateLimit}/${notificationsCount}`)
     }
     const notificationDate = new DateWrapper()
     let i = 0
@@ -129,7 +134,7 @@ export default class NotificationsService {
         notificationsSent++
       }
     }
-    console.log(`Sent ${notificationsSent} notifications`)
+    this.#logger.info(`Sent ${notificationsSent} notifications`)
 
     this.#notificationsToSend = []
   }

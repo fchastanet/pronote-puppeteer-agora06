@@ -12,7 +12,7 @@ export default class ProcessController {
   #logger
   #skipPronoteDataRetrieval
   #skipDataProcess
-  #verbose
+  #databaseFile
   #studentsInitializationFile
 
   constructor({
@@ -20,7 +20,7 @@ export default class ProcessController {
     processorDataService,
     skipPronoteDataRetrieval,
     skipDataProcess,
-    verbose,
+    databaseFile,
     studentsInitializationFile,
     logger
   }) {
@@ -28,23 +28,28 @@ export default class ProcessController {
     this.#processorDataService = processorDataService
     this.#skipPronoteDataRetrieval = skipPronoteDataRetrieval
     this.#skipDataProcess = skipDataProcess
-    this.#verbose = verbose
+    this.#databaseFile = databaseFile
     this.#studentsInitializationFile = studentsInitializationFile
     this.#logger = logger
   }
 
-  setProcessId(processId) {
-    this.#logger.setProcessId(processId)
-  }
-
-  setDebug(debug) {
-    this.#pronoteRetrievalService.setDebug(debug)
+  async install(config) {
+    this.#logger.info('Start install ...')
+    if (fs.existsSync(this.#databaseFile)) {
+      fs.unlinkSync(this.#databaseFile)
+    }
+    await this.#createDatabase()
+    await this.#processorDataService.initStudents(config)
+    await this.#processPronoteData()
+    this.#logger.info('End install ...')
   }
 
   async process() {
     this.#logger.info('Start process ...')
-    await this.#createDatabase()
-    await this.#initStudents()
+    if (process.env.NODE_ENV !== 'production') {
+      await this.#createDatabase()
+      await this.#initStudents()
+    }
     await this.#retrievePronoteData()
     await this.#processPronoteData()
     this.#logger.info('End process ...')
@@ -62,7 +67,7 @@ export default class ProcessController {
       if (!fs.existsSync(this.#studentsInitializationFile)) {
         throw new Error(`The students initialization file does not exist: ${this.#studentsInitializationFile}`)
       }
-      await this.#processorDataService.initStudents(this.#studentsInitializationFile)
+      await this.#processorDataService.initStudentsFromFile(this.#studentsInitializationFile)
       this.#logger.debug('Students initialized.')
     }
   }
@@ -85,9 +90,5 @@ export default class ProcessController {
     this.#logger.debug('Pronote data warehouse processing ...')
     await this.#processorDataService.process()
     this.#logger.debug('Pronote data warehouse processed.')
-  }
-
-  getLogs(processId, format = 'json') {
-    return this.#logger.getLogs(processId, format)
   }
 }

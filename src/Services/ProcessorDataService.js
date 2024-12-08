@@ -10,13 +10,11 @@ import Logger from './Logger.js'
 
 export default class ProcessorDataService {
   /** @type {DataWarehouse} */
-  #db
+  #dataWarehouse
   /** @type {NotificationsService} */
   #notificationsService
   /** @type {Logger} */
   #logger
-  #verbose = false
-  #debug = false
   #homeworkConverter
   #courseConverter
 
@@ -38,28 +36,30 @@ export default class ProcessorDataService {
   #newHomeworkKeys = []
   #deletedHomeworkKeys = []
 
-  constructor(db, notificationsService, logger, resultsDir, debug, verbose) {
-    this.#db = db
+  constructor({dataWarehouse, notificationsService, logger, resultsDir}) {
+    this.#dataWarehouse = dataWarehouse
     this.#notificationsService = notificationsService
     this.#logger = logger
     this.#resultsDir = resultsDir
     this.#homeworkConverter = new HomeworkConverter()
-    this.#courseConverter = new CourseConverter(debug, verbose)
+    this.#courseConverter = new CourseConverter({logger})
     this.#courseIdFactMapping = {}
-    this.#debug = debug
-    this.#verbose = verbose
   }
 
   createDatabase() {
-    this.#db.createSchema()
+    this.#dataWarehouse.createSchema()
   }
 
-  async initStudents(studentsInitializationFile) {
+  async initStudentsFromFile(studentsInitializationFile) {
     const config = await import(studentsInitializationFile)
+    this.initStudents(config.default)
+  }
+
+  async initStudents(config) {
     // Process students first
     const studentIds = {}
-    for (const [, studentData] of Object.entries(config.default.students)) {
-      const existingStudent = this.#db.getStudentByName(studentData.name)
+    for (const [, studentData] of Object.entries(config.students)) {
+      const existingStudent = this.#dataWarehouse.getStudentByName(studentData.name)
       const newStudentData = {
         name: studentData.name,
         fullName: `${studentData.firstName} ${studentData.lastName}`,
@@ -70,23 +70,19 @@ export default class ProcessorDataService {
         pronotePassword: studentData.pronotePassword
       }
       if (existingStudent) {
-        if (this.#verbose) {
-          this.#logger.debug(`Updating student '${studentData.name}'`)
-        }
-        this.#db.updatePronoteStudent(existingStudent.id, newStudentData)
+        this.#logger.verbose(`Updating student '${studentData.name}'`)
+        this.#dataWarehouse.updatePronoteStudent(existingStudent.id, newStudentData)
         studentIds[studentData.name] = existingStudent.id
       } else {
-        if (this.#verbose) {
-          this.#logger.debug(`Creating student '${studentData.name}'`)
-        }
-        const studentId = this.#db.createPronoteStudent(newStudentData)
+        this.#logger.verbose(`Creating student '${studentData.name}'`)
+        const studentId = this.#dataWarehouse.createPronoteStudent(newStudentData)
         studentIds[studentData.name] = studentId
       }
     }
 
     // Process users and link them to students
-    for (const [, userData] of Object.entries(config.default.users)) {
-      const existingUser = this.#db.getUserByLogin(userData.login)
+    for (const [, userData] of Object.entries(config.users)) {
+      const existingUser = this.#dataWarehouse.getUserByLogin(userData.login)
       let userId
       const newUserData = {
         login: userData.login,
@@ -96,26 +92,20 @@ export default class ProcessorDataService {
         role: userData.role ?? 'user'
       }
       if (existingUser) {
-        if (this.#verbose) {
-          this.#logger.debug(`Updating user '${userData.login}'`)
-        }
-        this.#db.updateUser(existingUser.id, newUserData)
+        this.#logger.verbose(`Updating user '${userData.login}'`)
+        this.#dataWarehouse.updateUser(existingUser.id, newUserData)
         userId = existingUser.id
       } else {
-        if (this.#verbose) {
-          this.#logger.debug(`Creating user '${userData.login}'`)
-        }
-        userId = this.#db.createUser(newUserData)
+        this.#logger.verbose(`Creating user '${userData.login}'`)
+        userId = this.#dataWarehouse.createUser(newUserData)
       }
 
       // Link account to students
       for (const studentKey of userData.students) {
         const studentId = studentIds[studentKey]
         if (studentId) {
-          if (this.#verbose) {
-            this.#logger.debug(`Linking user '${userData.login}' to student '${studentKey}'`)
-          }
-          this.#db.linkUserStudent(userId, studentId)
+          this.#logger.verbose(`Linking user '${userData.login}' to student '${studentKey}'`)
+          this.#dataWarehouse.linkUserStudent(userId, studentId)
         } else {
           this.#logger.error(`Student '${studentKey}' not found for user '${userData.login}'`)
         }
@@ -129,11 +119,9 @@ export default class ProcessorDataService {
 
   process() {
     try {
-      this.#db.getStudents().forEach((student) => {
+      this.#dataWarehouse.getStudents().forEach((student) => {
         const resultsDir = path.join(this.#resultsDir, this.#escapePath(student.name))
-        if (this.#verbose) {
-          this.#logger.debug(`Processing results for ${student.name} in '${resultsDir}'`)
-        }
+        this.#logger.verbose(`Processing results for ${student.name} in '${resultsDir}'`)
         this.processDirectories(resultsDir)
       })
     } catch (error) {
@@ -165,18 +153,18 @@ export default class ProcessorDataService {
       }
 
       if (
-        this.#db.isFileProcessed(studentInfoPath) &&
-        this.#db.isFileProcessed(coursesPath) &&
-        this.#db.isFileProcessed(homeworksPath)
+        this.#dataWarehouse.isFileProcessed(studentInfoPath) &&
+        this.#dataWarehouse.isFileProcessed(coursesPath) &&
+        this.#dataWarehouse.isFileProcessed(homeworksPath)
       ) {
-        this.#logger.info(`Files in directory '${subDir}' are already processed`)
+        this.#logger.verbose(`Files in directory '${subDir}' are already processed`)
         return
       }
 
       this.#logger.info(`Processing files in directory '${subDir}' ...`)
-      this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
-      this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
-      this.#db.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
+      this.#dataWarehouse.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
+      this.#dataWarehouse.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
+      this.#dataWarehouse.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_WAITING)
 
       try {
         this.#logger.info(`Processing '${studentInfoPath}' ...`)
@@ -185,7 +173,7 @@ export default class ProcessorDataService {
         this.processStudentInfo(studentInfoContent)
       } catch (error) {
         this.#logger.error(`Unable to process file '${studentInfoPath}' :`, error)
-        this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
+        this.#dataWarehouse.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
         return
       }
 
@@ -195,7 +183,7 @@ export default class ProcessorDataService {
         this.processCourses(coursesPath, coursesContent)
       } catch (error) {
         this.#logger.error(`Unable to process file '${coursesPath}' :`, error)
-        this.#db.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
+        this.#dataWarehouse.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
         return
       }
 
@@ -209,7 +197,7 @@ export default class ProcessorDataService {
         fs.writeFileSync(homeworkIdsPath, JSON.stringify(this.#homeworkIds, null, 2), 'utf8')
       } catch (error) {
         this.#logger.error(`Unable to process file '${homeworksPath}' :`, error)
-        this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
+        this.#dataWarehouse.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_ERROR)
         return
       }
 
@@ -223,12 +211,12 @@ export default class ProcessorDataService {
       }
 
       // remove Homeworks that were marked as temporary before this crawlDate and that are still temporary
-      let temporaryHomeworksToRemove = this.#db.reportTemporaryHomeworks(this.#crawlDate)
+      let temporaryHomeworksToRemove = this.#dataWarehouse.reportTemporaryHomeworks(this.#crawlDate)
       temporaryHomeworksToRemove = temporaryHomeworksToRemove.map((homework) => {
         homework.json = JSON.parse(homework.json)
         return homework
       })
-      const deletedHomeworkCount = this.#db.removeTemporaryHomeworks(this.#crawlDate)
+      const deletedHomeworkCount = this.#dataWarehouse.removeTemporaryHomeworks(this.#crawlDate)
       if (deletedHomeworkCount > 0) {
         this.#logger.info(`Removed ${deletedHomeworkCount} temporary homeworks in '${subDir}'`)
       }
@@ -246,33 +234,31 @@ export default class ProcessorDataService {
       this.#logger.info(`Writing ${errorsReportPath} ...`)
 
       // mark file processed only at the end as all files need to re parsed every time
-      this.#db.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
-      this.#db.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
-      this.#db.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
+      this.#dataWarehouse.insertProcessedFile(studentInfoPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
+      this.#dataWarehouse.insertProcessedFile(homeworksPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
+      this.#dataWarehouse.insertProcessedFile(coursesPath, DataWarehouse.FILE_PROCESSING_STATUS_PROCESSED)
     })
   }
 
   processStudentInfo(studentInfo) {
-    this.#studentId = this.#db.getStudentId(studentInfo.name)
+    this.#studentId = this.#dataWarehouse.getStudentId(studentInfo.name)
     if (!this.#studentId) {
-      this.#studentId = this.#db.insertStudent(studentInfo.name)
+      this.#studentId = this.#dataWarehouse.insertStudent(studentInfo.name)
     }
-    this.#schoolId = this.#db.getSchoolId(studentInfo.school)
+    this.#schoolId = this.#dataWarehouse.getSchoolId(studentInfo.school)
     if (!this.#schoolId) {
-      this.#schoolId = this.#db.insertSchool(studentInfo.school)
+      this.#schoolId = this.#dataWarehouse.insertSchool(studentInfo.school)
     }
-    this.#gradeId = this.#db.getGradeId(studentInfo.grade)
+    this.#gradeId = this.#dataWarehouse.getGradeId(studentInfo.grade)
     if (!this.#gradeId) {
-      this.#gradeId = this.#db.insertGrade(studentInfo.grade)
+      this.#gradeId = this.#dataWarehouse.insertGrade(studentInfo.grade)
     }
   }
 
   processCourses(filePath, data) {
     const items = this.#courseConverter.fromPronote(data)
     // Log the items to debug
-    if (this.#debug) {
-      this.#logger.debug('Converted Items:', items)
-    }
+    this.#logger.debug('Converted Items:', items)
 
     // Check if items is empty
     if (items.length === 0) {
@@ -325,9 +311,9 @@ export default class ProcessorDataService {
 
   insertCourse(course, schoolId, gradeId, studentId, filePath) {
     // Insert course
-    let subjectId = this.#db.getSubjectId(course.subject)
+    let subjectId = this.#dataWarehouse.getSubjectId(course.subject)
     if (!subjectId) {
-      subjectId = this.#db.insertSubject({
+      subjectId = this.#dataWarehouse.insertSubject({
         subject: course.subject,
         backgroundColor: course.backgroundColor,
       })
@@ -336,26 +322,26 @@ export default class ProcessorDataService {
     // Insert teachers
     const teacherIds = []
     course.teacherList.forEach((teacher) => {
-      let teacherId = this.#db.getTeacherId(teacher, subjectId)
+      let teacherId = this.#dataWarehouse.getTeacherId(teacher, subjectId)
       if (!teacherId) {
-        teacherId = this.#db.insertTeacher(teacher, subjectId)
+        teacherId = this.#dataWarehouse.insertTeacher(teacher, subjectId)
       }
       teacherIds.push(teacherId)
     })
 
     // Insert dates
-    const startDateId = this.#db.getOrInsertDate(course?.startDate)
-    const endDateId = this.#db.getOrInsertDate(course?.endDate)
-    const homeworkDateId = this.#db.getOrInsertDate(course?.homeworkDate)
-    const updateLastDateId = this.#db.getOrInsertDate(this.#crawlDate)
+    const startDateId = this.#dataWarehouse.getOrInsertDate(course?.startDate)
+    const endDateId = this.#dataWarehouse.getOrInsertDate(course?.endDate)
+    const homeworkDateId = this.#dataWarehouse.getOrInsertDate(course?.homeworkDate)
+    const updateLastDateId = this.#dataWarehouse.getOrInsertDate(this.#crawlDate)
 
     // Insert fact course
-    const factCourse = this.#db.getFactCourse(course.key)
+    const factCourse = this.#dataWarehouse.getFactCourse(course.key)
     let updateFiles = []
     let factCourseId = null
     if (typeof factCourse === 'undefined') {
       updateFiles.push({filePath, checksum: course.checksum, id: course.id})
-      factCourseId = this.#db.insertFactCourse({
+      factCourseId = this.#dataWarehouse.insertFactCourse({
         factKey: course.key,
         studentId,
         schoolId,
@@ -378,7 +364,7 @@ export default class ProcessorDataService {
       if (course.checksum != factCourse.checksum) {
         updateFiles = JSON.parse(factCourse.updateFiles)
         updateFiles.push({filePath, checksum: course.checksum, id: course.id})
-        this.#db.updateFactCourse({
+        this.#dataWarehouse.updateFactCourse({
           factKey: course.key,
           studentId,
           schoolId,
@@ -408,9 +394,9 @@ export default class ProcessorDataService {
 
   insertHomework(homework, schoolId, gradeId, studentId, filePath) {
     // Insert homework
-    let subjectId = this.#db.getSubjectId(homework.subject)
+    let subjectId = this.#dataWarehouse.getSubjectId(homework.subject)
     if (!subjectId) {
-      subjectId = this.#db.insertSubject({
+      subjectId = this.#dataWarehouse.insertSubject({
         subject: homework.subject,
         backgroundColor: homework.backgroundColor,
       })
@@ -422,20 +408,20 @@ export default class ProcessorDataService {
       dueDate.setHour(8)
     }
     const dueDateTolerance = dueDate ? dueDate.clone().add(1, 'days') : null
-    const dueDateId = this.#db.getOrInsertDate(dueDate)
+    const dueDateId = this.#dataWarehouse.getOrInsertDate(dueDate)
     const threeDaysAfterDueDate = dueDate.clone().add(3, 'days')
     const assignedDate = homework?.dueDate ? DateWrapper.parseDate(homework.assignedDate) : null
     if (assignedDate !== null) {
       assignedDate.setHour(8)
     }
-    const assignedDateId = this.#db.getOrInsertDate(assignedDate)
+    const assignedDateId = this.#dataWarehouse.getOrInsertDate(assignedDate)
     const maxCompletionDuration = dueDate !== null && assignedDate !== null ? dueDate.diff(assignedDate, 'second') : null
-    const updateLastDateId = this.#db.getOrInsertDate(this.#crawlDate)
+    const updateLastDateId = this.#dataWarehouse.getOrInsertDate(this.#crawlDate)
 
     const factCourseKey = this.#courseIdFactMapping?.[homework.plannedCourseId]?.factKey
     let factCourse = null
     if (factCourseKey !== null) {
-      factCourse = this.#db.getFactCourse(factCourseKey)
+      factCourse = this.#dataWarehouse.getFactCourse(factCourseKey)
     } else {
       this.#logger.warn(`Course ${homework.plannedCourseId} not found in #courseIdFactMapping`)
     }
@@ -444,7 +430,7 @@ export default class ProcessorDataService {
     const homeworkKey = this.computeHomeworkUniqueId(homework, factCourse, filePath)
     homework.factKey = homeworkKey
     this.#knownHomeworkUniqueId[homeworkKey] = homework.id
-    const factHomework = this.#db.getFactHomework(homeworkKey)
+    const factHomework = this.#dataWarehouse.getFactHomework(homeworkKey)
     let updateFiles = []
     let completedDateId = factHomework?.completedDateId || null
     let completionState = factHomework?.completionState || DataWarehouse.COMPLETION_STATE_IN_PROGRESS
@@ -464,16 +450,14 @@ export default class ProcessorDataService {
     if (completionState === DataWarehouse.COMPLETION_STATE_IN_PROGRESS) {
       if (homework.completed) {
         if (typeof factHomework === 'undefined') {
-          if (this.#verbose) {
-            this.#logger.info(
-              `Homework ${homework.id} is completed before being inserted, cannot compute completion duration`
-            )
-          }
+          this.#logger.verbose(
+            `Homework ${homework.id} is completed before being inserted, cannot compute completion duration`
+          )
           this.#unknownCompletionIds.push(homework.id)
 
           completionState = DataWarehouse.COMPLETION_STATE_UNKNOWN
         } else {
-          completedDateId = this.#db.getOrInsertDate(this.#crawlDate)
+          completedDateId = this.#dataWarehouse.getOrInsertDate(this.#crawlDate)
           completionDuration = this.#crawlDate.diff(assignedDate, 'second')
           if (this.#crawlDate.isAfter(dueDateTolerance)) {
             completionState = DataWarehouse.COMPLETION_STATE_OVER_DUE
@@ -483,7 +467,7 @@ export default class ProcessorDataService {
         }
       } else if (this.#crawlDate.isAfter(threeDaysAfterDueDate)) {
         completionState = DataWarehouse.COMPLETION_STATE_OVER_DUE
-        completedDateId = this.#db.getOrInsertDate(this.#crawlDate)
+        completedDateId = this.#dataWarehouse.getOrInsertDate(this.#crawlDate)
         completionDuration = this.#crawlDate.diff(assignedDate, 'second')
       }
     }
@@ -494,7 +478,7 @@ export default class ProcessorDataService {
         checksum: homework.checksum,
         id: homework.id,
       })
-      this.#db.insertFactHomework({
+      this.#dataWarehouse.insertFactHomework({
         factKey: homeworkKey,
         factCourseId: factCourse?.factId ?? null,
         studentId,
@@ -533,7 +517,7 @@ export default class ProcessorDataService {
         checksum: homework.checksum,
         id: homework.id,
       })
-      this.#db.updateFactHomework({
+      this.#dataWarehouse.updateFactHomework({
         factKey: homeworkKey,
         factCourseId: factCourse?.factId ?? null,
         studentId,
@@ -568,7 +552,7 @@ export default class ProcessorDataService {
       // TODO do not send notification if only change is homework completed state
       this.#notificationsService.stackHomeworkNotification(homework, 'updated')
     } else {
-      this.#db.updateFactHomeworkTemporary(homeworkKey, 0)
+      this.#dataWarehouse.updateFactHomeworkTemporary(homeworkKey, 0)
     }
   }
 

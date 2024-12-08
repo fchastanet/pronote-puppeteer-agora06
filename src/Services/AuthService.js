@@ -3,9 +3,12 @@ import DataWarehouse from '#pronote/Database/DataWarehouse.js'
 export default class AuthService {
   /** @type {DataWarehouse} */
   #dataWarehouse
+  /** @type {Logger} */
+  #logger
 
-  constructor({dataWarehouse}) {
+  constructor({dataWarehouse, logger}) {
     this.#dataWarehouse = dataWarehouse
+    this.#logger = logger
   }
 
   async login(login, password) {
@@ -39,7 +42,7 @@ export default class AuthService {
         pushExpirationTime: data?.pushExpirationTime,
       }
     }
-    console.log(authData)
+    this.#logger.info(authData)
     return authData
   }
 }

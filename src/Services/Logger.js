@@ -1,60 +1,66 @@
-import DataWarehouse from '#pronote/Database/DataWarehouse.js'
-
 export const LOG_FORMAT = {
   JSON: 'json',
   TEXT: 'text'
 }
 
 export default class Logger {
-  /** @param {DataWarehouse} */
-  #dataWarehouse = null
   #processId = null
-  #verbose
+  #debugMode
+  #verboseMode
 
-  constructor(dataWarehouse, verbose = false) {
-    this.#dataWarehouse = dataWarehouse
-    this.#verbose = verbose
+  constructor(debugMode = false, verboseMode = false) {
+    this.#debugMode = debugMode
+    this.#verboseMode = verboseMode
   }
 
-  setVerbose(verbose) {
-    this.#verbose = verbose
+  set debugMode(debugMode) {
+    this.#debugMode = debugMode
+    this.info('Logger Debug mode:', this.#debugMode)
   }
 
-  setProcessId(processId) {
+  get debugMode() {
+    return this.#debugMode
+  }
+
+  set verboseMode(verboseMode) {
+    this.#verboseMode = verboseMode
+    this.info('Logger Verbose mode:', this.#verboseMode)
+  }
+
+  get verboseMode() {
+    return this.#verboseMode
+  }
+
+  set processId(processId) {
     this.#processId = processId
   }
 
-  #log(level, ...args) {
-    const message = args.join(' ')
-    if (this.#processId) {
-      this.#dataWarehouse.insertProcessLog(this.#processId, level, message)
-    }
-    return message
+  get processId() {
+    return this.#processId
   }
 
   debug(...args) {
-    if (this.#verbose) {
-      console.debug(this.#log('debug', ...args))
+    if (this.#debugMode) {
+      console.debug('DEBUG  ', this.#processId, ...args)
+    }
+  }
+
+  verbose(...args) {
+    if (this.#verboseMode) {
+      console.info('VERBOSE', this.#processId, ...args)
     }
   }
 
   info(...args) {
-    console.info(this.#log('info', ...args))
+    console.info('INFO   ', this.#processId, ...args)
   }
 
   warn(...args) {
-    console.warn(this.#log('warn', ...args))
+    console.warn('WARN   ', this.#processId, ...args)
   }
 
   error(...args) {
-    console.error(this.#log('error', ...args))
+    console.error('ERROR  ', this.#processId, ...args)
   }
 
-  getLogs(processId, format = LOG_FORMAT.JSON) {
-    const logs = this.#dataWarehouse.getProcessLogs(processId)
-    if (format === LOG_FORMAT.TEXT) {
-      return logs.map((log) => `[${log.timestamp}] ${log.level}: ${log.message}`).join('\n')
-    }
-    return logs
-  }
 }

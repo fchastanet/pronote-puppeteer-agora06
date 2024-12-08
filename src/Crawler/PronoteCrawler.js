@@ -15,10 +15,6 @@ export default class PronoteCrawler {
   #browser = null
   /** @type {Page} #page */
   #page = null
-  /** @type {boolean} #debug */
-  #debug = false
-  /** @type {boolean} #verbose */
-  #verbose = false
   #sessionNumber = null
   // crawl session related variables
   /** @type {string} #resultDir */
@@ -26,16 +22,9 @@ export default class PronoteCrawler {
   /** @type {DateWrapper} #currentDate */
   #currentDate = null
 
-  constructor({crawler, logger, debug, verbose}) {
+  constructor({crawler, logger}) {
     this.#crawler = crawler
     this.#logger = logger
-    this.#verbose = verbose
-    this.#debug = debug
-  }
-
-  setDebug(debug) {
-    this.#debug = debug
-    this.#crawler.setDebug(debug)
   }
 
   async init() {
@@ -50,7 +39,7 @@ export default class PronoteCrawler {
       return
     }
 
-    if (this.#verbose) {
+    if (this.#logger.debugMode) {
       this.#page.on('console', (msg) => this.#logger.info('PAGE CONSOLE LOGS:', msg.text()))
     }
 
@@ -65,7 +54,7 @@ export default class PronoteCrawler {
       const request = response.request()
       // Only check responses for XHR requests linked to "cahier de texte"
       const postData = request.postData()
-      if (this.#debug) {
+      if (this.#logger.debugMode) {
         this.#logger.debug(
           'Response',
           'resourceType',
@@ -109,7 +98,7 @@ export default class PronoteCrawler {
   #writeCahierDeTexte(response, postDataObj) {
     // Log response status and URL
 
-    if (this.#debug) {
+    if (this.#logger.debugMode) {
       this.#logger.debug('XHR Response', response.status(), response.url())
       // Log response headers
       this.#logger.debug('Headers', response.headers())
@@ -135,9 +124,7 @@ export default class PronoteCrawler {
 
   #getTargetFile(postDataObj) {
     const tab = postDataObj?.donneesSec?._Signature_?.onglet
-    if (this.#debug) {
-      this.#logger.debug('Onglet', tab)
-    }
+    this.#logger.debug('Onglet', tab)
     if (tab === 88) {
       return this.#getResultFile('cahierDeTexte-travailAFaire.json')
     } else if (tab === 89) {
