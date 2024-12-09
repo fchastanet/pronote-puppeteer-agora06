@@ -8,6 +8,13 @@ export default defineConfig({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: 'web/index.html',
+        faviconPng: 'web/favicon.png',
+        faviconIco: 'web/favicon.ico'
+      }
+    }
   },
   css: {
     preprocessorOptions: {
