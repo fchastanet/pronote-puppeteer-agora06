@@ -78,10 +78,14 @@ window.addEventListener('userLoggedIn', (event) => {
   document.getElementById('loginForm').classList.toggle('hidden', true)
   document.getElementById('logoutButton').classList.toggle('hidden', false)
   const welcomeMessage = document.getElementById('welcomeMessage')
-  welcomeMessage.classList.toggle('hidden', false)
   welcomeMessage.textContent = `Welcome, ${event.detail.welcomeMessage}`
   const dashboard = new Dashboard()
   dashboard.init()
+})
+
+window.addEventListener('userLoggedOut', () => {
+  const welcomeMessage = document.getElementById('welcomeMessage')
+  welcomeMessage.textContent = ''
 })
 
 window.webServiceUrl = ''
