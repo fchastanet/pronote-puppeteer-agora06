@@ -88,6 +88,12 @@ window.addEventListener('userLoggedOut', () => {
   welcomeMessage.textContent = ''
 })
 
+document.getElementById('loginForm').addEventListener('keypress', (event) => {
+  if (event.key === 'Enter') {
+    document.getElementById('loginButton').click()
+  }
+})
+
 window.webServiceUrl = ''
 window.addEventListener('load', async () => {
   const appDiv = document.getElementById('app')
