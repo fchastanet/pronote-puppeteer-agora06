@@ -1,0 +1,90 @@
+@startuml "sequence diagram aws oriented"
+
+!pragma teoz true
+
+actor      "\nBrowser"                       as Browser
+box        "Internal Services" #LightBlue
+  Boundary "\nAws CloudFront"                as cloudfront #LightGreen
+  Boundary "AWS Lambda\nBackend API"         as backendAPILambda #LightGreen
+  actor    "AWS System Manager\nCronService" as cronService #LightGreen
+  Boundary "AWS Lambda\nBackend Service"     as backendServiceLambda #LightGreen
+  Database "\nAWS S3"                        as S3 #LightGreen
+  Database "Sqlite Database\nReadOnly"       as dbReadOnly
+  Database "Sqlite Database\nReadWrite"      as dbReadReadWrite
+  Database "\nAWS EFS"                       as efs #LightGreen
+end box
+box        "External Services" #MediumOrchid
+  queue    "Pronote\nSystem"                 as pronoteSystem
+  queue    "Notification\nSystem"            as notificationSystem
+end box
+
+== User Interaction ==
+
+Browser -> cloudfront: Load web interface
+cloudfront -> S3: Load static files
+Browser <-- S3: Return static files
+
+group authenticate user
+  Browser -> cloudfront: call /login endpoint
+  cloudfront -> backendAPILambda: call /login endpoint
+  backendAPILambda -> dbReadOnly: retrieve user data
+  backendAPILambda <-- dbReadOnly: return user data
+  Browser <-- backendAPILambda : return authentication data
+  Browser -> Browser: Display dashboard as logged in
+end
+group query metrics related to user with date range
+  Browser -> backendAPILambda: call /dashboardMetrics endpoint
+  backendAPILambda -> dbReadOnly: retrieve metrics
+  backendAPILambda <-- dbReadOnly: Return metrics
+  Browser <-- backendAPILambda: Return metrics.json
+  Browser -> Browser: Display metrics
+end
+group Subscribe to push notifications
+  Browser -> Browser: Check if browser supports push notifications
+  Browser -> backendAPILambda: call /publicVapidKey.json endpoint
+  Browser <-- backendAPILambda: return public vapid key
+  Browser -> Browser: register service worker (service-worker.js)
+  Browser -> backendAPILambda: call /subscribe endpoint
+  backendAPILambda -> efs: store subscription as file
+  note right of backendAPILambda
+    sqlite cannot be written from several processes
+    so we store subscriptions in files
+  end note
+  backendAPILambda --> Browser: Return response
+  Browser -> Browser: Set user as registered
+end
+group unsubscribe from push notifications
+  Browser -> backendAPILambda: call /unsubscribe endpoint
+  backendAPILambda -> efs: store subscription as file
+  note right of backendAPILambda
+    sqlite cannot be written from several processes
+    so we store subscriptions in files
+  end note
+  backendAPILambda --> Browser: Return response
+  Browser -> Browser: Set user as registered
+end
+
+== Cron Job ==
+
+group execute cron
+  cronService -> backendServiceLambda: call backendService command
+  backendServiceLambda -> dbReadReadWrite: retrieve list of users
+  loop each user
+    backendServiceLambda -> pronoteSystem: retrieve data from pronote
+    backendServiceLambda <-- pronoteSystem : return data
+    backendServiceLambda -> backendServiceLambda: save data as files
+    loop each file of current user
+      backendServiceLambda -> dbReadReadWrite: mark file as in progress
+      backendServiceLambda -> dbReadReadWrite: process file and update database
+      backendServiceLambda -> dbReadReadWrite: mark file as processed
+    end
+    backendServiceLambda -> efs: retrieve user subscription file
+    backendServiceLambda -> dbReadReadWrite: mark user as subscribed/not subscribed to notifications
+    alt user is subscribed
+      backendServiceLambda -> notificationSystem: send notification
+    end
+  end
+  backendServiceLambda -> efs : copy writeDatabase to readDatabase file
+end
+
+@enduml

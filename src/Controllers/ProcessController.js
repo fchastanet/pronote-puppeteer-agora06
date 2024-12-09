@@ -33,13 +33,14 @@ export default class ProcessController {
     this.#logger = logger
   }
 
-  async install(config) {
+  async install() {
     this.#logger.info('Start install ...')
     if (fs.existsSync(this.#databaseFile)) {
+      this.#logger.info(`Removing existing database file: ${this.#databaseFile}`)
       fs.unlinkSync(this.#databaseFile)
     }
     await this.#createDatabase()
-    await this.#processorDataService.initStudents(config)
+    await this.#initStudents()
     await this.#processPronoteData()
     this.#logger.info('End install ...')
   }
@@ -67,6 +68,7 @@ export default class ProcessController {
       if (!fs.existsSync(this.#studentsInitializationFile)) {
         throw new Error(`The students initialization file does not exist: ${this.#studentsInitializationFile}`)
       }
+      this.#logger.info(`Initializing students from file ${this.#studentsInitializationFile} ...`)
       await this.#processorDataService.initStudentsFromFile(this.#studentsInitializationFile)
       this.#logger.debug('Students initialized.')
     }

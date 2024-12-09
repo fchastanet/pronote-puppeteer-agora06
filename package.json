@@ -27,6 +27,8 @@
   },
   "scripts": {
     "backendServer": "node ./src/backendServer.js",
+    "backendServiceInstall": "node ./src/backendService.js install",
+    "backendServiceProcess": "node ./src/backendService.js process",
     "frontendServer-dev": "vite",
     "frontendServer-build": "vite build",
     "frontendServer-preview": "vite preview"

@@ -1,0 +1,59 @@
+@startuml
+
+!pragma teoz true
+
+actor Browser
+actor "Cron\nService" as cronService
+box         "Internal Service" #LightBlue
+  Boundary    "Frontend\nServer" as frontendServer
+  participant "Backend\nAPI" as backendAPI
+  Database    "Database" as db
+end box
+queue "Pronote\nSystem" as pronoteSystem
+
+Browser -> frontendServer: Load web interface
+note right of frontendServer
+  Frontend Server only serves static files
+end note
+group authenticate user
+  Browser -> backendAPI: call /login endpoint
+  backendAPI -> db: retrieve user data
+  backendAPI <-- db: return user data
+  Browser <-- backendAPI : return authentication data
+  Browser -> Browser: Display dashboard as logged in
+end
+group query metrics related to user with date range
+  Browser -> backendAPI: call /dashboardMetrics endpoint
+  backendAPI -> db: retrieve metrics
+  backendAPI <-- db: Return metrics
+  Browser <-- backendAPI: Return metrics.json
+  Browser -> Browser: Display metrics
+end
+group Subscribe to push notifications
+  Browser -> Browser: Check if browser supports push notifications
+  Browser -> backendAPI: call /publicVapidKey.json endpoint
+  Browser -> Browser: register service worker (service-worker.js)
+  Browser -> backendAPI: call /subscribe endpoint
+  backendAPI -> db: store subscription
+  backendAPI <-- db: Return data
+  backendAPI --> Browser: Return response
+  Browser -> Browser: Set user as registered
+end
+
+group execute cron
+activate cronService
+cronService -> backendAPI: call /cron endpoint
+activate backendAPI
+cronService <-- backendAPI: return 204 header status (cron job started)
+deactivate cronService
+backendAPI -> pronoteSystem: retrieve data from pronote
+backendAPI <-- pronoteSystem : return data
+backendAPI -> backendAPI: save data as files
+loop each file
+  backendAPI -> db: mark file as in progress
+  backendAPI -> db: process file and update database
+  backendAPI -> db: mark file as processed
+end
+end
+
+@enduml

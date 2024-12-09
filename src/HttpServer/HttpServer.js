@@ -10,7 +10,6 @@ import cookieParser from 'cookie-parser'
 import UserController from '#pronote/Controllers/UserController.js'
 import {randomUUID} from 'crypto'
 import {default as SqliteDatabase} from 'better-sqlite3'
-import ProcessController from '#pronote/Controllers/ProcessController.js'
 import Logger from '#pronote/Services/Logger.js'
 
 export default class HttpServer {
@@ -22,8 +21,6 @@ export default class HttpServer {
   #userController
   /** @type {DashboardController} */
   #dashboardController
-  /** @type {ProcessController} */
-  #processController
   #publicDir
   #port
   #origin
@@ -39,7 +36,7 @@ export default class HttpServer {
 
   constructor({
     pushSubscriptionController, loginController, dashboardController,
-    userController, processController,
+    userController,
     publicDir, port = 3001, origin,
     sessionDatabaseFile,
     sessionExpirationInMs = 900000,
@@ -54,7 +51,6 @@ export default class HttpServer {
     this.#loginController = loginController
     this.#dashboardController = dashboardController
     this.#userController = userController
-    this.#processController = processController
     this.#origin = origin
     this.#sessionExpirationInMs = sessionExpirationInMs
     this.#sessionSecret = sessionSecret
@@ -135,24 +131,6 @@ export default class HttpServer {
       next()
     }
 
-    const getBearerToken = (req) => {
-      const authHeader = req.headers['authorization']
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        return authHeader.slice(7, authHeader.length) // Remove 'Bearer ' prefix
-      }
-      return null
-    }
-
-    const checkBearerToken = (req, res, next) => {
-      const token = getBearerToken(req)
-      if (!token) {
-        return res.status(401).json({message: 'Unauthorized: No bearer token'})
-      }
-      // You can add additional token validation logic here
-      req.token = token // Attach token to request object for further use
-      next()
-    }
-
     const initLoggerMiddleware = (req, res, next) => {
       const processId = randomUUID()
       this.#logger.processId = processId
@@ -212,48 +190,6 @@ export default class HttpServer {
       cors(corsOptions),
       checkSessionCookie,
       this.#dashboardController.dashboardMetricsAction.bind(this.#dashboardController)
-    )
-
-    app.post(
-      '/cron',
-      cors(corsOptions),
-      checkBearerToken,
-      (req, res) => {
-        // Launch background process without waiting
-        Promise.resolve().then(async () => {
-          try {
-            await this.#processController.process()
-          } catch (error) {
-            this.#logger.error('Background process error:', error)
-          }
-        })
-        // Return process ID for log retrieval
-        res.status(202).json({
-          message: 'Process started',
-          processId: req.processId
-        })
-      }
-    )
-
-    app.post(
-      '/install',
-      cors(corsOptions),
-      checkBearerToken,
-      (req, res) => {
-        // Launch background process without waiting
-        Promise.resolve().then(async () => {
-          try {
-            await this.#processController.install(req.body)
-          } catch (error) {
-            this.#logger.error('Background process error:', error)
-          }
-        })
-        // Return process ID for log retrieval
-        res.status(202).json({
-          message: 'Process started',
-          processId: req.processId
-        })
-      }
     )
 
     app.listen(this.#port, '0.0.0.0', () => {

@@ -13,12 +13,6 @@ import UserController from '#pronote/Controllers/UserController.js'
 import DataMetrics from '#pronote/Database/DataMetrics.js'
 import DashboardController from '#pronote/Controllers/DashboardController.js'
 import ProcessorMetricsService from '#pronote/Services/ProcessorMetricsService.js'
-import PronoteCrawler from './Crawler/PronoteCrawler.js'
-import PronoteRetrievalService from './Services/PronoteRetrievalService.js'
-import NotificationsService from './Services/NotificationsService.js'
-import ProcessorDataService from './Services/ProcessorDataService.js'
-import ProcessController from './Controllers/ProcessController.js'
-import Crawler from './Crawler/Crawler.js'
 import Logger from './Services/Logger.js'
 import {randomUUID} from 'crypto'
 
@@ -48,56 +42,6 @@ const parseCommandOptions = (argv) => {
   return command.opts()
 }
 
-const initProcessController = ({
-  dataWarehouse,
-  pushSubscriptionService,
-  logger,
-  commandOptions,
-  databaseFile,
-  resultsDir
-}) => {
-  const crawler = new Crawler({logger})
-  const pronoteCrawler = new PronoteCrawler({
-    crawler,
-    logger,
-    debug: commandOptions.debug,
-    verbose: commandOptions.verbose,
-  })
-  const pronoteRetrievalService = new PronoteRetrievalService({
-    pronoteCrawler,
-    dataWarehouse,
-    logger,
-    resultsDir,
-    debug: commandOptions.debug,
-    verbose: commandOptions.verbose,
-  })
-
-  const notificationsService = new NotificationsService({
-    dataWarehouse,
-    pushSubscriptionService,
-    logger,
-    skipNotifications: commandOptions.skipNotifications,
-    rateLimit: process.env.NOTIFICATIONS_RATE_LIMIT,
-  })
-
-  const processorDataService = new ProcessorDataService({
-    dataWarehouse,
-    notificationsService,
-    logger,
-    resultsDir,
-  })
-
-  return new ProcessController({
-    pronoteRetrievalService,
-    processorDataService,
-    skipPronoteDataRetrieval: commandOptions.skipPronote,
-    logger,
-    skipDataProcess: commandOptions.skipDataProcess,
-    databaseFile,
-    studentsInitializationFile: path.join(process.cwd(), '.students-dev.js'),
-  })
-}
-
 const main = async () => {
   const commandOptions = parseCommandOptions(process.argv)
   logger.processId = randomUUID()
@@ -110,7 +54,6 @@ const main = async () => {
 
   const databaseFile = process.env.SQLITE_DATABASE_FILE
 
-  const resultsDir = path.join(process.cwd(), process.env.RESULTS_DIR)
   const publicDir = path.join(process.cwd(), process.env.PUBLIC_DIR)
 
   databaseConnection = new DatabaseConnection({
@@ -148,20 +91,11 @@ const main = async () => {
 
   const userController = new UserController({dataWarehouse, logger})
 
-  const processController = initProcessController({
-    dataWarehouse,
-    pushSubscriptionService,
-    logger,
-    commandOptions,
-    databaseFile,
-    resultsDir
-  })
   const server = new HttpServer({
     pushSubscriptionController,
     loginController,
     userController,
     dashboardController,
-    processController,
     logger,
     publicDir,
     port: process.env?.SERVER_PORT ?? 3001,
