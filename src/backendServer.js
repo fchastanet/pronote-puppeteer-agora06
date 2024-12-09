@@ -122,7 +122,7 @@ const main = async () => {
     secure: process.env?.SESSION_COOKIE_SECURE === 1 ?? false,
   }
   logger.info('cookieOptions', cookieOptions)
-  const authService = new AuthService({dataWarehouse})
+  const authService = new AuthService({dataWarehouse, logger})
   const loginController = new LoginController({
     logger,
     authService,
@@ -144,9 +144,9 @@ const main = async () => {
   const processorMetricsService = new ProcessorMetricsService({
     dataMetrics, dataWarehouse
   })
-  const dashboardController = new DashboardController({processorMetricsService})
+  const dashboardController = new DashboardController({processorMetricsService, logger})
 
-  const userController = new UserController(dataWarehouse)
+  const userController = new UserController({dataWarehouse, logger})
 
   const processController = initProcessController({
     dataWarehouse,

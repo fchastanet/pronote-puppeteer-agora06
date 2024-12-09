@@ -6,9 +6,11 @@ import Logger from '#pronote/Services/Logger.js'
 export default class CourseConverter {
   /** @type {Logger} */
   #logger
+  /** @type {FromTypeConverter} */
+  #fromTypeConverter
 
   constructor({logger}) {
-    this.fromTypeConverter = new FromTypeConverter()
+    this.#fromTypeConverter = new FromTypeConverter()
     this.#logger = logger
   }
 
@@ -59,7 +61,7 @@ export default class CourseConverter {
         plannedCourseId: item.cours.V.N,
         // TODO listeGroupes, listeElementsProgrammeCDT
         subject: subjects[item.Matiere.V.N],
-        description: this.fromTypeConverter.convertValueContext(item.descriptif, 'Literal'),
+        description: this.#fromTypeConverter.convertValueContext(item.descriptif, 'Literal'),
         backgroundColor: item.CouleurFond,
         teacherList: item.listeProfesseurs.V.map((prof) => prof.L) || [],
         startDate: item.Date.V,
@@ -105,7 +107,7 @@ export default class CourseConverter {
     try {
       return {
         id: item.N,
-        description: this.fromTypeConverter.convertValueContext(item.descriptif, 'Literal'),
+        description: this.#fromTypeConverter.convertValueContext(item.descriptif, 'Literal'),
         date: item?.Date?.V || null,
         endDate: item?.DateFin?.V || null,
         locked: item.verrouille,

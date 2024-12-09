@@ -101,6 +101,7 @@ export default class HttpServer {
     app.use(cookieParser())
 
     // Configure CORS to accept credentials
+    this.#logger.info('CORS origin:', this.#origin)
     const corsOptions = {
       origin: this.#origin, // frontend URL
       credentials: true, // important for cookies
