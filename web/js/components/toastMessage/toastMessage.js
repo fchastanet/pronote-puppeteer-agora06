@@ -1,4 +1,4 @@
-import './toastMessage.css'
+import './toastMessage.scss'
 
 const showToast = (message, isSuccess) => {
   if (!message) {

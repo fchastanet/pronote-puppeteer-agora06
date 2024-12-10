@@ -1,10 +1,78 @@
 import showToast from '../components/toastMessage/toastMessage.js'
 import {fetchWithAuth} from '../utils/fetchWithAuth.js'
 import {timeout} from '../utils/utils.js'
+import './pushNotifications.scss'
 
 class PushNotifications {
 
   constructor() {
+  }
+
+  init() {
+    const subscribeButton = document.getElementById('subscribeButton')
+    subscribeButton.addEventListener('click', this.subscribeOrUnsubscribe.bind(this))
+
+    subscribeButton.classList = 'navbar-button navbar-notificationsButton hidden'
+
+    const setButtonEnabled = (button, enabled) => {
+      button.classList.toggle('disabled', !enabled)
+      button.disabled = !enabled
+    }
+
+    window.addEventListener('subscribed', async (event) => {
+      subscribeButton.title = 'you are currently subscribed, you will receive notifications, unless you click on that button'
+      subscribeButton.disabled = false
+      subscribeButton.dataset.action = 'unsubscribe'
+      subscribeButton.classList.toggle('navbar-subscribeNotificationsButton', false)
+      subscribeButton.classList.toggle('navbar-unsubscribeNotificationsButton', true)
+      subscribeButton.innerHTML = `
+        <span class="material-symbols-outlined">
+        notifications
+        </span>
+        <span data-translate="subscribed"></span>
+      `
+      window.dispatchEvent(new CustomEvent('loadComponentTranslations', {detail: {component: subscribeButton}}))
+    })
+    window.addEventListener('unsubscribed', async (event) => {
+      subscribeButton.classList.toggle('hidden', false)
+      subscribeButton.classList.toggle('disabled', false)
+      subscribeButton.title = 'you will not receive notifications until you click on that button'
+      subscribeButton.disabled = false
+      subscribeButton.dataset.action = 'subscribe'
+      subscribeButton.classList.toggle('navbar-subscribeNotificationsButton', true)
+      subscribeButton.classList.toggle('navbar-unsubscribeNotificationsButton', false)
+      subscribeButton.innerHTML = `
+        <span class="material-symbols-outlined">
+        notifications_off
+        </span>
+        <span data-translate="subscribe"></span>
+      `
+      window.dispatchEvent(new CustomEvent('loadComponentTranslations', {detail: {component: subscribeButton}}))
+    })
+
+    window.addEventListener('userLoggedIn', async (event) => {
+      subscribeButton.classList.toggle('hidden', false)
+      subscribeButton.classList.toggle('disabled', false)
+      if (event.detail?.pushNotification?.enabled) {
+        window.dispatchEvent(new CustomEvent('subscribed'))
+      } else {
+        window.dispatchEvent(new CustomEvent('unsubscribed'))
+      }
+    })
+
+    window.addEventListener('userLoggedOut', async (event) => {
+      subscribeButton.classList.toggle('hidden', true)
+      subscribeButton.classList.toggle('disabled', true)
+    })
+
+    window.addEventListener('subscriptionInProgress', async (event) => {
+      setButtonEnabled(subscribeButton, false)
+    })
+
+    window.addEventListener('subscriptionCompleted', async (event) => {
+      setButtonEnabled(subscribeButton, true)
+    })
+
   }
 
   async #isServiceWorkerAvailable() {
@@ -89,49 +157,6 @@ class PushNotifications {
       console.log('Unsubscribed')
     } catch (error) {
       throw new Error('Error unsubscribing', error)
-    }
-  }
-
-  #setButtonEnabled(button, enabled) {
-    button.classList.toggle('disabled', !enabled)
-    button.disabled = !enabled
-  }
-
-  #setButtonVisible(button, visible) {
-    button.classList.toggle('hidden', !visible)
-  }
-
-  #setSubscribeButtonState(state) {
-    const subscribeButton = document.getElementById('subscribeButton')
-    const unsubscribeButton = document.getElementById('unsubscribeButton')
-    if (state === PushNotifications.NOTIFICATION_STATE_IN_PROGRESS) {
-      this.#setButtonEnabled(subscribeButton, false)
-      this.#setButtonEnabled(unsubscribeButton, false)
-      return
-    }
-    if (state === PushNotifications.NOTIFICATION_STATE_NOT_LOGGED) {
-      this.#setButtonVisible(subscribeButton, false)
-      this.#setButtonVisible(unsubscribeButton, false)
-      this.#setButtonEnabled(unsubscribeButton, false)
-      return
-    }
-    this.#setButtonEnabled(subscribeButton, true)
-    this.#setButtonEnabled(unsubscribeButton, true)
-    this.#setButtonVisible(subscribeButton, state !== PushNotifications.NOTIFICATION_STATE_ACTIVATED)
-    this.#setButtonVisible(unsubscribeButton, state === PushNotifications.NOTIFICATION_STATE_ACTIVATED)
-  }
-
-
-  async unsubscribe() {
-    this.#setSubscribeButtonState(PushNotifications.NOTIFICATION_STATE_IN_PROGRESS)
-    try {
-      await this.#unsubscribe()
-      console.log('Unsubscribed')
-      this.#setSubscribeButtonState(PushNotifications.NOTIFICATION_STATE_DEACTIVATED)
-    } catch (error) {
-      console.error('Error unsubscribing:', error)
-      this.#setSubscribeButtonState(PushNotifications.NOTIFICATION_STATE_ACTIVATED)
-      showToast(`Error unsubscribing : ${error}`, false)
     }
   }
 
@@ -222,43 +247,43 @@ class PushNotifications {
     }
   }
 
-  async subscribe() {
-    this.#setSubscribeButtonState(PushNotifications.NOTIFICATION_STATE_IN_PROGRESS)
+  async unsubscribe() {
+    window.dispatchEvent(new CustomEvent('subscriptionInProgress'))
     try {
-      await this.#subscribe()
-      console.log('Subscribed')
-      this.#setSubscribeButtonState(PushNotifications.NOTIFICATION_STATE_ACTIVATED)
+      await this.#unsubscribe()
+      showToast(`You have been unsubscribed from notifications successfully`, true)
+      window.dispatchEvent(new CustomEvent('unsubscribed'))
     } catch (error) {
-      showToast(`Error subscribing : ${error}`, false)
-      this.#setSubscribeButtonState(PushNotifications.NOTIFICATION_STATE_DEACTIVATED)
+      console.error('Error unsubscribing:', error)
+      showToast(`Error unsubscribing : ${error}`, false)
+    } finally {
+      window.dispatchEvent(new CustomEvent('subscriptionCompleted'))
     }
   }
 
+  async subscribe() {
+    window.dispatchEvent(new CustomEvent('subscriptionInProgress'))
+    try {
+      await this.#subscribe()
+      showToast(`You have been subscribed to notifications successfully`, true)
+      window.dispatchEvent(new CustomEvent('subscribed'))
+    } catch (error) {
+      showToast(`Error subscribing : ${error}`, false)
+    } finally {
+      window.dispatchEvent(new CustomEvent('subscriptionCompleted'))
+    }
+  }
 
-  async setListeners() {
-    const subscribeButton = document.getElementById('subscribeButton')
-    const unsubscribeButton = document.getElementById('unsubscribeButton')
-    this.#setSubscribeButtonState(PushNotifications.NOTIFICATION_STATE_IN_PROGRESS)
-    window.addEventListener('userLoggedIn', (event) => {
-      console.log('User logged in:', event.detail)
-      this.#setSubscribeButtonState(
-        event.detail?.pushNotification?.enabled ?
-          PushNotifications.NOTIFICATION_STATE_ACTIVATED :
-          PushNotifications.NOTIFICATION_STATE_DEACTIVATED
-      )
-    })
-    window.addEventListener('userLoggedOut', () => {
-      this.#setSubscribeButtonState(PushNotifications.NOTIFICATION_STATE_NOT_LOGGED)
-    })
-    subscribeButton.addEventListener('click', this.subscribe.bind(this))
-    unsubscribeButton.addEventListener('click', this.unsubscribe.bind(this))
+  async subscribeOrUnsubscribe(event) {
+    if (event.currentTarget.disabled) {
+      return
+    }
+    if (event.currentTarget.dataset.action === 'unsubscribe') {
+      await this.unsubscribe()
+    } else {
+      await this.subscribe()
+    }
   }
 }
-
-PushNotifications.NOTIFICATION_STATE_IN_PROGRESS = 'in-progress'
-PushNotifications.NOTIFICATION_STATE_ACTIVATED = 'activated'
-PushNotifications.NOTIFICATION_STATE_DEACTIVATED = 'deactivated'
-PushNotifications.NOTIFICATION_STATE_NOT_LOGGED = 'notLogged'
-
 
 export default PushNotifications

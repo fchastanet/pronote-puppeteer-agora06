@@ -44,10 +44,6 @@ const logout = async () => {
 
     if (response.ok) {
       showToast('Logout successful', true)
-      document.getElementById('loginForm').classList.toggle('hidden', false)
-      document.getElementById('dashboard').classList.toggle('hidden', true)
-      document.getElementById('logoutButton').classList.toggle('hidden', true)
-      document.getElementById('studentSelector').classList.toggle('hidden', true)
       const event = new CustomEvent('userLoggedOut', {detail: response})
       window.dispatchEvent(event)
     } else {
@@ -74,9 +70,18 @@ const checkLoggedIn = async () => {
   }
 }
 
+const changeLoginState = (loggedIn) => {
+  document.getElementById('loginForm').classList.toggle('hidden', loggedIn)
+  document.getElementById('dashboard').classList.toggle('hidden', !loggedIn)
+  document.getElementById('studentSelector').classList.toggle('hidden', !loggedIn)
+  document.getElementById('logoutButton').classList.toggle('hidden', !loggedIn)
+  document.getElementById('loginButton').classList.toggle('hidden', loggedIn)
+  const welcomeMessage = document.getElementById('welcomeMessage')
+  welcomeMessage.textContent = ''
+}
+
 window.addEventListener('userLoggedIn', (event) => {
-  document.getElementById('loginForm').classList.toggle('hidden', true)
-  document.getElementById('logoutButton').classList.toggle('hidden', false)
+  changeLoginState(true)
   const welcomeMessage = document.getElementById('welcomeMessage')
   welcomeMessage.textContent = `Welcome, ${event.detail.welcomeMessage}`
   const dashboard = new Dashboard()
@@ -84,8 +89,7 @@ window.addEventListener('userLoggedIn', (event) => {
 })
 
 window.addEventListener('userLoggedOut', () => {
-  const welcomeMessage = document.getElementById('welcomeMessage')
-  welcomeMessage.textContent = ''
+  changeLoginState(false)
 })
 
 document.getElementById('loginForm').addEventListener('keypress', (event) => {
@@ -99,7 +103,7 @@ window.addEventListener('load', async () => {
   const appDiv = document.getElementById('app')
   window.webServiceUrl = appDiv.getAttribute('data-web-service-url')
   const pushNotifications = new PushNotifications()
-  pushNotifications.setListeners()
+  pushNotifications.init()
   initLanguageSelector()
   document.getElementById('loginButton').addEventListener('click', login)
   document.getElementById('logoutButton').addEventListener('click', logout)

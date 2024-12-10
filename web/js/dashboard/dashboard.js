@@ -52,6 +52,7 @@ class Dashboard {
 
     window.addEventListener('userLoggedIn', () => {
       dashboard.classList.toggle('hidden', false)
+      dashboardGrid.classList.toggle('hidden', false)
     })
     window.addEventListener('userLoggedOut', () => {
       dashboard.classList.toggle('hidden', true)

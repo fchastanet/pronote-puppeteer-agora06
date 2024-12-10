@@ -1,4 +1,5 @@
 import translations from '../../../translations.js'
+import './languageSelector.scss'
 
 const getUserLang = () => {
   const savedLang = localStorage.getItem('lang')
@@ -12,13 +13,22 @@ const setUserLang = (lang) => {
 
 const initLanguageSelector = () => {
   const userLang = getUserLang()
-  document.querySelectorAll('[data-translate]').forEach((el) => {
-    const key = el.getAttribute('data-translate')
-    el.textContent = translations[userLang][key]
-  })
-  document.querySelectorAll('[data-title-translate]').forEach((el) => {
-    const key = el.getAttribute('data-title-translate')
-    el.title = translations[userLang][key]
+
+  const translate = (component) => {
+    component.querySelectorAll('[data-translate]').forEach((el) => {
+      const key = el.getAttribute('data-translate')
+      el.textContent = translations[userLang][key]
+    })
+    component.querySelectorAll('[data-title-translate]').forEach((el) => {
+      const key = el.getAttribute('data-title-translate')
+      el.title = translations[userLang][key]
+    })
+  }
+  translate(document)
+
+  window.addEventListener('loadComponentTranslations', (event) => {
+    const component = event.detail.component
+    translate(component)
   })
 
   document.getElementById('login').placeholder = translations[userLang].loginPlaceholder

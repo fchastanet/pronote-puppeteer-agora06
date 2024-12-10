@@ -1,7 +1,3 @@
-.toast.hidden {
-  display: none;
-}
-
 .toast {
   position: fixed;
   bottom: 20px;
@@ -10,12 +6,16 @@
   border-radius: 4px;
   color: white;
   z-index: 1000;
-}
 
-.toast.success {
-  background-color: #4caf50;
-}
+  &.hidden {
+    display: none;
+  }
 
-.toast.error {
-  background-color: #f44336;
+  &.success {
+    background-color: #4caf50;
+  }
+
+  &.error {
+    background-color: #f44336;
+  }
 }

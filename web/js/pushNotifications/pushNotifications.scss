@@ -1,0 +1,13 @@
+.navbar {
+  &-notificationsButton {
+    margin-right: 10px;
+  }
+
+  &-subscribeNotificationsButton {
+    background-color: #f44336;
+  }
+
+  &-unsubscribeNotificationsButton {
+    background-color: #4CAF50;
+  }
+}

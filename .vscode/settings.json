@@ -48,4 +48,7 @@
     "editor.wordWrapColumn": 120,
   },
   "dbmlERDPreviewer.preferredTheme": "dark",
+  "[scss]": {
+    "editor.defaultFormatter": "michelemelluso.code-beautifier"
+  },
 }
