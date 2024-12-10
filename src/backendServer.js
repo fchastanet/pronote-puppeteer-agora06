@@ -53,7 +53,7 @@ const main = async () => {
   dotenv.config({path: path.join(process.cwd(), envFile)})
 
   const databaseFile = process.env.SQLITE_DATABASE_FILE
-
+  const resultsDir = path.join(process.cwd(), process.env.RESULTS_DIR)
   const publicDir = path.join(process.cwd(), process.env.PUBLIC_DIR)
 
   databaseConnection = new DatabaseConnection({
@@ -65,22 +65,24 @@ const main = async () => {
     secure: process.env?.SESSION_COOKIE_SECURE === 1 ?? false,
   }
   logger.info('cookieOptions', cookieOptions)
-  const authService = new AuthService({dataWarehouse, logger})
-  const loginController = new LoginController({
-    logger,
-    authService,
-    cookieOptions,
-    verbose: commandOptions.verbose,
-  })
 
   const pushSubscriptionService = new PushSubscriptionService({
     dataWarehouse,
     privatePath: path.join(process.cwd(), 'src', 'HttpServer'),
+    resultsDir,
     logger
   })
   await pushSubscriptionService.init()
   const pushSubscriptionController = new PushSubscriptionController({
     logger, pushSubscriptionService
+  })
+
+  const authService = new AuthService({dataWarehouse, logger, pushSubscriptionService})
+  const loginController = new LoginController({
+    logger,
+    authService,
+    cookieOptions,
+    verbose: commandOptions.verbose,
   })
 
   const dataMetrics = new DataMetrics(databaseConnection)
@@ -104,7 +106,6 @@ const main = async () => {
     sessionExpiration: process.env?.SESSION_EXPIRATION_IN_MS ?? 900000,
     sessionSecret: process.env?.SESSION_SECRET ?? 'your-secret-key',
     cookieOptions,
-    debug: commandOptions.debug
   })
 
   server.start()

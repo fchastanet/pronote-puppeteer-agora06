@@ -22,6 +22,9 @@ const handleResponse = async (
     window.dispatchEvent(event)
     throw new ResponseError('Authentication expired')
   }
+  if (response.status === 204 || response.status === 205) {
+    decodeJsonResponse = false
+  }
   if (throwErrorOnResponseKO && !response.ok) {
     throw new CustomError(`HTTP error! status: ${response.status}`)
   }

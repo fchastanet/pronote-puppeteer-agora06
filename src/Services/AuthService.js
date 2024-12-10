@@ -1,19 +1,27 @@
 import DataWarehouse from '#pronote/Database/DataWarehouse.js'
+import PushSubscriptionService from '#pronote/Services/PushSubscriptionService.js'
 
 export default class AuthService {
   /** @type {DataWarehouse} */
   #dataWarehouse
   /** @type {Logger} */
   #logger
+  /** @type {PushSubscriptionService} */
+  #pushSubscriptionService
 
-  constructor({dataWarehouse, logger}) {
+  constructor({dataWarehouse, logger, pushSubscriptionService}) {
     this.#dataWarehouse = dataWarehouse
     this.#logger = logger
+    this.#pushSubscriptionService = pushSubscriptionService
   }
 
   async login(login, password) {
-    const authData = await this.#dataWarehouse.getUserByLoginAndPassword(login, password)
-    return this.#authData(authData)
+    const userData = await this.#dataWarehouse.getUserByLoginAndPassword(login, password)
+    if (!userData || userData.length === 0) {
+      throw new Error('Invalid login or password')
+    }
+    const subscription = this.#pushSubscriptionService.getUserSubscription(userData.id)
+    return this.#authData(userData, subscription)
   }
 
   async validateSession(login) {
@@ -21,11 +29,11 @@ export default class AuthService {
     if (!userData || userData.length === 0) {
       throw new Error('Invalid session')
     }
-
-    return this.#authData(userData)
+    const subscription = this.#pushSubscriptionService.getUserSubscription(userData.id)
+    return this.#authData(userData, subscription)
   }
 
-  #authData(data) {
+  #authData(data, subscription) {
     const authData = {
       authenticated: data?.id > 0 ?? false,
       id: data?.id ?? 0,
@@ -35,11 +43,11 @@ export default class AuthService {
       welcomeMessage: data?.role === 'admin' ? 'Administrator' : `${data?.firstName} ${data?.lastName} (Role User)`,
       role: data?.role ?? 'unauthenticated',
       pushNotification: {
-        enabled: (!!data?.pushEndpoint && !!data?.pushAuth && !!data?.pushP256dh),
-        pushEndpoint: data?.pushEndpoint,
-        pushAuth: data?.pushAuth,
-        pushP256dh: data?.pushP256dh,
-        pushExpirationTime: data?.pushExpirationTime,
+        enabled: (!!subscription?.endpoint && !!subscription?.keys?.p256dh && !!subscription?.keys?.auth),
+        pushEndpoint: subscription?.endpoint,
+        pushAuth: subscription?.keys?.auth,
+        pushP256dh: subscription?.keys?.p256dh,
+        pushExpirationTime: subscription?.expirationTime,
       }
     }
     this.#logger.info(authData)

@@ -1,3 +1,4 @@
+import showToast from '../components/toastMessage/toastMessage.js'
 import {fetchWithAuth} from '../utils/fetchWithAuth.js'
 import {timeout} from '../utils/utils.js'
 
@@ -39,10 +40,10 @@ class PushNotifications {
 
   async #requestServiceWorkerRegistration() {
     try {
-      const registration = await navigator.serviceWorker
-        .register(`/service-worker.js?webService=${window.webServiceUrl}`, {
-          scope: '/',
-        })
+      const registration = await navigator.serviceWorker.register(
+        `/service-worker.js?webService=${window.webServiceUrl}`,
+        {scope: '/'}
+      )
       console.log('Service Worker registered with scope:', registration.scope)
       return registration
     } catch (error) {
@@ -126,10 +127,11 @@ class PushNotifications {
     try {
       await this.#unsubscribe()
       console.log('Unsubscribed')
-    } catch (error) {
-      this.#setSubscribeButtonState(PushNotifications.NOTIFICATION_STATE_ACTIVATED)
-    } finally {
       this.#setSubscribeButtonState(PushNotifications.NOTIFICATION_STATE_DEACTIVATED)
+    } catch (error) {
+      console.error('Error unsubscribing:', error)
+      this.#setSubscribeButtonState(PushNotifications.NOTIFICATION_STATE_ACTIVATED)
+      showToast(`Error unsubscribing : ${error}`, false)
     }
   }
 
@@ -191,6 +193,9 @@ class PushNotifications {
         })
       return subscription
     } catch (error) {
+      if (error.code === 20) {
+        showToast('Google Services for push messaging disabled chec your privacy settings', false)
+      }
       throw new Error('Error subscribing:', error)
     }
   }
@@ -222,10 +227,10 @@ class PushNotifications {
     try {
       await this.#subscribe()
       console.log('Subscribed')
-    } catch (error) {
-      this.#setSubscribeButtonState(PushNotifications.NOTIFICATION_STATE_DEACTIVATED)
-    } finally {
       this.#setSubscribeButtonState(PushNotifications.NOTIFICATION_STATE_ACTIVATED)
+    } catch (error) {
+      showToast(`Error subscribing : ${error}`, false)
+      this.#setSubscribeButtonState(PushNotifications.NOTIFICATION_STATE_DEACTIVATED)
     }
   }
 

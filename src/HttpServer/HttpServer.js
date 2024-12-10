@@ -29,8 +29,6 @@ export default class HttpServer {
   #sessionSecret
   #cookieOptions
   #sessionDatabaseFile
-  #debug
-  #apiKey
   /** @type {Logger} */
   #logger
 
@@ -42,7 +40,6 @@ export default class HttpServer {
     sessionExpirationInMs = 900000,
     sessionSecret,
     cookieOptions = {},
-    apiKey,
     logger
   }) {
     this.#port = port
@@ -64,7 +61,6 @@ export default class HttpServer {
       ...cookieOptions
     }
     this.#sessionDatabaseFile = sessionDatabaseFile
-    this.#apiKey = apiKey
     this.#logger = logger
   }
 

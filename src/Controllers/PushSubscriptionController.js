@@ -15,7 +15,7 @@ export default class PushSubscriptionController {
     try {
       const body = req.body
       this.#pushSubscriptionService.pushSubscription(req.session.user.id, body.new)
-      this.#logger.log('Subscription added : ', body.new)
+      this.#logger.info('Subscription added : ', body.new)
       this.#pushSubscriptionService.sendNotificationToSubscriber(body.new, {
         title: 'Notification System',
         body: 'Subscription added',
@@ -30,18 +30,18 @@ export default class PushSubscriptionController {
 
   async deleteSubscription(req, res, next) {
     try {
-      const endpoint = req.query.endpoint?.toString()
       const subscription = await this.#pushSubscriptionService.getUserSubscription(req.session.user.id)
       this.#pushSubscriptionService.deleteUserSubscription(req.session.user.id)
-      this.#logger.log('Subscription removed : ', endpoint, 'for user', req.session.user.id)
+      const endpoint = subscription?.endpoint
       if (subscription) {
         this.#pushSubscriptionService.sendNotificationToSubscriber(subscription, {
           title: 'Notification System',
           body: 'Subscription removed',
         })
       }
+      this.#logger.info('Subscription removed : ', endpoint, 'for user', req.session.user.id)
       // Send 204 - no content
-      res.status(204).json({})
+      return res.status(204).json({})
     } catch (e) {
       this.#logger.error('Error removing subscription', e)
       next(e)

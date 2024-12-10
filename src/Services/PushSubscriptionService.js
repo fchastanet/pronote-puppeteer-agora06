@@ -11,16 +11,19 @@ export default class PushSubscriptionService {
   #logger
   #privatePath
   #privateKeysTargetFile
+  #resultsDir
 
-  constructor({dataWarehouse, privatePath, logger}) {
+  constructor({dataWarehouse, privatePath, resultsDir, logger}) {
     this.#dataWarehouse = dataWarehouse
     this.#privatePath = privatePath
+    this.#resultsDir = resultsDir
     this.#privateKeysTargetFile = path.join(this.#privatePath, 'privateVapidKey.js')
     this.#logger = logger
   }
 
   async init() {
     const {publicVapidKey, privateVapidKey} = await this.#generateVapidKeys()
+    fs.mkdirSync(path.join(this.#resultsDir, 'subscriptions'), {recursive: true})
     webpush.setVapidDetails('mailto:fchastanet@gmail.com', publicVapidKey, privateVapidKey)
   }
 
@@ -58,26 +61,46 @@ export default class PushSubscriptionService {
     })
   }
 
-  async pushSubscription(userId, subscription) {
-    this.#dataWarehouse.updateUserSubscription(
-      userId,
-      subscription.endpoint,
-      subscription.keys.auth,
-      subscription.keys.p256dh,
-      subscription.expirationTime
+  #getUserLogin(userId) {
+    const user = this.#dataWarehouse.getUserById(userId)
+    if (!user) {
+      throw new Error(`User with id ${userId} not found`)
+    }
+    return user.login
+  }
+
+  #getSubscriptionFilePath(userLogin) {
+    return path.join(this.#resultsDir, 'subscriptions', `${userLogin}.json`)
+  }
+
+  pushSubscription(userId, subscription) {
+    const userLogin = this.#getUserLogin(userId)
+    const subscriptionFile = this.#getSubscriptionFilePath(userLogin)
+    fs.writeFileSync(
+      subscriptionFile,
+      JSON.stringify(subscription, null, 2)?.replace(/\00/g, ''),
     )
+    this.#logger.info(`Subscription saved for user ${userLogin} in ${subscriptionFile}`)
   }
 
-  async removeSubscriptionByEndpoint(endpoint) {
-    this.#dataWarehouse.deleteUserSubscription(endpoint)
+  deleteUserSubscription(userId) {
+    const userLogin = this.#getUserLogin(userId)
+    const subscriptionFile = this.#getSubscriptionFilePath(userLogin)
+    fs.writeFileSync(subscriptionFile, '{}')
+    this.#logger.info(`Subscription deleted for user ${userLogin} in ${subscriptionFile}`)
   }
 
-  async deleteUserSubscription(userId) {
-    this.#dataWarehouse.deleteUserSubscription(userId)
-  }
-
-  async getUserSubscription(userId) {
-    this.#dataWarehouse.getUserSubscription(userId)
+  getUserSubscription(userId) {
+    const userLogin = this.#getUserLogin(userId)
+    const subscriptionFile = this.#getSubscriptionFilePath(userLogin)
+    if (!fs.existsSync(subscriptionFile)) {
+      return null
+    }
+    const subscription = JSON.parse(fs.readFileSync(subscriptionFile, 'utf8'))
+    if (!subscription || !subscription?.endpoint) {
+      return null
+    }
+    return subscription
   }
 
   async sendNotification(notification, notificationKey, subscriptions) {

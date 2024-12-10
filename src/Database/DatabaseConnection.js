@@ -17,7 +17,7 @@ export default class DatabaseConnection {
   open() {
     const opts = {}
     if (this.#logger.debugMode) {
-      opts.verbose = this.#logger.log
+      opts.verbose = this.#logger.debug.bind(this.#logger)
     }
     this.#db = new SqliteDatabase(this.#databaseFile, opts)
     this.#db.pragma('journal_mode = WAL') // it is generally important to set the WAL pragma for performance reasons.
