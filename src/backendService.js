@@ -50,6 +50,7 @@ const initProcessController = async (options) => {
   const pushSubscriptionService = new PushSubscriptionService({
     dataWarehouse,
     privatePath: path.join(process.cwd(), 'src', 'HttpServer'),
+    resultsDir,
     logger
   })
   await pushSubscriptionService.init()
